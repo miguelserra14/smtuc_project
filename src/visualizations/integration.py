@@ -140,79 +140,126 @@ def generate_connection_visualizations(
     date_tag = sample_date.replace("-", "")
     prefix = output_prefix or f"l{_safe_slug(line_number)}"
 
-    # 1) Timeline plot
-    bus_points = pd.DataFrame(
-        {
-            "time": [v for v in schedule_df["bus_time"].astype(str).tolist() if str(v).strip()],
-            "series": [f"Autocarro {line_number} ({bus_stop_ref})"] * int((schedule_df["bus_time"].astype(str) != "").sum()),
-        }
-    )
-    metro_points = pd.DataFrame(
-        {
-            "time": [v for v in schedule_df["metro_time_from_origin"].astype(str).tolist() if str(v).strip()],
-            "series": [f"Metro ({metro_origin_ref} -> {metro_stop_ref})"] * int((schedule_df["metro_time_from_origin"].astype(str) != "").sum()),
-        }
-    )
-    timeline_df = pd.concat([bus_points, metro_points], ignore_index=True)
-    timeline_df["time_s"] = timeline_df["time"].map(_hhmmss_to_seconds)
+    # 1) Timeline heatmap: frequency of passages per hour and transport type
+    bus_times_s = [
+        _hhmmss_to_seconds(v)
+        for v in schedule_df["bus_time"].astype(str).tolist()
+        if str(v).strip()
+    ]
+    metro_times_s = [
+        _hhmmss_to_seconds(v)
+        for v in schedule_df["metro_time_from_origin"].astype(str).tolist()
+        if str(v).strip()
+    ]
 
-    fig_timeline = px.scatter(
-        timeline_df,
-        x="time_s",
-        y="series",
-        color="series",
-        title=f"Timeline de Passagens ({sample_date})",
-        labels={"time_s": "Hora", "series": "Rede"},
+    # Create 20-minute bins (6 to 24)
+    bin_minutes = 20
+    start_h, end_h = 6, 24
+    bins_per_hour = 60 // bin_minutes  # 3 bins per hour
+    n_bins = (end_h - start_h) * bins_per_hour
+    
+    bus_counts = []
+    metro_counts = []
+    heatmap_labels_x = []
+    
+    for i in range(n_bins):
+        start_sec = start_h * 3600 + i * bin_minutes * 60
+        end_sec = start_sec + bin_minutes * 60
+        bus_counts.append(sum(1 for t in bus_times_s if start_sec <= t < end_sec))
+        metro_counts.append(sum(1 for t in metro_times_s if start_sec <= t < end_sec))
+        
+        h = (start_h * 60 + i * bin_minutes) // 60
+        m = (start_h * 60 + i * bin_minutes) % 60
+        heatmap_labels_x.append(f"{h:02d}:{m:02d}")
+
+    heatmap_data = [
+        metro_counts,
+        bus_counts,
+    ]
+    heatmap_labels_y = [f"Metro ({metro_origin_ref} -> {metro_stop_ref})", f"Autocarro {line_number}"]
+
+    fig_timeline = go.Figure(
+        data=go.Heatmap(
+            z=heatmap_data,
+            x=heatmap_labels_x,
+            y=heatmap_labels_y,
+            colorscale="YlOrRd",
+            text=heatmap_data,
+            texttemplate="%{text}",
+            textfont={"size": 10},
+            colorbar={"title": "Freq."},
+        )
     )
-    fig_timeline.update_traces(marker={"size": 10, "line": {"color": "black", "width": 0.6}})
     fig_timeline.update_layout(
+        title=f"Frequencia de Passagens por Hora ({sample_date})",
+        xaxis_title="Hora",
+        yaxis_title="Rede",
         plot_bgcolor="white",
-        xaxis={
-            "tickmode": "array",
-            "tickvals": list(range(6 * 3600, 24 * 3600 + 1, 3600)),
-            "ticktext": [f"{h:02d}:00" for h in range(6, 25)],
-            "showgrid": True,
-            "gridcolor": "#d9d9d9",
-        },
-        yaxis={"showgrid": False},
     )
 
-    # 2) Wait-time bar plot
+    # 2) Wait-time bar plot (sorted by temporal order)
+    # Convert metro_time to seconds for proper ordering
+    waits_df_sorted = waits_df.copy()
+    waits_df_sorted["metro_time_s"] = waits_df_sorted["metro_time"].apply(_hhmmss_to_seconds)
+    waits_df_sorted = waits_df_sorted.sort_values("metro_time_s").reset_index(drop=True)
+    waits_df_sorted["index_label"] = range(len(waits_df_sorted))
+
     fig_wait = px.bar(
-        waits_df,
-        x="metro_time",
+        waits_df_sorted,
+        x="index_label",
         y="wait_min",
         color="wait_class",
         title=f"Espera ate ao Proximo Autocarro ({sample_date})",
-        labels={"metro_time": "Hora de chegada do metro na Portela", "wait_min": "Espera (min)"},
+        labels={"index_label": "Hora de chegada do metro", "wait_min": "Espera (min)"},
         color_discrete_map={"<=10": "#2a9d8f", "10-15": "#e9c46a", ">15": "#e76f51", "sem_ligacao": "#6c757d"},
     )
+    
+    # Custom x-axis with temporal labels
     fig_wait.update_layout(
         plot_bgcolor="white",
-        xaxis={"showgrid": False, "tickangle": -45},
+        xaxis={
+            "tickmode": "array",
+            "tickvals": list(range(len(waits_df_sorted))),
+            "ticktext": waits_df_sorted["metro_time"].tolist(),
+            "showgrid": False,
+            "tickangle": -45,
+        },
         yaxis={"showgrid": True, "gridcolor": "#d9d9d9", "rangemode": "tozero"},
     )
 
     # 3) Period equity heatmap (coverage<=10, lost>15, median wait)
+    period_labels = {
+        "manha": "Manha (6h-12h)",
+        "meio_dia": "Meio Dia (12h-17h)",
+        "tarde_noite": "Tarde-Noite (17h-24h)",
+        "dia_inteiro": "Dia Inteiro (6h-24h)",
+    }
     heat_records = []
-    for period in ["manha", "meio_dia", "tarde_noite"]:
-        sub = waits_df[waits_df["period"] == period]
+    for period in ["manha", "meio_dia", "tarde_noite", "dia_inteiro"]:
+        if period == "dia_inteiro":
+            sub = waits_df
+        else:
+            sub = waits_df[waits_df["period"] == period]
+        
         if sub.empty:
             cov10 = None
             lost15 = None
             med_wait = None
+            mean_wait = None
         else:
             waits = pd.to_numeric(sub["wait_min"], errors="coerce")
             n = len(sub)
             cov10 = round(float((waits <= 10).sum() / n * 100.0), 2)
             lost15 = round(float(((waits > 15) | waits.isna()).sum() / n * 100.0), 2)
             med_wait = round(float(waits.dropna().median()), 2) if not waits.dropna().empty else None
+            mean_wait = round(float(waits.dropna().mean()), 2) if not waits.dropna().empty else None
 
         heat_records.extend(
             [
-                {"period": period, "metric": "coverage<=10 (%)", "value": cov10},
-                {"period": period, "metric": "lost>15 (%)", "value": lost15},
-                {"period": period, "metric": "median_wait (min)", "value": med_wait},
+                {"period": period_labels[period], "metric": "coverage<=10 (%)", "value": cov10},
+                {"period": period_labels[period], "metric": "lost>15 (%)", "value": lost15},
+                {"period": period_labels[period], "metric": "median_wait (min)", "value": med_wait},
+                {"period": period_labels[period], "metric": "mean_wait (min)", "value": mean_wait},
             ]
         )
 
