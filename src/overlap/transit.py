@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import OUTPUTS_OVERLAP_DIR, WALK_SPEED_M_MIN
+from config import OUTPUTS_INTEGRATION_DIR, WALK_SPEED_M_MIN
 from gtfs_processing.gtfs import load_gtfs
 from gtfs_processing.gtfs_probe import (
     NearestStopResult,
@@ -199,6 +199,19 @@ def _safe_slug(value: str) -> str:
     return cleaned or "value"
 
 
+def _hhmmss_to_seconds(value: str) -> int:
+    h, m, s = (int(part) for part in str(value).split(":"))
+    return h * 3600 + m * 60 + s
+
+
+def _seconds_to_hhmmss(value: int) -> str:
+    value = int(value)
+    h = value // 3600
+    m = (value % 3600) // 60
+    s = value % 60
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
 def build_line_stop_vs_metro_table(
     metro_stop_ref: str,
     bus_stop_ref: str,
@@ -302,7 +315,7 @@ def build_line_stop_vs_metro_table(
     if n == 0:
         out_df = pd.DataFrame(columns=columns)
         root = Path(__file__).resolve().parents[2]
-        out_dir = root / OUTPUTS_OVERLAP_DIR
+        out_dir = root / OUTPUTS_INTEGRATION_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         csv_name = output_csv_name or (
             f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
@@ -329,7 +342,7 @@ def build_line_stop_vs_metro_table(
     out_df = pd.DataFrame(rows, columns=columns)
 
     root = Path(__file__).resolve().parents[2]
-    out_dir = root / OUTPUTS_OVERLAP_DIR
+    out_dir = root / OUTPUTS_INTEGRATION_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
         f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
@@ -338,6 +351,254 @@ def build_line_stop_vs_metro_table(
     out_df.to_csv(out_dir / csv_name, index=False)
 
     return out_df
+
+
+def build_metro_bus_connection_metrics(
+    metro_stop_ref: str,
+    bus_stop_ref: str,
+    line_number: str | int,
+    day_str: str | None = None,
+    metro_origin_ref: str = "Portagem",
+    bus_origin_ref: str = "Portagem",
+    coverage_thresholds_min: tuple[int, ...] = (5, 10, 15),
+    lost_connection_threshold_min: int = 15,
+    output_csv_name: str | None = None,
+) -> pd.DataFrame:
+    """
+    Calcula métricas de coordenação metro -> autocarro e grava um CSV em outputs/integration.
+    """
+    schedule_df = build_line_stop_vs_metro_table(
+        metro_stop_ref=metro_stop_ref,
+        bus_stop_ref=bus_stop_ref,
+        line_number=line_number,
+        day_str=day_str,
+        metro_origin_ref=metro_origin_ref,
+        bus_origin_ref=bus_origin_ref,
+    )
+
+    if schedule_df.empty:
+        metrics_df = pd.DataFrame(
+            [
+                {
+                    "scope": "overall",
+                    "metric": "metro_arrivals_count",
+                    "value": 0,
+                    "unit": "count",
+                    "note": "Sem dados para calcular métricas",
+                }
+            ]
+        )
+    else:
+        bus_times = sorted(
+            {
+                _hhmmss_to_seconds(v)
+                for v in schedule_df["bus_time"].astype(str).tolist()
+                if str(v).strip()
+            }
+        )
+        metro_times = sorted(
+            {
+                _hhmmss_to_seconds(v)
+                for v in schedule_df["metro_time_from_origin"].astype(str).tolist()
+                if str(v).strip()
+            }
+        )
+
+        waits_min: list[float | None] = []
+        for metro_s in metro_times:
+            next_bus = next((b for b in bus_times if b >= metro_s), None)
+            if next_bus is None:
+                waits_min.append(None)
+            else:
+                waits_min.append(round((next_bus - metro_s) / 60.0, 2))
+
+        waits_series = pd.Series(waits_min, dtype="float")
+        waits_valid = waits_series.dropna()
+        n_metro = len(metro_times)
+        n_bus = len(bus_times)
+
+        records: list[dict] = [
+            {"scope": "overall", "metric": "metro_arrivals_count", "value": n_metro, "unit": "count", "note": ""},
+            {"scope": "overall", "metric": "bus_arrivals_count", "value": n_bus, "unit": "count", "note": ""},
+            {
+                "scope": "overall",
+                "metric": "bus_vs_metro_ratio",
+                "value": round((n_bus / n_metro), 3) if n_metro else None,
+                "unit": "ratio",
+                "note": "passagens_autocarro / passagens_metro",
+            },
+            {
+                "scope": "overall",
+                "metric": "wait_median_min",
+                "value": round(float(waits_valid.median()), 2) if not waits_valid.empty else None,
+                "unit": "min",
+                "note": "tempo de espera para o próximo autocarro",
+            },
+            {
+                "scope": "overall",
+                "metric": "wait_p75_min",
+                "value": round(float(waits_valid.quantile(0.75)), 2) if not waits_valid.empty else None,
+                "unit": "min",
+                "note": "tempo de espera para o próximo autocarro",
+            },
+            {
+                "scope": "overall",
+                "metric": "wait_p90_min",
+                "value": round(float(waits_valid.quantile(0.90)), 2) if not waits_valid.empty else None,
+                "unit": "min",
+                "note": "tempo de espera para o próximo autocarro",
+            },
+            {
+                "scope": "overall",
+                "metric": "wait_max_min",
+                "value": round(float(waits_valid.max()), 2) if not waits_valid.empty else None,
+                "unit": "min",
+                "note": "tempo de espera para o próximo autocarro",
+            },
+        ]
+
+        # Cobertura de ligação até T minutos
+        for threshold in coverage_thresholds_min:
+            coverage = float(((waits_series <= float(threshold)).sum() / n_metro) * 100.0) if n_metro else 0.0
+            records.append(
+                {
+                    "scope": "overall",
+                    "metric": f"coverage_le_{int(threshold)}_min_pct",
+                    "value": round(coverage, 2),
+                    "unit": "pct",
+                    "note": "percentagem de chegadas de metro com autocarro ate T minutos",
+                }
+            )
+
+        # Taxa de perda de ligação (espera > threshold ou sem autocarro seguinte)
+        lost_count = int(((waits_series > float(lost_connection_threshold_min)) | waits_series.isna()).sum())
+        lost_rate = float((lost_count / n_metro) * 100.0) if n_metro else 0.0
+        records.append(
+            {
+                "scope": "overall",
+                "metric": f"lost_connection_gt_{int(lost_connection_threshold_min)}_min_pct",
+                "value": round(lost_rate, 2),
+                "unit": "pct",
+                "note": "espera superior ao limiar ou sem autocarro seguinte",
+            }
+        )
+
+        # Janela sem serviço útil: maior sequência contínua de chegadas com ligação perdida
+        bad_flags = [
+            (w is None) or (float(w) > float(lost_connection_threshold_min))
+            for w in waits_min
+        ]
+        best_start = None
+        best_end = None
+        current_start = None
+        for i, is_bad in enumerate(bad_flags):
+            if is_bad and current_start is None:
+                current_start = i
+            if not is_bad and current_start is not None:
+                if best_start is None or (i - 1 - current_start) > (best_end - best_start):
+                    best_start, best_end = current_start, i - 1
+                current_start = None
+        if current_start is not None:
+            i = len(bad_flags)
+            if best_start is None or (i - 1 - current_start) > (best_end - best_start):
+                best_start, best_end = current_start, i - 1
+
+        if best_start is not None and best_end is not None and metro_times:
+            start_s = metro_times[best_start]
+            end_s = metro_times[best_end]
+            span_min = round((end_s - start_s) / 60.0, 2)
+            records.extend(
+                [
+                    {
+                        "scope": "overall",
+                        "metric": "critical_window_start",
+                        "value": _seconds_to_hhmmss(start_s),
+                        "unit": "hh:mm:ss",
+                        "note": "inicio da maior janela continua de ligacoes perdidas",
+                    },
+                    {
+                        "scope": "overall",
+                        "metric": "critical_window_end",
+                        "value": _seconds_to_hhmmss(end_s),
+                        "unit": "hh:mm:ss",
+                        "note": "fim da maior janela continua de ligacoes perdidas",
+                    },
+                    {
+                        "scope": "overall",
+                        "metric": "critical_window_span_min",
+                        "value": span_min,
+                        "unit": "min",
+                        "note": "duracao entre primeira e ultima chegada de metro da janela critica",
+                    },
+                ]
+            )
+
+        # Equidade temporal (manhã, meio do dia, tarde/noite)
+        period_defs = [
+            ("manha", 6, 12),
+            ("meio_dia", 12, 17),
+            ("tarde_noite", 17, 24),
+        ]
+        for label, start_h, end_h in period_defs:
+            idxs = [
+                i
+                for i, sec in enumerate(metro_times)
+                if start_h <= (sec // 3600) < end_h
+            ]
+            p_waits = pd.Series([waits_min[i] for i in idxs], dtype="float")
+            p_n = len(idxs)
+            p_cov10 = float(((p_waits <= 10).sum() / p_n) * 100.0) if p_n else None
+            p_lost = float((((p_waits > float(lost_connection_threshold_min)) | p_waits.isna()).sum() / p_n) * 100.0) if p_n else None
+
+            records.extend(
+                [
+                    {"scope": label, "metric": "metro_arrivals_count", "value": p_n, "unit": "count", "note": ""},
+                    {
+                        "scope": label,
+                        "metric": "wait_median_min",
+                        "value": round(float(p_waits.dropna().median()), 2) if not p_waits.dropna().empty else None,
+                        "unit": "min",
+                        "note": "tempo de espera para o próximo autocarro",
+                    },
+                    {
+                        "scope": label,
+                        "metric": "wait_p90_min",
+                        "value": round(float(p_waits.dropna().quantile(0.90)), 2) if not p_waits.dropna().empty else None,
+                        "unit": "min",
+                        "note": "tempo de espera para o próximo autocarro",
+                    },
+                    {
+                        "scope": label,
+                        "metric": "coverage_le_10_min_pct",
+                        "value": round(p_cov10, 2) if p_cov10 is not None else None,
+                        "unit": "pct",
+                        "note": "percentagem de chegadas com autocarro ate 10 minutos",
+                    },
+                    {
+                        "scope": label,
+                        "metric": f"lost_connection_gt_{int(lost_connection_threshold_min)}_min_pct",
+                        "value": round(p_lost, 2) if p_lost is not None else None,
+                        "unit": "pct",
+                        "note": "espera superior ao limiar ou sem autocarro seguinte",
+                    },
+                ]
+            )
+
+        metrics_df = pd.DataFrame(records, columns=["scope", "metric", "value", "unit", "note"])
+
+    sample_date = day_str if day_str else next_monday(date.today()).strftime("%Y-%m-%d")
+    csv_name = output_csv_name or (
+        f"line_{_safe_slug(line_number)}_connection_metrics_"
+        f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}_"
+        f"{sample_date.replace('-', '')}.csv"
+    )
+
+    root = Path(__file__).resolve().parents[2]
+    out_dir = root / OUTPUTS_INTEGRATION_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    metrics_df.to_csv(out_dir / csv_name, index=False)
+
+    return metrics_df
 
 
 def find_direct_options(dataset: str, origin_ref: str, dest_ref: str, day_str: str, time_str: str) -> pd.DataFrame:

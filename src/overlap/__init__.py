@@ -7,6 +7,7 @@ from .overlap import (
 )
 from .transit import (
 	build_line_stop_vs_metro_table,
+	build_metro_bus_connection_metrics,
 	commute_options_for_datetime,
 	compare_nearest_network,
 	find_direct_options,
@@ -30,4 +31,5 @@ __all__ = [
 	"temporal_overlap_events_for_metrics",
 	"compute_bgri_reachability_now",
 	"build_line_stop_vs_metro_table",
+	"build_metro_bus_connection_metrics",
 ]
