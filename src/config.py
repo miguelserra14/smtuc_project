@@ -24,7 +24,7 @@ DEFAULT_BGRI_LAYER = "BGRI2021_0603"
 DEFAULT_OUTPUT_GAP_CSV = "outputs/population/bgri_transport_gap.csv"
 
 
-"""
+r"""
 
 COmandos para gerar as visualizações:
 

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import random
+import re
 from datetime import date, datetime, timedelta
 from functools import lru_cache
+from pathlib import Path
 
 import pandas as pd
 
-from config import WALK_SPEED_M_MIN
+from config import OUTPUTS_OVERLAP_DIR, WALK_SPEED_M_MIN
 from gtfs_processing.gtfs import load_gtfs
 from gtfs_processing.gtfs_probe import (
     NearestStopResult,
@@ -17,9 +19,325 @@ from gtfs_processing.gtfs_probe import (
     _to_seconds,
 )
 
+
 @lru_cache(maxsize=8)
 def _load_gtfs_cached(dataset: str):
     return load_gtfs(dataset=dataset)
+
+
+def _normalize_service_id(value: str) -> str:
+    return str(value).strip().upper().replace("_", " ")
+
+
+def _service_id_aliases_for_day(day: date) -> set[str]:
+    weekday = day.weekday()
+    if weekday <= 4:
+        aliases = {
+            "DIAS UTEIS",
+            "WEEKDAY",
+            "WEEKDAYS",
+            "WD",
+            "WKD",
+        }
+    elif weekday == 5:
+        aliases = {
+            "SABADOS",
+            "SABADO",
+            "SATURDAY",
+            "SAT",
+            "SAB",
+        }
+    else:
+        aliases = {
+            "DOMINGOS E FERIADOS",
+            "DOMINGO",
+            "SUNDAY",
+            "SUN",
+            "DOM",
+        }
+    return {_normalize_service_id(v) for v in aliases}
+
+
+def _select_service_ids_for_day(gtfs, day: date) -> set[str]:
+    trip_service_ids = set(gtfs.trips["service_id"].dropna().astype(str).unique())
+    if not trip_service_ids:
+        return set()
+
+    active_by_calendar = _active_service_ids(gtfs, day)
+    if not active_by_calendar:
+        return trip_service_ids
+
+    active_norm = {_normalize_service_id(v) for v in active_by_calendar}
+    selected = {sid for sid in trip_service_ids if _normalize_service_id(sid) in active_norm}
+    if selected:
+        return selected
+
+    aliases = _service_id_aliases_for_day(day)
+    fallback = {sid for sid in trip_service_ids if _normalize_service_id(sid) in aliases}
+    return fallback
+
+
+def _matching_stop_ids(gtfs, stop_ref: str) -> list[str]:
+    ref = str(stop_ref).strip()
+    if not ref:
+        return []
+
+    stops = gtfs.stops.copy()
+    if stops.empty or "stop_id" not in stops.columns:
+        return []
+
+    stops["stop_id"] = stops["stop_id"].astype(str)
+
+    out: list[str] = []
+
+    direct = stops[stops["stop_id"] == ref]["stop_id"].drop_duplicates().tolist()
+    out.extend(direct)
+
+    if "stop_name" not in stops.columns:
+        return out
+
+    names = stops["stop_name"].astype(str)
+    exact = stops[names.str.lower() == ref.lower()]["stop_id"].drop_duplicates().tolist()
+    out.extend(exact)
+
+    partial = stops[names.str.contains(ref, case=False, na=False)]["stop_id"].drop_duplicates().tolist()
+    out.extend(partial)
+
+    return list(dict.fromkeys(str(v) for v in out))
+
+
+def _arrival_times_for_stop(
+    gtfs,
+    trips: pd.DataFrame,
+    target_stop_id: str,
+    origin_candidates: list[str] | None = None,
+) -> list[str]:
+    if trips.empty:
+        return []
+
+    st = gtfs.stop_times.copy()
+    st["trip_id"] = st["trip_id"].astype(str)
+    st["stop_id"] = st["stop_id"].astype(str)
+    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
+    if st.empty:
+        return []
+
+    target_stop_id = str(target_stop_id)
+    with_origin = bool(origin_candidates)
+    origin_set = {str(v) for v in (origin_candidates or [])}
+
+    out: list[str] = []
+    for _, trip_st in st.groupby("trip_id"):
+        trip_st = trip_st.sort_values("stop_sequence")
+        target_rows = trip_st[trip_st["stop_id"] == target_stop_id]
+        if target_rows.empty:
+            continue
+
+        target_row = target_rows.iloc[0]
+        if with_origin:
+            origins = trip_st[trip_st["stop_id"].isin(origin_set)]
+            if origins.empty:
+                continue
+            origin_seq = int(origins["stop_sequence"].min())
+            if origin_seq >= int(target_row["stop_sequence"]):
+                continue
+
+        out.append(str(target_row["arrival_time"]))
+
+    return sorted(set(out))
+
+
+def _pick_best_target_stop_id(
+    gtfs,
+    trips: pd.DataFrame,
+    target_candidates: list[str],
+    origin_candidates: list[str] | None = None,
+) -> str:
+    if not target_candidates:
+        raise ValueError("Sem paragens candidatas para o destino.")
+
+    if len(target_candidates) == 1:
+        return str(target_candidates[0])
+
+    st = gtfs.stop_times.copy()
+    st["trip_id"] = st["trip_id"].astype(str)
+    st["stop_id"] = st["stop_id"].astype(str)
+    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
+
+    origin_set = {str(v) for v in (origin_candidates or [])}
+    use_origin = bool(origin_set)
+
+    best_stop = str(target_candidates[0])
+    best_score = -1
+    for cand in [str(v) for v in target_candidates]:
+        score = 0
+        for _, trip_st in st.groupby("trip_id"):
+            trip_st = trip_st.sort_values("stop_sequence")
+            target_rows = trip_st[trip_st["stop_id"] == cand]
+            if target_rows.empty:
+                continue
+
+            if use_origin:
+                origins = trip_st[trip_st["stop_id"].isin(origin_set)]
+                if origins.empty:
+                    continue
+                if int(origins["stop_sequence"].min()) >= int(target_rows.iloc[0]["stop_sequence"]):
+                    continue
+
+            score += 1
+
+        if score > best_score:
+            best_score = score
+            best_stop = cand
+
+    return best_stop
+
+
+def _safe_slug(value: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9]+", "_", str(value).strip().lower())
+    cleaned = cleaned.strip("_")
+    return cleaned or "value"
+
+
+def build_line_stop_vs_metro_table(
+    metro_stop_ref: str,
+    bus_stop_ref: str,
+    line_number: str | int,
+    day_str: str | None = None,
+    metro_origin_ref: str = "Portagem",
+    bus_origin_ref: str = "Portagem",
+    output_csv_name: str | None = None,
+) -> pd.DataFrame:
+    """
+    Gera uma tabela comparando horários de autocarro e metro numa paragem de destino.
+
+    Requer apenas: nome/id da paragem de metro, nome/id da paragem de autocarro e número da linha.
+    Por omissão, calcula para a próxima segunda-feira a partir de hoje.
+    """
+    day = _parse_day(day_str) if day_str else next_monday(date.today())
+
+    gtfs_bus = _load_gtfs_cached("smtuc")
+    gtfs_metro = _load_gtfs_cached("metrobus")
+
+    # Candidate ids para filtrar sentido (ex.: Portagem -> Portela)
+    bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
+    metro_origin_candidates = _matching_stop_ids(gtfs_metro, str(metro_origin_ref))
+    bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
+    metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
+
+    if not bus_target_candidates:
+        raise ValueError(f"Paragem de autocarro não encontrada: {bus_stop_ref}")
+    if not metro_target_candidates:
+        raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
+
+    # Trips da linha de autocarro
+    line_str = str(line_number).strip()
+    routes = gtfs_bus.routes.copy()
+    routes["route_id"] = routes["route_id"].astype(str)
+    if "route_short_name" in routes.columns:
+        routes["route_short_name"] = routes["route_short_name"].astype(str)
+    else:
+        routes["route_short_name"] = ""
+
+    route_ids = routes[routes["route_short_name"].str.strip() == line_str]["route_id"].drop_duplicates().tolist()
+    if not route_ids and (routes["route_id"].str.strip() == line_str).any():
+        route_ids = routes[routes["route_id"].str.strip() == line_str]["route_id"].drop_duplicates().tolist()
+
+    if not route_ids:
+        raise ValueError(f"Linha não encontrada: {line_str}")
+
+    bus_services = _select_service_ids_for_day(gtfs_bus, day)
+    bus_trips = gtfs_bus.trips.copy()
+    bus_trips["route_id"] = bus_trips["route_id"].astype(str)
+    bus_trips["service_id"] = bus_trips["service_id"].astype(str)
+    bus_trips = bus_trips[bus_trips["route_id"].isin(route_ids)]
+    if bus_services:
+        bus_trips = bus_trips[bus_trips["service_id"].isin(bus_services)]
+
+    bus_stop_id = _pick_best_target_stop_id(
+        gtfs=gtfs_bus,
+        trips=bus_trips,
+        target_candidates=bus_target_candidates,
+        origin_candidates=bus_origin_candidates,
+    )
+
+    # Trips do metro
+    metro_services = _select_service_ids_for_day(gtfs_metro, day)
+    metro_trips = gtfs_metro.trips.copy()
+    metro_trips["service_id"] = metro_trips["service_id"].astype(str)
+    if metro_services:
+        metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
+
+    metro_stop_id = _pick_best_target_stop_id(
+        gtfs=gtfs_metro,
+        trips=metro_trips,
+        target_candidates=metro_target_candidates,
+        origin_candidates=metro_origin_candidates,
+    )
+
+    bus_times = _arrival_times_for_stop(
+        gtfs=gtfs_bus,
+        trips=bus_trips,
+        target_stop_id=bus_stop_id,
+        origin_candidates=bus_origin_candidates,
+    )
+    metro_times = _arrival_times_for_stop(
+        gtfs=gtfs_metro,
+        trips=metro_trips,
+        target_stop_id=metro_stop_id,
+        origin_candidates=metro_origin_candidates,
+    )
+
+    n = max(len(bus_times), len(metro_times))
+    columns = [
+        "idx",
+        "bus_line",
+        "bus_stop",
+        "bus_time",
+        "metro_stop",
+        "metro_time_from_origin",
+        "origin_ref",
+        "date",
+    ]
+    if n == 0:
+        out_df = pd.DataFrame(columns=columns)
+        root = Path(__file__).resolve().parents[2]
+        out_dir = root / OUTPUTS_OVERLAP_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
+        csv_name = output_csv_name or (
+            f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
+            f"_metro_{_safe_slug(metro_stop_ref)}_{day.strftime('%Y%m%d')}.csv"
+        )
+        out_df.to_csv(out_dir / csv_name, index=False)
+        return out_df
+
+    rows = []
+    for i in range(n):
+        rows.append(
+            {
+                "idx": i + 1,
+                "bus_line": line_str,
+                "bus_stop": str(bus_stop_ref),
+                "bus_time": bus_times[i] if i < len(bus_times) else "",
+                "metro_stop": str(metro_stop_ref),
+                "metro_time_from_origin": metro_times[i] if i < len(metro_times) else "",
+                "origin_ref": str(metro_origin_ref),
+                "date": day.strftime("%Y-%m-%d"),
+            }
+        )
+
+    out_df = pd.DataFrame(rows, columns=columns)
+
+    root = Path(__file__).resolve().parents[2]
+    out_dir = root / OUTPUTS_OVERLAP_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_name = output_csv_name or (
+        f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
+        f"_metro_{_safe_slug(metro_stop_ref)}_{day.strftime('%Y%m%d')}.csv"
+    )
+    out_df.to_csv(out_dir / csv_name, index=False)
+
+    return out_df
 
 
 def find_direct_options(dataset: str, origin_ref: str, dest_ref: str, day_str: str, time_str: str) -> pd.DataFrame:
