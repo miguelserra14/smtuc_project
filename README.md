@@ -97,3 +97,32 @@ No fim do MVP, deve ser possível responder com dados a:
     - [ ] cores: verde para vermelho
     - [ ] overlaps
     - [ ] índice de subserviço com parte mais densa da cidade
+
+## Checklist técnica de visualização (estado atual)
+
+### Arquitetura e organização
+
+- [x] Visualizações separadas por domínio numa package própria (`src/visualizations`)
+- [x] Escrita/export de HTML centralizada em módulo dedicado (`src/visualizations/io.py`)
+- [x] Remoção de shims de compatibilidade e APIs públicas mais explícitas
+- [ ] Uniformizar imports relativos (`from .module import ...`) em todos os pacotes de `src/`
+
+### Consistência visual
+
+- [x] Escalas robustas a outliers (percentis) para choropleths/scatter
+- [x] Paleta semântica consistente no reachability (menos tempo = melhor cor)
+- [x] Tooltip com métricas de decisão (intervalo temporal, área, modo dominante)
+- [ ] Definir tema visual único (cores/tipografia/margens) para todos os gráficos Plotly/Folium
+
+### Interatividade e performance
+
+- [x] Isócronas dinâmicas com atualização por posição do rato
+- [x] Legenda dinâmica com áreas por classe e total agregada
+- [x] Otimização de performance com debounce + limiar mínimo de movimento
+- [ ] Parametrizar os valores de performance (ex.: `debounceMs`, `minMoveMeters`) no `config.py`
+
+### Qualidade e validação
+
+- [x] Testes de integração para geração das visualizações principais
+- [x] Regressão validada após refatores de estrutura de módulos
+- [ ] Adicionar smoke test dedicado para garantir presença dos elementos-chave no HTML (legenda, classes, modo)

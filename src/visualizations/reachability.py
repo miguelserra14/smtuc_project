@@ -266,36 +266,19 @@ def create_overlap_reachability_map(
         }}
 
         function buildDynamicIsochrones(latlng) {{
-            var byThreshold = {{}};
-            thresholds.forEach(function(t) {{ byThreshold[t] = []; }});
-
-            zoneGeoJson.features.forEach(function(ft) {{
-                if (!ft || !ft.properties) return;
-                var cLat = Number(ft.properties.center_lat);
-                var cLon = Number(ft.properties.center_lon);
-                var baseReach = Number(ft.properties.reach_min);
-                if (isNaN(cLat) || isNaN(cLon) || isNaN(baseReach)) return;
-
-                var cPoint = L.latLng(cLat, cLon);
-                var dNow = mapObj.distance(latlng, cPoint);
-                var dBase = mapObj.distance(baseOrigin, cPoint);
-                var estMin = baseReach + ((dNow - dBase) / 80.0);
-
-                thresholds.forEach(function(t) {{
-                    if (estMin <= t) byThreshold[t].push(ft);
-                }});
-            }});
-
-            var cumGeo = {{}};
-            thresholds.forEach(function(t) {{
-                cumGeo[t] = unionFeatures(byThreshold[t]);
-            }});
+            var exactBands = {{
+                '0-10': [],
+                '10-20': [],
+                '20-30': [],
+                '30-40': [],
+                '40-50': [],
+                '50-60': [],
+            }};
 
             var bandFeatures = [];
             var areaByBand = {{'0-10': 0, '10-20': 0, '20-30': 0, '30-40': 0, '40-50': 0, '50-60': 0}};
             var modeByBand = {{'0-10': 'transporte público', '10-20': 'transporte público', '20-30': 'transporte público', '30-40': 'transporte público', '40-50': 'transporte público', '50-60': 'transporte público'}};
             var modeCounts = {{'0-10': {{walk: 0, pt: 0}}, '10-20': {{walk: 0, pt: 0}}, '20-30': {{walk: 0, pt: 0}}, '30-40': {{walk: 0, pt: 0}}, '40-50': {{walk: 0, pt: 0}}, '50-60': {{walk: 0, pt: 0}}}};
-            var prev = null;
 
             zoneGeoJson.features.forEach(function(ft) {{
                 if (!ft || !ft.properties) return;
@@ -316,6 +299,8 @@ def create_overlap_reachability_map(
                 else if (estMin <= 50) bandLabel = '40-50';
                 else if (estMin <= 60) bandLabel = '50-60';
                 if (!bandLabel) return;
+
+                exactBands[bandLabel].push(ft);
                 if (baseMode === 'a pé') modeCounts[bandLabel].walk += 1;
                 else modeCounts[bandLabel].pt += 1;
             }});
@@ -324,20 +309,27 @@ def create_overlap_reachability_map(
                 modeByBand[label] = modeCounts[label].walk >= modeCounts[label].pt ? 'a pé' : 'transporte público';
             }});
 
+            var cumGeo = {{}};
+            var cumulative = null;
             thresholds.forEach(function(upper) {{
-                var curr = cumGeo[upper];
-                if (!curr) {{
-                    prev = curr || prev;
-                    return;
-                }}
-                var band = prev ? diffSafe(curr, prev) : curr;
-                if (!band) {{
-                    prev = curr;
-                    return;
-                }}
-
                 var lower = upper - 10;
                 var label = lower + '-' + upper;
+
+                var thisBandUnion = unionFeatures(exactBands[label]);
+                var curr = null;
+                if (cumulative && thisBandUnion) curr = unionFeatures([cumulative, thisBandUnion]);
+                else curr = cumulative || thisBandUnion;
+                cumGeo[upper] = curr;
+
+                if (!curr) {{
+                    cumulative = curr || cumulative;
+                    return;
+                }}
+                var band = cumulative ? diffSafe(curr, cumulative) : curr;
+                if (!band) {{
+                    cumulative = curr;
+                    return;
+                }}
                 var areaKm2 = 0;
                 try {{ areaKm2 = turf.area(band) / 1000000.0; }} catch (e) {{ areaKm2 = 0; }}
 
@@ -347,7 +339,7 @@ def create_overlap_reachability_map(
                 band.properties.band_mode = modeByBand[label] || 'transporte público';
                 bandFeatures.push(band);
                 areaByBand[label] = areaKm2;
-                prev = curr;
+                cumulative = curr;
             }});
 
             return {{

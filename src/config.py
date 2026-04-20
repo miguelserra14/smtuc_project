@@ -22,3 +22,20 @@ LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"
 DEFAULT_BGRI_LAYER = "BGRI2021_0603"
 DEFAULT_OUTPUT_GAP_CSV = "outputs/population/bgri_transport_gap.csv"
+
+
+"""
+
+COmandos para gerar as visualizações:
+
+Set-Location "C:\Users\migue\OneDrive\Documentos\trabalho\side quests\smtuc 2.0"; C:/Users/migue/miniconda3/envs/smtuc312/python.exe -m http.server 8000
+
+Links visualizações:
+
+http://localhost:8000/outputs/overlap/overlap_reachability_now.html
+http://localhost:8000/outputs/population/2kmstadium.html
+http://localhost:8000/outputs/population/bgri_population_heatmap.html
+http://localhost:8000/outputs/population/bgri_population_vs_supply_scatter.html
+http://localhost:8000/outputs/population/bgri_underservice_choropleth.html
+http://localhost:8000/outputs/population/bgri_underservice_dense_population.html
+"""
