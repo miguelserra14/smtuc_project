@@ -35,6 +35,7 @@ C:/Users/migue/miniconda3/envs/smtuc312/python.exe -m http.server 8000
 Links visualizações:
 
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
+http://localhost:8000/outputs/population/bgri.html
 http://localhost:8000/outputs/population/2kmstadium.html
 http://localhost:8000/outputs/population/bgri_population_heatmap.html
 http://localhost:8000/outputs/population/bgri_population_vs_supply_scatter.html

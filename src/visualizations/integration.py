@@ -295,23 +295,56 @@ def generate_connection_visualizations(
         plot_bgcolor="white",
     )
 
-    # 2) Wait-time bar plot (sorted by temporal order)
+    # 2) Wait-time bar plot with point overlays for special cases
     # Convert metro_time to seconds for proper ordering
     waits_df_sorted = waits_df.copy()
     waits_df_sorted["metro_time_s"] = waits_df_sorted["metro_time"].apply(_hhmmss_to_seconds)
     waits_df_sorted = waits_df_sorted.sort_values("metro_time_s").reset_index(drop=True)
     waits_df_sorted["index_label"] = range(len(waits_df_sorted))
 
+    zero_waits = waits_df_sorted[pd.to_numeric(waits_df_sorted["wait_min"], errors="coerce") == 0]
+    no_link_waits = waits_df_sorted[waits_df_sorted["wait_class"] == "sem_ligacao"]
+    bar_waits = waits_df_sorted[
+        (pd.to_numeric(waits_df_sorted["wait_min"], errors="coerce") != 0)
+        & (waits_df_sorted["wait_class"] != "sem_ligacao")
+    ]
+
     fig_wait = px.bar(
-        waits_df_sorted,
+        bar_waits,
         x="index_label",
         y="wait_min",
         color="wait_class",
         title=f"Espera ate ao Proximo Autocarro ({sample_date})",
         labels={"index_label": "Hora de chegada do metro", "wait_min": "Espera (min)"},
-        color_discrete_map={"<=10": "#2a9d8f", "10-15": "#e9c46a", ">15": "#e76f51", "sem_ligacao": "#6c757d"},
+        color_discrete_map={"<=10": "#2a9d8f", "10-15": "#e9c46a", ">15": "#e76f51"},
     )
-    
+
+    if not zero_waits.empty:
+        fig_wait.add_trace(
+            go.Scatter(
+                x=zero_waits["index_label"],
+                y=[0] * len(zero_waits),
+                mode="markers",
+                name="0 min",
+                marker={"size": 11, "color": "#2a9d8f", "line": {"width": 0.5, "color": "white"}},
+                hovertemplate="%{customdata[0]}<br>Espera: 0 min<extra></extra>",
+                customdata=zero_waits[["metro_time"]].to_numpy(),
+            )
+        )
+
+    if not no_link_waits.empty:
+        fig_wait.add_trace(
+            go.Scatter(
+                x=no_link_waits["index_label"],
+                y=[0] * len(no_link_waits),
+                mode="markers",
+                name="sem ligação",
+                marker={"size": 11, "color": "#6c757d", "line": {"width": 0.5, "color": "white"}},
+                hovertemplate="%{customdata[0]}<br>Sem ligação<extra></extra>",
+                customdata=no_link_waits[["metro_time"]].to_numpy(),
+            )
+        )
+
     # Custom x-axis with temporal labels
     fig_wait.update_layout(
         plot_bgcolor="white",
@@ -323,6 +356,7 @@ def generate_connection_visualizations(
             "tickangle": -45,
         },
         yaxis={"showgrid": True, "gridcolor": "#d9d9d9", "rangemode": "tozero"},
+        legend_title_text="",
     )
 
     # 3) Period equity heatmap (coverage<=10, lost>15, median wait)

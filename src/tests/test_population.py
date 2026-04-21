@@ -22,6 +22,7 @@ from visualizations import (
     _write_readable_plotly_html,
     create_2km_choropleth_map,
     create_choropleth_map,
+    create_population_dashboard_html,
     create_population_heatmap,
     create_scatter_plot,
 )
@@ -159,3 +160,15 @@ def test_bgri_population_heatmap(bgri_underserved_context: dict[str, object]) ->
     )
     print(f"Heatmap de população gerado: {population_heatmap_html}")
     assert population_heatmap_html.exists()
+
+
+@pytest.mark.integration
+def test_bgri_population_dashboard(bgri_underserved_context: dict[str, object]) -> None:
+    """Generate the combined population dashboard that embeds the three main views."""
+    out_dir = bgri_underserved_context["out_dir"]
+
+    dashboard_html = out_dir / "bgri.html"
+    create_population_dashboard_html(dashboard_html)
+
+    print(f"Dashboard de população gerado: {dashboard_html}")
+    assert dashboard_html.exists()

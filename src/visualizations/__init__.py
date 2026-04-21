@@ -3,6 +3,7 @@ from .integration import generate_connection_visualizations
 from .population_maps import (
     create_2km_choropleth_map,
     create_choropleth_map,
+    create_population_dashboard_html,
     create_population_heatmap,
     create_scatter_plot,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "generate_connection_visualizations",
     "create_2km_choropleth_map",
     "create_choropleth_map",
+    "create_population_dashboard_html",
     "create_population_heatmap",
     "create_scatter_plot",
     "create_overlap_reachability_map",
