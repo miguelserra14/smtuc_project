@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -9,14 +11,15 @@ from overlap.transit import (
     build_line_stop_vs_metro_table,
     build_metro_bus_connection_metrics,
 )
-from visualizations.io import _write_readable_plotly_html
 
 try:
     import plotly.express as px
     import plotly.graph_objects as go
+    import plotly.io as pio
 except Exception:  # pragma: no cover - optional dependency guard
     px = None
     go = None
+    pio = None
 
 
 def _safe_slug(value: str) -> str:
@@ -97,6 +100,89 @@ def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def create_combined_integration_dashboard(
+        output_path: Path | str,
+        title: str,
+        timeline_fig: object,
+        waits_fig: object,
+        equity_fig: object,
+) -> str:
+        """Create a single HTML page with timeline, waits and equity in one document."""
+        if pio is None:
+                raise ImportError("plotly.io nao esta disponivel para gerar visualizacoes")
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        timeline_json = pio.to_json(timeline_fig)
+        waits_json = pio.to_json(waits_fig)
+        equity_json = pio.to_json(equity_fig)
+
+        page = f"""<!DOCTYPE html>
+<html lang=\"pt\">
+<head>
+    <meta charset=\"utf-8\" />
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+    <meta name=\"color-scheme\" content=\"light only\" />
+    <title>{html.escape(title)}</title>
+    <script src=\"https://cdn.plot.ly/plotly-3.4.0.min.js\"></script>
+    <style>
+        :root {{
+            --bg: #f7f8fa;
+            --card: #ffffff;
+            --ink: #222222;
+            --muted: #5a6573;
+            --border: #dde2e8;
+            --accent: #145da0;
+            color-scheme: light only;
+        }}
+        html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: Segoe UI, Tahoma, sans-serif; }}
+        .container {{ max-width: 1360px; margin: 0 auto; padding: 24px 16px 40px; }}
+        h1 {{ margin: 0 0 8px; color: var(--accent); font-size: 1.55rem; }}
+        p {{ margin: 0 0 20px; color: var(--muted); }}
+        .panel {{ background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }}
+        .panel h2 {{ margin: 0; padding: 12px 14px; font-size: 1rem; border-bottom: 1px solid var(--border); }}
+        .plot {{ width: 100%; height: 560px; }}
+        .plot, .plot * {{ forced-color-adjust: none !important; }}
+        @media (max-width: 860px) {{
+            .plot {{ height: 460px; }}
+            h1 {{ font-size: 1.25rem; }}
+        }}
+    </style>
+</head>
+<body>
+    <main class=\"container\">
+        <h1>{html.escape(title)}</h1>
+        <p>Dashboard agregado com as 3 visualizacoes de integracao.</p>
+        <section class=\"panel\">
+            <h2>Timeline de passagens</h2>
+            <div id=\"plot_timeline\" class=\"plot\"></div>
+        </section>
+        <section class=\"panel\">
+            <h2>Espera de transbordo</h2>
+            <div id=\"plot_waits\" class=\"plot\"></div>
+        </section>
+        <section class=\"panel\">
+            <h2>Equidade temporal</h2>
+            <div id=\"plot_equity\" class=\"plot\"></div>
+        </section>
+    </main>
+    <script>
+        const figTimeline = {timeline_json};
+        const figWaits = {waits_json};
+        const figEquity = {equity_json};
+        const cfg = {{ responsive: true }};
+        Plotly.newPlot('plot_timeline', figTimeline.data, figTimeline.layout, cfg);
+        Plotly.newPlot('plot_waits', figWaits.data, figWaits.layout, cfg);
+        Plotly.newPlot('plot_equity', figEquity.data, figEquity.layout, cfg);
+    </script>
+</body>
+</html>
+"""
+        output_path.write_text(page, encoding="utf-8")
+        return str(output_path)
+
+
 def generate_connection_visualizations(
     metro_stop_ref: str,
     bus_stop_ref: str,
@@ -105,13 +191,15 @@ def generate_connection_visualizations(
     metro_origin_ref: str = "Portagem",
     bus_origin_ref: str = "Portagem",
     output_prefix: str | None = None,
+    output_subdir: str | None = None,
+    fixed_html_name: str | None = None,
 ) -> dict[str, str]:
     """
     Gera visualizacoes de coordenacao metro -> autocarro e grava HTML em outputs/integration.
 
     Retorna um dicionario com os caminhos dos ficheiros gerados.
     """
-    if px is None or go is None:
+    if px is None or go is None or pio is None:
         raise ImportError("plotly nao esta disponivel para gerar visualizacoes")
 
     schedule_df = build_line_stop_vs_metro_table(
@@ -133,7 +221,17 @@ def generate_connection_visualizations(
 
     waits_df = _build_waits_table(schedule_df)
 
-    out_root = Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+    out_root_base = Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+    if output_subdir:
+        out_root = out_root_base / str(output_subdir)
+    else:
+        stop_ref_norm = str(metro_stop_ref).strip().lower()
+        if "portagem" in stop_ref_norm:
+            out_root = out_root_base / "portagem"
+        elif "portela" in stop_ref_norm:
+            out_root = out_root_base / "portela"
+        else:
+            out_root = out_root_base
     out_root.mkdir(parents=True, exist_ok=True)
 
     sample_date = str(schedule_df["date"].iloc[0]) if not schedule_df.empty else (day_str or "unknown_date")
@@ -275,31 +373,48 @@ def generate_connection_visualizations(
     )
     fig_heat.update_layout(plot_bgcolor="white")
 
-    timeline_path = out_root / f"{prefix}_tl_{date_tag}.html"
-    waits_path = out_root / f"{prefix}_wt_{date_tag}.html"
-    heatmap_path = out_root / f"{prefix}_eq_{date_tag}.html"
-    waits_csv_path = out_root / f"{prefix}_wt_{date_tag}.csv"
+    waits_csv_path = out_root / f"{prefix}_wt.csv"
     schedule_csv_path = out_root / (
         f"line_{_safe_slug(line_number)}_bus_{_safe_slug(bus_stop_ref)}"
-        f"_metro_{_safe_slug(metro_stop_ref)}_{date_tag}.csv"
+        f"_metro_{_safe_slug(metro_stop_ref)}.csv"
     )
     metrics_csv_path = out_root / (
         f"line_{_safe_slug(line_number)}_connection_metrics_"
-        f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}_{date_tag}.csv"
+        f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}.csv"
     )
 
-    _write_readable_plotly_html(fig_timeline, timeline_path, title="Timeline de Passagens")
-    _write_readable_plotly_html(fig_wait, waits_path, title="Espera de Transbordo")
-    _write_readable_plotly_html(fig_heat, heatmap_path, title="Equidade Temporal")
     waits_df.to_csv(waits_csv_path, index=False)
+
+    root_schedule_path = out_root_base / schedule_csv_path.name
+    if root_schedule_path.exists() and root_schedule_path.resolve() != schedule_csv_path.resolve():
+        if schedule_csv_path.exists():
+            schedule_csv_path.unlink()
+        shutil.move(str(root_schedule_path), str(schedule_csv_path))
+
+    root_metrics_path = out_root_base / metrics_csv_path.name
+    if root_metrics_path.exists() and root_metrics_path.resolve() != metrics_csv_path.resolve():
+        if metrics_csv_path.exists():
+            metrics_csv_path.unlink()
+        shutil.move(str(root_metrics_path), str(metrics_csv_path))
+
+    combined_name = fixed_html_name or f"{prefix}_all.html"
+    combined_path = out_root / combined_name
+    create_combined_integration_dashboard(
+        output_path=combined_path,
+        title=(
+            f"Integracao Linha {line_number}: {bus_origin_ref} -> {bus_stop_ref} "
+            f"vs Metro {metro_origin_ref} -> {metro_stop_ref} ({sample_date})"
+        ),
+        timeline_fig=fig_timeline,
+        waits_fig=fig_wait,
+        equity_fig=fig_heat,
+    )
 
     return {
         "output_dir": str(out_root),
         "schedule_csv": str(schedule_csv_path),
         "metrics_csv": str(metrics_csv_path),
-        "timeline_html": str(timeline_path),
-        "waits_html": str(waits_path),
-        "equity_html": str(heatmap_path),
+        "combined_html": str(combined_path),
         "waits_csv": str(waits_csv_path),
         "metrics_rows": str(len(metrics_df)),
     }

@@ -212,6 +212,28 @@ def _seconds_to_hhmmss(value: int) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
+def nearest_business_day(from_day: date | None = None) -> date:
+    """Return today if weekday, otherwise the nearest weekday (Sat->Fri, Sun->Mon)."""
+    day = from_day or date.today()
+    wd = day.weekday()
+    if wd <= 4:
+        return day
+    if wd == 5:
+        return day - timedelta(days=1)
+    return day + timedelta(days=1)
+
+
+def resolve_reference_day(day_str: str | None = None) -> date:
+    """
+    Resolve the reference day for integration analyses.
+
+    Any explicit day provided by callers is intentionally ignored so execution stays
+    anchored to the current business day policy.
+    """
+    _ = day_str  # kept for API compatibility and explicit intent
+    return nearest_business_day(date.today())
+
+
 def build_line_stop_vs_metro_table(
     metro_stop_ref: str,
     bus_stop_ref: str,
@@ -225,9 +247,9 @@ def build_line_stop_vs_metro_table(
     Gera uma tabela comparando horários de autocarro e metro numa paragem de destino.
 
     Requer apenas: nome/id da paragem de metro, nome/id da paragem de autocarro e número da linha.
-    Por omissão, calcula para a próxima segunda-feira a partir de hoje.
+    O dia de referência é sempre o dia útil atual (ou o dia útil mais próximo).
     """
-    day = _parse_day(day_str) if day_str else next_monday(date.today())
+    day = resolve_reference_day(day_str)
 
     gtfs_bus = _load_gtfs_cached("smtuc")
     gtfs_metro = _load_gtfs_cached("metrobus")
@@ -319,7 +341,7 @@ def build_line_stop_vs_metro_table(
         out_dir.mkdir(parents=True, exist_ok=True)
         csv_name = output_csv_name or (
             f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
-            f"_metro_{_safe_slug(metro_stop_ref)}_{day.strftime('%Y%m%d')}.csv"
+            f"_metro_{_safe_slug(metro_stop_ref)}.csv"
         )
         out_df.to_csv(out_dir / csv_name, index=False)
         return out_df
@@ -346,7 +368,7 @@ def build_line_stop_vs_metro_table(
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
         f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
-        f"_metro_{_safe_slug(metro_stop_ref)}_{day.strftime('%Y%m%d')}.csv"
+        f"_metro_{_safe_slug(metro_stop_ref)}.csv"
     )
     out_df.to_csv(out_dir / csv_name, index=False)
 
@@ -586,11 +608,10 @@ def build_metro_bus_connection_metrics(
 
         metrics_df = pd.DataFrame(records, columns=["scope", "metric", "value", "unit", "note"])
 
-    sample_date = day_str if day_str else next_monday(date.today()).strftime("%Y-%m-%d")
+    sample_date = resolve_reference_day(day_str).strftime("%Y-%m-%d")
     csv_name = output_csv_name or (
         f"line_{_safe_slug(line_number)}_connection_metrics_"
-        f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}_"
-        f"{sample_date.replace('-', '')}.csv"
+        f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}.csv"
     )
 
     root = Path(__file__).resolve().parents[2]
