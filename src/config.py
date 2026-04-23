@@ -38,11 +38,6 @@ Nota: todas as datas mostradas nas visualizações são calculadas automaticamen
 
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
 http://localhost:8000/outputs/population/bgri.html
-http://localhost:8000/outputs/population/2kmstadium.html
-http://localhost:8000/outputs/population/bgri_population_heatmap.html
-http://localhost:8000/outputs/population/bgri_population_vs_supply_scatter.html
-http://localhost:8000/outputs/population/bgri_underservice_choropleth.html
-http://localhost:8000/outputs/population/bgri_underservice_dense_population.html
 
 Views integração (linha 54, data útil automática):
 

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light only" />
+    <title>__TITLE__</title>
+    <style>
+        :root {
+            --bg: #f7f8fa;
+            --card: #ffffff;
+            --ink: #222222;
+            --muted: #5a6573;
+            --border: #dde2e8;
+            --accent: #145da0;
+            color-scheme: light only;
+        }
+        html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: Segoe UI, Tahoma, sans-serif; }
+        .container { max-width: 1360px; margin: 0 auto; padding: 24px 16px 40px; }
+        h1 { margin: 0 0 8px; color: var(--accent); font-size: 1.55rem; }
+        p { margin: 0 0 20px; color: var(--muted); }
+        .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+        .panel h2 { margin: 0; padding: 12px 14px; font-size: 1rem; border-bottom: 1px solid var(--border); }
+        .panel iframe { width: 100%; height: 700px; border: 0; display: block; background: #fff; }
+        @media (max-width: 860px) {
+            .panel iframe { height: 520px; }
+            h1 { font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>__TITLE__</h1>
+        <p>Painel agregado com heatmap de população e duas visualizações de subserviço.</p>
+        <section class="panel">
+            <h2>Heatmap de população</h2>
+            <iframe srcdoc="__HEATMAP_SRCDOC__" loading="lazy" title="Heatmap de população"></iframe>
+        </section>
+        <section class="panel" style="padding: 16px 14px;">
+            <p style="margin: 0; color: var(--muted); line-height: 1.45;">
+                O índice de subserviço mede a pressão de serviço em cada BGRI e é calculado por
+                <strong>índice de subserviço = população residente / (passagens no dia + 1)</strong>.
+                Aqui, <strong>população residente</strong> corresponde a <strong>N_INDIVIDUOS</strong> e
+                <strong>passagens no dia</strong> corresponde a <strong>supply_departures</strong>.
+                O <strong>+ 1</strong> evita divisões por zero e faz com que zonas sem oferta fiquem com pontuação mais alta,
+                enquanto zonas com mais passagens tenham pontuação mais baixa.
+            </p>
+        </section>
+        <section class="panel">
+            <h2>Índice de subserviço</h2>
+            <iframe srcdoc="__CHOROPLETH_SRCDOC__" loading="lazy" title="Índice de subserviço"></iframe>
+        </section>
+        <section class="panel">
+            <h2>Estádio a 2 km</h2>
+            <iframe srcdoc="__STADIUM_SRCDOC__" loading="lazy" title="Estádio a 2 km"></iframe>
+        </section>
+    </main>
+</body>
+</html>

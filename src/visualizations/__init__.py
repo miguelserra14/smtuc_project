@@ -5,7 +5,6 @@ from .population_maps import (
     create_choropleth_map,
     create_population_dashboard_html,
     create_population_heatmap,
-    create_scatter_plot,
 )
 from .reachability import create_overlap_reachability_map
 
@@ -17,6 +16,5 @@ __all__ = [
     "create_choropleth_map",
     "create_population_dashboard_html",
     "create_population_heatmap",
-    "create_scatter_plot",
     "create_overlap_reachability_map",
 ]

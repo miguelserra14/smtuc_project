@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date
-from pathlib import Path
 
 import pandas as pd
 
@@ -19,12 +18,7 @@ from population.data_processing import (
     get_population_near_stadium,
 )
 from visualizations import (
-    _write_readable_plotly_html,
-    create_2km_choropleth_map,
-    create_choropleth_map,
     create_population_dashboard_html,
-    create_population_heatmap,
-    create_scatter_plot,
 )
 from src.config import CATCHMENT_M, STADIUM_RADIUS_M, OUTPUTS_POPULATION_DIR
 
@@ -94,81 +88,20 @@ def test_bgri_underserved_zones_dataset(bgri_underserved_context: dict[str, obje
 
 
 @pytest.mark.integration
-def test_bgri_underserved_choropleth(bgri_underserved_context: dict[str, object]) -> None:
-    """Generate and validate underserved choropleth visualization."""
-    merged = bgri_underserved_context["merged"]
-    day_str = bgri_underserved_context["day_str"]
-    out_dir = bgri_underserved_context["out_dir"]
-
-    # Generate main choropleth
-    fig_map = create_choropleth_map(merged, day_str, color_scale="YlOrRd")
-    map_html = out_dir / "bgri_underservice_choropleth.html"
-    _write_readable_plotly_html(fig_map, map_html, "BGRI Coimbra — Choropleth")
-
-    print(f"Mapa gerado: {map_html}")
-    assert map_html.exists()
-
-
-@pytest.mark.integration
-def test_bgri_2km_choropleth(bgri_underserved_context: dict[str, object]) -> None:
-    """Generate and validate 2km stadium choropleth visualization."""
-    merged = bgri_underserved_context["merged"]
-    day_str = bgri_underserved_context["day_str"]
-    out_dir = bgri_underserved_context["out_dir"]
-
-    # Generate 2km choropleth
-    merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M*2)
-    fig_map_2km = create_2km_choropleth_map(merged_2km, day_str, color_scale="YlOrRd")
-    map_2km_html = out_dir / "2kmstadium.html"
-    _write_readable_plotly_html(fig_map_2km, map_2km_html, "BGRI Coimbra — Choropleth 2km")
-
-    print(f"Mapa (<=2km estádio) gerado: {map_2km_html}")
-    assert map_2km_html.exists()
-
-
-@pytest.mark.integration
-def test_bgri_population_supply_scatter(bgri_underserved_context: dict[str, object]) -> None:
-    """Generate and validate population vs supply scatter visualization."""
-    merged = bgri_underserved_context["merged"]
-    day_str = bgri_underserved_context["day_str"]
-    out_dir = bgri_underserved_context["out_dir"]
-
-    # Generate scatter plot
-    scatter_df = merged[merged["N_INDIVIDUOS"] > 0].copy()
-    fig_scatter = create_scatter_plot(scatter_df, day_str)
-    scatter_html = out_dir / "bgri_population_vs_supply_scatter.html"
-    _write_readable_plotly_html(fig_scatter, scatter_html, "BGRI Coimbra — Scatter")
-
-    print(f"Scatter gerado: {scatter_html}")
-    assert scatter_html.exists()
-
-
-@pytest.mark.integration
-def test_bgri_population_heatmap(bgri_underserved_context: dict[str, object]) -> None:
-    """Generate and validate population heatmap visualization."""
-    merged = bgri_underserved_context["merged"]
-    day_str = bgri_underserved_context["day_str"]
-    out_dir = bgri_underserved_context["out_dir"]
-
-    # Generate population heatmap (red -> green)
-    fig_population_heatmap = create_population_heatmap(merged, day_str, color_scale="RdYlGn")
-    population_heatmap_html = out_dir / "bgri_population_heatmap.html"
-    _write_readable_plotly_html(
-        fig_population_heatmap,
-        population_heatmap_html,
-        "BGRI Coimbra — Heatmap de População",
-    )
-    print(f"Heatmap de população gerado: {population_heatmap_html}")
-    assert population_heatmap_html.exists()
-
-
-@pytest.mark.integration
 def test_bgri_population_dashboard(bgri_underserved_context: dict[str, object]) -> None:
-    """Generate the combined population dashboard that embeds the three main views."""
+    """Generate the combined population dashboard with embedded population maps."""
+    merged = bgri_underserved_context["merged"]
+    day_str = bgri_underserved_context["day_str"]
     out_dir = bgri_underserved_context["out_dir"]
+    merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M*2)
 
     dashboard_html = out_dir / "bgri.html"
-    create_population_dashboard_html(dashboard_html)
+    create_population_dashboard_html(
+        dashboard_html,
+        merged=merged,
+        merged_2km=merged_2km,
+        day_str=day_str,
+    )
 
     print(f"Dashboard de população gerado: {dashboard_html}")
     assert dashboard_html.exists()

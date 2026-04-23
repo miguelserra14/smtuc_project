@@ -23,6 +23,14 @@ except Exception:  # pragma: no cover - optional dependency guard
     pio = None
 
 
+_TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+
+
+def _read_template(template_name: str) -> str:
+    template_path = _TEMPLATE_DIR / template_name
+    return template_path.read_text(encoding="utf-8")
+
+
 def _safe_slug(value: str) -> str:
     out = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(value).strip())
     while "__" in out:
@@ -126,148 +134,31 @@ def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_combined_integration_dashboard(
-        output_path: Path | str,
-        title: str,
-        timeline_fig: object,
-        waits_fig: object,
-        equity_fig: object,
+    output_path: Path | str,
+    title: str,
+    timeline_fig: object,
+    waits_fig: object,
+    equity_fig: object,
 ) -> str:
-        """Create a single HTML page with timeline, waits and equity in one document."""
-        if pio is None:
-                raise ImportError("plotly.io nao esta disponivel para gerar visualizacoes")
+    """Create a single HTML page with timeline, waits and equity in one document."""
+    if pio is None:
+        raise ImportError("plotly.io nao esta disponivel para gerar visualizacoes")
 
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        timeline_json = pio.to_json(timeline_fig)
-        waits_json = pio.to_json(waits_fig)
-        equity_json = pio.to_json(equity_fig)
+    timeline_json = pio.to_json(timeline_fig)
+    waits_json = pio.to_json(waits_fig)
+    equity_json = pio.to_json(equity_fig)
 
-        page = f"""<!DOCTYPE html>
-<html lang=\"pt\">
-<head>
-    <meta charset=\"utf-8\" />
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
-    <meta name=\"color-scheme\" content=\"light only\" />
-    <title>{html.escape(title)}</title>
-    <script src=\"https://cdn.plot.ly/plotly-3.4.0.min.js\"></script>
-    <style>
-        :root {{
-            --bg: #f7f8fa;
-            --card: #ffffff;
-            --ink: #222222;
-            --muted: #5a6573;
-            --border: #dde2e8;
-            --accent: #145da0;
-            color-scheme: light only;
-        }}
-        html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: Segoe UI, Tahoma, sans-serif; }}
-        .container {{ max-width: 1360px; margin: 0 auto; padding: 24px 16px 40px; }}
-        h1 {{ margin: 0 0 8px; color: var(--accent); font-size: 1.55rem; }}
-        p {{ margin: 0 0 20px; color: var(--muted); }}
-        .panel {{ background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }}
-        .panel h2 {{ margin: 0; padding: 12px 14px; font-size: 1rem; border-bottom: 1px solid var(--border); }}
-        .plot {{ width: 100%; height: 560px; }}
-        .plot, .plot * {{ forced-color-adjust: none !important; }}
-        @media (max-width: 860px) {{
-            .plot {{ height: 460px; }}
-            h1 {{ font-size: 1.25rem; }}
-        }}
-    </style>
-</head>
-<body>
-    <main class=\"container\">
-        <h1 id=\"dashboard-title\">{html.escape(title)}</h1>
-        <p>Dashboard agregado com as 3 visualizacoes de integracao.</p>
-        <section class=\"panel\">
-            <h2>Timeline de passagens</h2>
-            <div id=\"plot_timeline\" class=\"plot\"></div>
-        </section>
-        <section class=\"panel\">
-            <h2>Espera de transbordo</h2>
-            <div id=\"plot_waits\" class=\"plot\"></div>
-        </section>
-        <section class=\"panel\">
-            <h2>Equidade temporal</h2>
-            <div id=\"plot_equity\" class=\"plot\"></div>
-        </section>
-    </main>
-    <script>
-        const figTimeline = {timeline_json};
-        const figWaits = {waits_json};
-        const figEquity = {equity_json};
-        const cfg = {{ responsive: true }};
+    page = _read_template("integration_dashboard.html")
+    page = page.replace("__TITLE__", html.escape(title))
+    page = page.replace("__TIMELINE_JSON__", timeline_json)
+    page = page.replace("__WAITS_JSON__", waits_json)
+    page = page.replace("__EQUITY_JSON__", equity_json)
 
-        function pad2(v) {{
-            return String(v).padStart(2, '0');
-        }}
-
-        function nearestBusinessDayStr(now) {{
-            const d = new Date(now.getTime());
-            const wd = d.getDay(); // 0=Sun, 6=Sat
-            if (wd === 6) d.setDate(d.getDate() - 1); // Sat -> Fri
-            else if (wd === 0) d.setDate(d.getDate() + 1); // Sun -> Mon
-            return `${{d.getFullYear()}}-${{pad2(d.getMonth() + 1)}}-${{pad2(d.getDate())}}`;
-        }}
-
-        function replaceDateSuffix(text, dayStr) {{
-            if (!text) return text;
-            const re = /\\(\\d{{4}}-\\d{{2}}-\\d{{2}}\\)$/;
-            if (re.test(text)) return text.replace(re, `(${{dayStr}})`);
-            return `${{text}} (${{dayStr}})`;
-        }}
-
-        function applyAutoBusinessDay() {{
-            const dayStr = nearestBusinessDayStr(new Date());
-            const titleEl = document.getElementById('dashboard-title');
-            if (titleEl) titleEl.textContent = replaceDateSuffix(titleEl.textContent, dayStr);
-            document.title = replaceDateSuffix(document.title, dayStr);
-
-            figTimeline.layout = figTimeline.layout || {{}};
-            figWaits.layout = figWaits.layout || {{}};
-            figEquity.layout = figEquity.layout || {{}};
-
-            figTimeline.layout.title = figTimeline.layout.title || {{}};
-            figWaits.layout.title = figWaits.layout.title || {{}};
-            figEquity.layout.title = figEquity.layout.title || {{}};
-
-            if (typeof figTimeline.layout.title === 'string') {{
-                figTimeline.layout.title = replaceDateSuffix(figTimeline.layout.title, dayStr);
-            }} else {{
-                figTimeline.layout.title.text = replaceDateSuffix(figTimeline.layout.title.text || '', dayStr);
-            }}
-
-            if (typeof figWaits.layout.title === 'string') {{
-                figWaits.layout.title = replaceDateSuffix(figWaits.layout.title, dayStr);
-            }} else {{
-                figWaits.layout.title.text = replaceDateSuffix(figWaits.layout.title.text || '', dayStr);
-            }}
-
-            if (typeof figEquity.layout.title === 'string') {{
-                figEquity.layout.title = replaceDateSuffix(figEquity.layout.title, dayStr);
-            }} else {{
-                figEquity.layout.title.text = replaceDateSuffix(figEquity.layout.title.text || '', dayStr);
-            }}
-        }}
-
-        applyAutoBusinessDay();
-        Plotly.newPlot('plot_timeline', figTimeline.data, figTimeline.layout, cfg);
-        Plotly.newPlot('plot_waits', figWaits.data, figWaits.layout, cfg);
-        Plotly.newPlot('plot_equity', figEquity.data, figEquity.layout, cfg);
-
-        // Keep page date fresh if user leaves dashboard open across day boundaries.
-        setInterval(() => {{
-            applyAutoBusinessDay();
-            Plotly.relayout('plot_timeline', figTimeline.layout);
-            Plotly.relayout('plot_waits', figWaits.layout);
-            Plotly.relayout('plot_equity', figEquity.layout);
-        }}, 60000);
-    </script>
-</body>
-</html>
-"""
-        output_path.write_text(page, encoding="utf-8")
-        return str(output_path)
+    output_path.write_text(page, encoding="utf-8")
+    return str(output_path)
 
 
 def generate_connection_visualizations(

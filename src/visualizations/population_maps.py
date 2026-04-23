@@ -13,77 +13,46 @@ except Exception:  # pragma: no cover - optional dependency guard
     px = None
 
 
-def create_population_dashboard_html(output_path: Path | str, title: str = "BGRI Coimbra — Painel de População") -> str:
-        """Create a single HTML dashboard that embeds the three main population visualizations."""
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+_TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
-        heatmap_rel = "bgri_population_heatmap.html"
-        choropleth_rel = "bgri_underservice_choropleth.html"
-        stadium_rel = "2kmstadium.html"
 
-        page = f"""<!DOCTYPE html>
-<html lang=\"pt\">
-<head>
-    <meta charset=\"utf-8\" />
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
-    <meta name=\"color-scheme\" content=\"light only\" />
-    <title>{html.escape(title)}</title>
-    <style>
-        :root {{
-            --bg: #f7f8fa;
-            --card: #ffffff;
-            --ink: #222222;
-            --muted: #5a6573;
-            --border: #dde2e8;
-            --accent: #145da0;
-            color-scheme: light only;
-        }}
-        html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: Segoe UI, Tahoma, sans-serif; }}
-        .container {{ max-width: 1360px; margin: 0 auto; padding: 24px 16px 40px; }}
-        h1 {{ margin: 0 0 8px; color: var(--accent); font-size: 1.55rem; }}
-        p {{ margin: 0 0 20px; color: var(--muted); }}
-        .panel {{ background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }}
-        .panel h2 {{ margin: 0; padding: 12px 14px; font-size: 1rem; border-bottom: 1px solid var(--border); }}
-        .panel iframe {{ width: 100%; height: 700px; border: 0; display: block; background: #fff; }}
-        @media (max-width: 860px) {{
-            .panel iframe {{ height: 520px; }}
-            h1 {{ font-size: 1.25rem; }}
-        }}
-    </style>
-</head>
-<body>
-    <main class=\"container\">
-        <h1>{html.escape(title)}</h1>
-        <p>Painel agregado com heatmap de população e duas visualizações de subserviço.</p>
-        <section class=\"panel\">
-            <h2>Heatmap de população</h2>
-            <iframe src=\"{heatmap_rel}\" loading=\"lazy\" title=\"Heatmap de população\"></iframe>
-        </section>
-        <section class=\"panel\" style=\"padding: 16px 14px;\">
-            <p style=\"margin: 0; color: var(--muted); line-height: 1.45;\">
-                O índice de subserviço mede a pressão de serviço em cada BGRI e é calculado por
-                <strong>índice de subserviço = população residente / (passagens no dia + 1)</strong>.
-                Aqui, <strong>população residente</strong> corresponde a <strong>N_INDIVIDUOS</strong> e
-                <strong>passagens no dia</strong> corresponde a <strong>supply_departures</strong>.
-                O <strong>+ 1</strong> evita divisões por zero e faz com que zonas sem oferta fiquem com pontuação mais alta,
-                enquanto zonas com mais passagens tenham pontuação mais baixa.
-            </p>
-        </section>
-        <section class=\"panel\">
-            <h2>Índice de subserviço</h2>
-            <iframe src=\"{choropleth_rel}\" loading=\"lazy\" title=\"Índice de subserviço\"></iframe>
-        </section>
-        <section class=\"panel\">
-            <h2>Estádio a 2 km</h2>
-            <iframe src=\"{stadium_rel}\" loading=\"lazy\" title=\"Estádio a 2 km\"></iframe>
-        </section>
-    </main>
-</body>
-</html>
-"""
-        output_path.write_text(page, encoding="utf-8")
-        return str(output_path)
+def _read_template(template_name: str) -> str:
+    template_path = _TEMPLATE_DIR / template_name
+    return template_path.read_text(encoding="utf-8")
+
+
+def _figure_to_srcdoc(fig: object) -> str:
+    """Serialize a Plotly figure into escaped full HTML for iframe srcdoc."""
+    html_doc = fig.to_html(full_html=True, include_plotlyjs="cdn")
+    return html.escape(html_doc, quote=True)
+
+
+def create_population_dashboard_html(
+    output_path: Path | str,
+    merged: gpd.GeoDataFrame,
+    merged_2km: gpd.GeoDataFrame,
+    day_str: str,
+    title: str = "BGRI Coimbra — Painel de População",
+) -> str:
+    """Create a single HTML dashboard that embeds the three main population visualizations."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    heatmap_fig = create_population_heatmap(merged, day_str, color_scale="RdYlGn")
+    choropleth_fig = create_choropleth_map(merged, day_str, color_scale="YlOrRd")
+    stadium_fig = create_2km_choropleth_map(merged_2km, day_str, color_scale="YlOrRd")
+
+    heatmap_srcdoc = _figure_to_srcdoc(heatmap_fig)
+    choropleth_srcdoc = _figure_to_srcdoc(choropleth_fig)
+    stadium_srcdoc = _figure_to_srcdoc(stadium_fig)
+
+    page = _read_template("population_dashboard.html")
+    page = page.replace("__TITLE__", html.escape(title))
+    page = page.replace("__HEATMAP_SRCDOC__", heatmap_srcdoc)
+    page = page.replace("__CHOROPLETH_SRCDOC__", choropleth_srcdoc)
+    page = page.replace("__STADIUM_SRCDOC__", stadium_srcdoc)
+    output_path.write_text(page, encoding="utf-8")
+    return str(output_path)
 
 
 def _create_choropleth_generic(
@@ -176,69 +145,3 @@ def create_population_heatmap(
             "BGRI2021": True,
         },
     )
-
-
-def create_scatter_plot(
-    scatter_df,
-    day_str: str,
-) -> object:
-    if px is None:
-        raise ImportError("plotly não está disponível para gerar visualizações")
-
-    scatter_score_p5 = float(scatter_df["underservice_score"].quantile(0.05))
-    scatter_score_p95 = float(scatter_df["underservice_score"].quantile(0.95))
-    if scatter_score_p95 <= scatter_score_p5:
-        scatter_score_p5 = float(scatter_df["underservice_score"].min())
-        scatter_score_p95 = float(scatter_df["underservice_score"].max())
-    if scatter_score_p95 <= scatter_score_p5:
-        scatter_score_p95 = scatter_score_p5 + 1.0
-
-    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
-
-    fig_scatter = px.scatter(
-        scatter_df,
-        x="supply_departures",
-        y="N_INDIVIDUOS",
-        color="underservice_score",
-        size="N_INDIVIDUOS",
-        hover_name="BGRI2021",
-        color_continuous_scale="YlOrRd",
-        range_color=(scatter_score_p5, scatter_score_p95),
-        title=f"População vs Oferta por BGRI (dia {ref_day})",
-        labels={
-            "supply_departures": "Oferta (n.º de passagens no dia)",
-            "N_INDIVIDUOS": "População",
-            "underservice_score": "Índice de subserviço",
-        },
-    )
-    fig_scatter.update_traces(
-        marker={
-            "opacity": 0.9,
-            "line": {"color": "black", "width": 0.7},
-        },
-        selector={"mode": "markers"},
-    )
-    fig_scatter.update_layout(
-        margin={"l": 0, "r": 30, "t": 50, "b": 0},
-        plot_bgcolor="white",
-        xaxis={
-            "gridcolor": "black",
-            "showgrid": False,
-            "showline": False,
-            "zeroline": True,
-            "zerolinecolor": "black",
-            "zerolinewidth": 2,
-            "range": [0, None],
-        },
-        yaxis={
-            "gridcolor": "black",
-            "showgrid": False,
-            "showline": False,
-            "zeroline": True,
-            "zerolinecolor": "black",
-            "zerolinewidth": 2,
-            "range": [0, None],
-        },
-    )
-
-    return fig_scatter
