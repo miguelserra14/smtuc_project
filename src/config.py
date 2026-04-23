@@ -34,6 +34,8 @@ C:/Users/migue/miniconda3/envs/smtuc312/python.exe -m http.server 8000
 
 Links visualizações:
 
+Nota: todas as datas mostradas nas visualizações são calculadas automaticamente pela função de dia útil mais próximo (resolve_reference_day).
+
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
 http://localhost:8000/outputs/population/bgri.html
 http://localhost:8000/outputs/population/2kmstadium.html

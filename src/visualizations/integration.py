@@ -10,6 +10,7 @@ from config import OUTPUTS_INTEGRATION_DIR
 from overlap.transit import (
     build_line_stop_vs_metro_table,
     build_metro_bus_connection_metrics,
+    resolve_reference_day,
 )
 
 try:
@@ -43,6 +44,17 @@ def _seconds_to_hhmmss(value: int) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
+def _line_display(line_number: str | int | list[str | int] | tuple[str | int, ...]) -> str:
+    if isinstance(line_number, (list, tuple, set)):
+        items = [str(v).strip() for v in line_number if str(v).strip()]
+        return "+".join(dict.fromkeys(items))
+    text = str(line_number).strip()
+    if "," in text:
+        items = [p.strip() for p in text.split(",") if p.strip()]
+        return "+".join(dict.fromkeys(items))
+    return text
+
+
 def _period_label(seconds: int) -> str:
     hour = int(seconds // 3600)
     if 6 <= hour < 12:
@@ -55,13 +67,23 @@ def _period_label(seconds: int) -> str:
 
 
 def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
-    bus_times = sorted(
-        {
-            _hhmmss_to_seconds(v)
-            for v in schedule_df["bus_time"].astype(str).tolist()
-            if str(v).strip()
-        }
-    )
+    if "bus_line_passage" in schedule_df.columns:
+        bus_line_col = schedule_df["bus_line_passage"].astype(str).str.strip()
+    else:
+        bus_line_col = schedule_df.get("bus_line", pd.Series([""] * len(schedule_df))).astype(str).str.strip()
+
+    bus_events = []
+    for time_v, line_v in zip(schedule_df["bus_time"].astype(str).tolist(), bus_line_col.tolist()):
+        if not str(time_v).strip():
+            continue
+        bus_events.append(
+            {
+                "time_s": _hhmmss_to_seconds(time_v),
+                "time": str(time_v),
+                "line": str(line_v),
+            }
+        )
+    bus_events = sorted(bus_events, key=lambda r: (int(r["time_s"]), str(r["line"])))
     metro_times = sorted(
         {
             _hhmmss_to_seconds(v)
@@ -72,14 +94,16 @@ def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
 
     rows: list[dict] = []
     for metro_s in metro_times:
-        next_bus = next((b for b in bus_times if b >= metro_s), None)
+        next_bus = next((b for b in bus_events if int(b["time_s"]) >= metro_s), None)
         if next_bus is None:
             wait_min = None
             next_bus_str = ""
+            next_bus_line = ""
             class_label = "sem_ligacao"
         else:
-            wait_min = round((next_bus - metro_s) / 60.0, 2)
-            next_bus_str = _seconds_to_hhmmss(next_bus)
+            wait_min = round((int(next_bus["time_s"]) - metro_s) / 60.0, 2)
+            next_bus_str = str(next_bus["time"])
+            next_bus_line = str(next_bus["line"])
             if wait_min <= 10:
                 class_label = "<=10"
             elif wait_min <= 15:
@@ -91,6 +115,7 @@ def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
             {
                 "metro_time": _seconds_to_hhmmss(metro_s),
                 "next_bus_time": next_bus_str,
+                "next_bus_line": next_bus_line,
                 "wait_min": wait_min,
                 "wait_class": class_label,
                 "period": _period_label(metro_s),
@@ -152,7 +177,7 @@ def create_combined_integration_dashboard(
 </head>
 <body>
     <main class=\"container\">
-        <h1>{html.escape(title)}</h1>
+        <h1 id=\"dashboard-title\">{html.escape(title)}</h1>
         <p>Dashboard agregado com as 3 visualizacoes de integracao.</p>
         <section class=\"panel\">
             <h2>Timeline de passagens</h2>
@@ -172,9 +197,71 @@ def create_combined_integration_dashboard(
         const figWaits = {waits_json};
         const figEquity = {equity_json};
         const cfg = {{ responsive: true }};
+
+        function pad2(v) {{
+            return String(v).padStart(2, '0');
+        }}
+
+        function nearestBusinessDayStr(now) {{
+            const d = new Date(now.getTime());
+            const wd = d.getDay(); // 0=Sun, 6=Sat
+            if (wd === 6) d.setDate(d.getDate() - 1); // Sat -> Fri
+            else if (wd === 0) d.setDate(d.getDate() + 1); // Sun -> Mon
+            return `${{d.getFullYear()}}-${{pad2(d.getMonth() + 1)}}-${{pad2(d.getDate())}}`;
+        }}
+
+        function replaceDateSuffix(text, dayStr) {{
+            if (!text) return text;
+            const re = /\\(\\d{{4}}-\\d{{2}}-\\d{{2}}\\)$/;
+            if (re.test(text)) return text.replace(re, `(${{dayStr}})`);
+            return `${{text}} (${{dayStr}})`;
+        }}
+
+        function applyAutoBusinessDay() {{
+            const dayStr = nearestBusinessDayStr(new Date());
+            const titleEl = document.getElementById('dashboard-title');
+            if (titleEl) titleEl.textContent = replaceDateSuffix(titleEl.textContent, dayStr);
+            document.title = replaceDateSuffix(document.title, dayStr);
+
+            figTimeline.layout = figTimeline.layout || {{}};
+            figWaits.layout = figWaits.layout || {{}};
+            figEquity.layout = figEquity.layout || {{}};
+
+            figTimeline.layout.title = figTimeline.layout.title || {{}};
+            figWaits.layout.title = figWaits.layout.title || {{}};
+            figEquity.layout.title = figEquity.layout.title || {{}};
+
+            if (typeof figTimeline.layout.title === 'string') {{
+                figTimeline.layout.title = replaceDateSuffix(figTimeline.layout.title, dayStr);
+            }} else {{
+                figTimeline.layout.title.text = replaceDateSuffix(figTimeline.layout.title.text || '', dayStr);
+            }}
+
+            if (typeof figWaits.layout.title === 'string') {{
+                figWaits.layout.title = replaceDateSuffix(figWaits.layout.title, dayStr);
+            }} else {{
+                figWaits.layout.title.text = replaceDateSuffix(figWaits.layout.title.text || '', dayStr);
+            }}
+
+            if (typeof figEquity.layout.title === 'string') {{
+                figEquity.layout.title = replaceDateSuffix(figEquity.layout.title, dayStr);
+            }} else {{
+                figEquity.layout.title.text = replaceDateSuffix(figEquity.layout.title.text || '', dayStr);
+            }}
+        }}
+
+        applyAutoBusinessDay();
         Plotly.newPlot('plot_timeline', figTimeline.data, figTimeline.layout, cfg);
         Plotly.newPlot('plot_waits', figWaits.data, figWaits.layout, cfg);
         Plotly.newPlot('plot_equity', figEquity.data, figEquity.layout, cfg);
+
+        // Keep page date fresh if user leaves dashboard open across day boundaries.
+        setInterval(() => {{
+            applyAutoBusinessDay();
+            Plotly.relayout('plot_timeline', figTimeline.layout);
+            Plotly.relayout('plot_waits', figWaits.layout);
+            Plotly.relayout('plot_equity', figEquity.layout);
+        }}, 60000);
     </script>
 </body>
 </html>
@@ -186,7 +273,7 @@ def create_combined_integration_dashboard(
 def generate_connection_visualizations(
     metro_stop_ref: str,
     bus_stop_ref: str,
-    line_number: str | int,
+    line_number: str | int | list[str | int] | tuple[str | int, ...],
     day_str: str | None = None,
     metro_origin_ref: str = "Portagem",
     bus_origin_ref: str = "Portagem",
@@ -234,21 +321,40 @@ def generate_connection_visualizations(
             out_root = out_root_base
     out_root.mkdir(parents=True, exist_ok=True)
 
-    sample_date = str(schedule_df["date"].iloc[0]) if not schedule_df.empty else (day_str or "unknown_date")
+    # Always bind displayed date to the shared nearest-business-day policy.
+    sample_date = resolve_reference_day().strftime("%Y-%m-%d")
     date_tag = sample_date.replace("-", "")
-    prefix = output_prefix or f"l{_safe_slug(line_number)}"
+    line_display = _line_display(line_number)
+    prefix = output_prefix or f"l{_safe_slug(line_display)}"
 
     # 1) Timeline heatmap: frequency of passages per hour and transport type
-    bus_times_s = [
-        _hhmmss_to_seconds(v)
-        for v in schedule_df["bus_time"].astype(str).tolist()
-        if str(v).strip()
-    ]
     metro_times_s = [
         _hhmmss_to_seconds(v)
         for v in schedule_df["metro_time_from_origin"].astype(str).tolist()
         if str(v).strip()
     ]
+
+    if "bus_line_passage" in schedule_df.columns:
+        bus_line_col = schedule_df["bus_line_passage"].astype(str).str.strip()
+    else:
+        bus_line_col = schedule_df["bus_line"].astype(str).str.strip()
+
+    bus_lines_unique = [v for v in bus_line_col.tolist() if v]
+    bus_lines_unique = list(dict.fromkeys(bus_lines_unique))
+    if not bus_lines_unique:
+        bus_lines_unique = [line_display]
+
+    bus_times_by_line: dict[str, list[int]] = {}
+    for line_val in bus_lines_unique:
+        mask = (
+            (schedule_df["bus_time"].astype(str).str.strip() != "")
+            & (bus_line_col == line_val)
+        )
+        bus_times_by_line[line_val] = [
+            _hhmmss_to_seconds(v)
+            for v in schedule_df.loc[mask, "bus_time"].astype(str).tolist()
+            if str(v).strip()
+        ]
 
     # Create 20-minute bins (6 to 24)
     bin_minutes = 20
@@ -256,25 +362,28 @@ def generate_connection_visualizations(
     bins_per_hour = 60 // bin_minutes  # 3 bins per hour
     n_bins = (end_h - start_h) * bins_per_hour
     
-    bus_counts = []
+    bus_counts_by_line = {line_val: [] for line_val in bus_lines_unique}
     metro_counts = []
     heatmap_labels_x = []
     
     for i in range(n_bins):
         start_sec = start_h * 3600 + i * bin_minutes * 60
         end_sec = start_sec + bin_minutes * 60
-        bus_counts.append(sum(1 for t in bus_times_s if start_sec <= t < end_sec))
+        for line_val in bus_lines_unique:
+            bus_counts_by_line[line_val].append(
+                sum(1 for t in bus_times_by_line.get(line_val, []) if start_sec <= t < end_sec)
+            )
         metro_counts.append(sum(1 for t in metro_times_s if start_sec <= t < end_sec))
         
         h = (start_h * 60 + i * bin_minutes) // 60
         m = (start_h * 60 + i * bin_minutes) % 60
         heatmap_labels_x.append(f"{h:02d}:{m:02d}")
 
-    heatmap_data = [
-        metro_counts,
-        bus_counts,
-    ]
-    heatmap_labels_y = [f"Metro ({metro_origin_ref} -> {metro_stop_ref})", f"Autocarro {line_number}"]
+    heatmap_data = [metro_counts]
+    heatmap_labels_y = [f"Metro ({metro_origin_ref} -> {metro_stop_ref})"]
+    for line_val in bus_lines_unique:
+        heatmap_data.append(bus_counts_by_line[line_val])
+        heatmap_labels_y.append(f"Autocarro {line_val}")
 
     fig_timeline = go.Figure(
         data=go.Heatmap(
@@ -317,6 +426,13 @@ def generate_connection_visualizations(
         title=f"Espera ate ao Proximo Autocarro ({sample_date})",
         labels={"index_label": "Hora de chegada do metro", "wait_min": "Espera (min)"},
         color_discrete_map={"<=10": "#2a9d8f", "10-15": "#e9c46a", ">15": "#e76f51"},
+        hover_data={
+            "metro_time": True,
+            "next_bus_time": True,
+            "next_bus_line": True,
+            "wait_min": True,
+            "index_label": False,
+        },
     )
 
     if not zero_waits.empty:
@@ -327,8 +443,13 @@ def generate_connection_visualizations(
                 mode="markers",
                 name="0 min",
                 marker={"size": 11, "color": "#2a9d8f", "line": {"width": 0.5, "color": "white"}},
-                hovertemplate="%{customdata[0]}<br>Espera: 0 min<extra></extra>",
-                customdata=zero_waits[["metro_time"]].to_numpy(),
+                hovertemplate=(
+                    "Hora de chegada do metro=%{customdata[0]}"
+                    "<br>Próximo autocarro=%{customdata[1]}"
+                    "<br>Linha=%{customdata[2]}"
+                    "<br>Espera (min)=0<extra></extra>"
+                ),
+                customdata=zero_waits[["metro_time", "next_bus_time", "next_bus_line"]].to_numpy(),
             )
         )
 
@@ -436,7 +557,7 @@ def generate_connection_visualizations(
     create_combined_integration_dashboard(
         output_path=combined_path,
         title=(
-            f"Integracao Linha {line_number}: {bus_origin_ref} -> {bus_stop_ref} "
+            f"Integracao Linha {line_display}: {bus_origin_ref} -> {bus_stop_ref} "
             f"vs Metro {metro_origin_ref} -> {metro_stop_ref} ({sample_date})"
         ),
         timeline_fig=fig_timeline,

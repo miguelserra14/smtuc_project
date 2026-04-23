@@ -147,3 +147,41 @@ def test_line_54_portagem_bus_vs_metro_from_portela() -> None:
 
     print("\nTabela comparativa (linha 54 Portagem vs Metro Portagem vindo da Portela):")
     print(df.to_string(index=False))
+
+
+@pytest.mark.integration
+def test_lines_54_38_portagem_bus_vs_metro_from_portela() -> None:
+    """Valida suporte a múltiplas linhas no cenário da Portagem (54 + 38)."""
+    _require_dataset("smtuc")
+    _require_dataset("metrobus")
+
+    expected_day = resolve_reference_day().strftime("%Y-%m-%d")
+
+    df = build_line_stop_vs_metro_table(
+        metro_stop_ref="Portagem",
+        bus_stop_ref="Portagem",
+        line_number=("54", "38"),
+        day_str="2026-04-20",
+        metro_origin_ref="Portela",
+        bus_origin_ref="Portela do Mondego",
+    )
+
+    assert not df.empty
+    assert (df["bus_line"] == "54+38").all()
+    assert (df["origin_ref"].str.lower() == "portela").all()
+    assert (df["date"] == expected_day).all()
+
+    bus_times = df.loc[df["bus_time"] != "", "bus_time"].tolist()
+    assert len(bus_times) > 0
+
+    # A agregação de linhas não deve reduzir a oferta face ao cenário base (linha 54).
+    df_54 = build_line_stop_vs_metro_table(
+        metro_stop_ref="Portagem",
+        bus_stop_ref="Portagem",
+        line_number="54",
+        day_str="2026-04-20",
+        metro_origin_ref="Portela",
+        bus_origin_ref="Portela do Mondego",
+    )
+    bus_times_54 = [t for t in df_54["bus_time"].tolist() if t]
+    assert len(bus_times) >= len(bus_times_54)

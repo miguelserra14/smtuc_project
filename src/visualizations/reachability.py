@@ -4,6 +4,7 @@ import json
 
 import geopandas as gpd
 from shapely.ops import unary_union
+from overlap.transit import resolve_reference_day
 
 try:
     import folium
@@ -21,6 +22,8 @@ def create_overlap_reachability_map(
     """Create a true isochrone map with 10-minute bands from a fixed origin."""
     if folium is None:
         raise ImportError("folium não está disponível para gerar visualizações de mapa")
+
+    ref_day_str = resolve_reference_day(day_str).strftime("%Y-%m-%d")
 
     def _add_mouse_origin_marker(map_obj: object) -> None:
         map_name = map_obj.get_name()
@@ -52,7 +55,7 @@ def create_overlap_reachability_map(
                 weight: 2
             }}).addTo(mapObj);
 
-            originPoint.bindTooltip('Origem dinâmica ({day_str} {time_str})', {{sticky: true, permanent: false}});
+            originPoint.bindTooltip('Origem dinâmica ({ref_day_str} {time_str})', {{sticky: true, permanent: false}});
 
             mapObj.on('mousemove', function(e) {{
                 originHalo.setLatLng(e.latlng);
@@ -60,7 +63,7 @@ def create_overlap_reachability_map(
                 originHalo.bringToFront();
                 originPoint.bringToFront();
                 originPoint.setTooltipContent(
-                    'Origem dinâmica ({day_str} {time_str})' +
+                    'Origem dinâmica ({ref_day_str} {time_str})' +
                     '<br>Lat: ' + e.latlng.lat.toFixed(5) +
                     ' | Lon: ' + e.latlng.lng.toFixed(5)
                 );

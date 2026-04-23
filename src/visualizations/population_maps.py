@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import geopandas as gpd
+from overlap.transit import resolve_reference_day
 
 try:
     import plotly.express as px
@@ -139,7 +140,8 @@ def create_choropleth_map(
     day_str: str,
     color_scale: str = "YlOrRd",
 ) -> object:
-    map_title = f"BGRI Coimbra — Índice de Subserviço (dia {day_str}, raio 500m)"
+    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
+    map_title = f"BGRI Coimbra — Índice de Subserviço (dia {ref_day}, raio 500m)"
     return _create_choropleth_generic(merged, map_title, color_scale)
 
 
@@ -148,7 +150,8 @@ def create_2km_choropleth_map(
     day_str: str,
     color_scale: str = "YlOrRd",
 ) -> object:
-    map_title = f"BGRI Coimbra — Índice de Subserviço (dia {day_str}, raio 2km)"
+    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
+    map_title = f"BGRI Coimbra — Índice de Subserviço (dia {ref_day}, raio 2km)"
     return _create_choropleth_generic(
         merged_2km,
         map_title,
@@ -161,7 +164,8 @@ def create_population_heatmap(
     day_str: str,
     color_scale: str = "RdYlGn",
 ) -> object:
-    map_title = f"BGRI Coimbra — Heatmap de População (dia {day_str})"
+    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
+    map_title = f"BGRI Coimbra — Heatmap de População (dia {ref_day})"
     return _create_choropleth_generic(
         merged,
         map_title,
@@ -189,6 +193,8 @@ def create_scatter_plot(
     if scatter_score_p95 <= scatter_score_p5:
         scatter_score_p95 = scatter_score_p5 + 1.0
 
+    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
+
     fig_scatter = px.scatter(
         scatter_df,
         x="supply_departures",
@@ -198,7 +204,7 @@ def create_scatter_plot(
         hover_name="BGRI2021",
         color_continuous_scale="YlOrRd",
         range_color=(scatter_score_p5, scatter_score_p95),
-        title=f"População vs Oferta por BGRI (dia {day_str})",
+        title=f"População vs Oferta por BGRI (dia {ref_day})",
         labels={
             "supply_departures": "Oferta (n.º de passagens no dia)",
             "N_INDIVIDUOS": "População",

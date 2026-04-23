@@ -147,6 +147,62 @@ def _arrival_times_for_stop(
     return sorted(set(out))
 
 
+def _arrival_events_for_stop(
+    gtfs,
+    trips: pd.DataFrame,
+    target_stop_id: str,
+    origin_candidates: list[str] | None = None,
+    line_by_trip: dict[str, str] | None = None,
+) -> list[dict[str, str]]:
+    if trips.empty:
+        return []
+
+    st = gtfs.stop_times.copy()
+    st["trip_id"] = st["trip_id"].astype(str)
+    st["stop_id"] = st["stop_id"].astype(str)
+    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
+    if st.empty:
+        return []
+
+    target_stop_id = str(target_stop_id)
+    with_origin = bool(origin_candidates)
+    origin_set = {str(v) for v in (origin_candidates or [])}
+    line_by_trip = line_by_trip or {}
+
+    out: list[dict[str, str]] = []
+    for trip_id, trip_st in st.groupby("trip_id"):
+        trip_st = trip_st.sort_values("stop_sequence")
+        target_rows = trip_st[trip_st["stop_id"] == target_stop_id]
+        if target_rows.empty:
+            continue
+
+        target_row = target_rows.iloc[0]
+        if with_origin:
+            origins = trip_st[trip_st["stop_id"].isin(origin_set)]
+            if origins.empty:
+                continue
+            origin_seq = int(origins["stop_sequence"].min())
+            if origin_seq >= int(target_row["stop_sequence"]):
+                continue
+
+        out.append(
+            {
+                "time": str(target_row["arrival_time"]),
+                "line": str(line_by_trip.get(str(trip_id), "")),
+            }
+        )
+
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for ev in sorted(out, key=lambda r: (_hhmmss_to_seconds(str(r["time"])), str(r["line"]))):
+        k = (str(ev["time"]), str(ev["line"]))
+        if k in seen:
+            continue
+        seen.add(k)
+        deduped.append(ev)
+    return deduped
+
+
 def _pick_best_target_stop_id(
     gtfs,
     trips: pd.DataFrame,
@@ -212,6 +268,18 @@ def _seconds_to_hhmmss(value: int) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
+def _normalize_line_numbers(line_number: str | int | list[str | int] | tuple[str | int, ...]) -> list[str]:
+    if isinstance(line_number, (list, tuple, set)):
+        raw = [str(v).strip() for v in line_number if str(v).strip()]
+    else:
+        text = str(line_number).strip()
+        if "," in text:
+            raw = [p.strip() for p in text.split(",") if p.strip()]
+        else:
+            raw = [text] if text else []
+    return list(dict.fromkeys(raw))
+
+
 def nearest_business_day(from_day: date | None = None) -> date:
     """Return today if weekday, otherwise the nearest weekday (Sat->Fri, Sun->Mon)."""
     day = from_day or date.today()
@@ -237,7 +305,7 @@ def resolve_reference_day(day_str: str | None = None) -> date:
 def build_line_stop_vs_metro_table(
     metro_stop_ref: str,
     bus_stop_ref: str,
-    line_number: str | int,
+    line_number: str | int | list[str | int] | tuple[str | int, ...],
     day_str: str | None = None,
     metro_origin_ref: str = "Portagem",
     bus_origin_ref: str = "Portagem",
@@ -265,8 +333,13 @@ def build_line_stop_vs_metro_table(
     if not metro_target_candidates:
         raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
 
-    # Trips da linha de autocarro
-    line_str = str(line_number).strip()
+    # Trips da(s) linha(s) de autocarro
+    line_values = _normalize_line_numbers(line_number)
+    if not line_values:
+        raise ValueError("Linha(s) não indicada(s).")
+    line_label = "+".join(line_values)
+    line_slug = "_".join(_safe_slug(v) for v in line_values)
+
     routes = gtfs_bus.routes.copy()
     routes["route_id"] = routes["route_id"].astype(str)
     if "route_short_name" in routes.columns:
@@ -274,12 +347,12 @@ def build_line_stop_vs_metro_table(
     else:
         routes["route_short_name"] = ""
 
-    route_ids = routes[routes["route_short_name"].str.strip() == line_str]["route_id"].drop_duplicates().tolist()
-    if not route_ids and (routes["route_id"].str.strip() == line_str).any():
-        route_ids = routes[routes["route_id"].str.strip() == line_str]["route_id"].drop_duplicates().tolist()
+    route_ids = routes[routes["route_short_name"].str.strip().isin(line_values)]["route_id"].drop_duplicates().tolist()
+    if not route_ids:
+        route_ids = routes[routes["route_id"].str.strip().isin(line_values)]["route_id"].drop_duplicates().tolist()
 
     if not route_ids:
-        raise ValueError(f"Linha não encontrada: {line_str}")
+        raise ValueError(f"Linha(s) não encontrada(s): {line_label}")
 
     bus_services = _select_service_ids_for_day(gtfs_bus, day)
     bus_trips = gtfs_bus.trips.copy()
@@ -289,11 +362,13 @@ def build_line_stop_vs_metro_table(
     if bus_services:
         bus_trips = bus_trips[bus_trips["service_id"].isin(bus_services)]
 
+    bus_origin_candidates_effective = bus_origin_candidates if len(line_values) == 1 else None
+
     bus_stop_id = _pick_best_target_stop_id(
         gtfs=gtfs_bus,
         trips=bus_trips,
         target_candidates=bus_target_candidates,
-        origin_candidates=bus_origin_candidates,
+        origin_candidates=bus_origin_candidates_effective,
     )
 
     # Trips do metro
@@ -310,12 +385,28 @@ def build_line_stop_vs_metro_table(
         origin_candidates=metro_origin_candidates,
     )
 
-    bus_times = _arrival_times_for_stop(
+    route_to_line = {}
+    if "route_short_name" in routes.columns:
+        route_to_line = dict(
+            zip(
+                routes["route_id"].astype(str).tolist(),
+                routes["route_short_name"].astype(str).str.strip().tolist(),
+            )
+        )
+    line_by_trip = {
+        str(row["trip_id"]): str(route_to_line.get(str(row["route_id"]), str(row["route_id"]))).strip()
+        for _, row in bus_trips[["trip_id", "route_id"]].iterrows()
+    }
+
+    bus_events = _arrival_events_for_stop(
         gtfs=gtfs_bus,
         trips=bus_trips,
         target_stop_id=bus_stop_id,
-        origin_candidates=bus_origin_candidates,
+        origin_candidates=bus_origin_candidates_effective,
+        line_by_trip=line_by_trip,
     )
+    bus_times = [ev["time"] for ev in bus_events]
+    bus_lines = [ev["line"] for ev in bus_events]
     metro_times = _arrival_times_for_stop(
         gtfs=gtfs_metro,
         trips=metro_trips,
@@ -327,6 +418,7 @@ def build_line_stop_vs_metro_table(
     columns = [
         "idx",
         "bus_line",
+        "bus_line_passage",
         "bus_stop",
         "bus_time",
         "metro_stop",
@@ -340,7 +432,7 @@ def build_line_stop_vs_metro_table(
         out_dir = root / OUTPUTS_INTEGRATION_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         csv_name = output_csv_name or (
-            f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
+            f"line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
             f"_metro_{_safe_slug(metro_stop_ref)}.csv"
         )
         out_df.to_csv(out_dir / csv_name, index=False)
@@ -351,7 +443,8 @@ def build_line_stop_vs_metro_table(
         rows.append(
             {
                 "idx": i + 1,
-                "bus_line": line_str,
+                "bus_line": line_label,
+                "bus_line_passage": bus_lines[i] if i < len(bus_lines) else "",
                 "bus_stop": str(bus_stop_ref),
                 "bus_time": bus_times[i] if i < len(bus_times) else "",
                 "metro_stop": str(metro_stop_ref),
@@ -367,7 +460,7 @@ def build_line_stop_vs_metro_table(
     out_dir = root / OUTPUTS_INTEGRATION_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
-        f"line_{_safe_slug(line_str)}_bus_{_safe_slug(bus_stop_ref)}"
+        f"line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
         f"_metro_{_safe_slug(metro_stop_ref)}.csv"
     )
     out_df.to_csv(out_dir / csv_name, index=False)
@@ -378,7 +471,7 @@ def build_line_stop_vs_metro_table(
 def build_metro_bus_connection_metrics(
     metro_stop_ref: str,
     bus_stop_ref: str,
-    line_number: str | int,
+    line_number: str | int | list[str | int] | tuple[str | int, ...],
     day_str: str | None = None,
     metro_origin_ref: str = "Portagem",
     bus_origin_ref: str = "Portagem",
@@ -609,8 +702,11 @@ def build_metro_bus_connection_metrics(
         metrics_df = pd.DataFrame(records, columns=["scope", "metric", "value", "unit", "note"])
 
     sample_date = resolve_reference_day(day_str).strftime("%Y-%m-%d")
+    line_values = _normalize_line_numbers(line_number)
+    line_slug = "_".join(_safe_slug(v) for v in line_values) if line_values else _safe_slug(str(line_number))
+
     csv_name = output_csv_name or (
-        f"line_{_safe_slug(line_number)}_connection_metrics_"
+        f"line_{line_slug}_connection_metrics_"
         f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}.csv"
     )
 
