@@ -232,9 +232,7 @@ def test_overlap_reachability_map_now() -> None:
     _require_dataset("smtuc")
     _require_dataset("metrobus")
 
-    now = datetime.now()
-    day_str = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%H:%M:%S")
+    day_str = datetime.now().strftime("%Y-%m-%d")
 
     merged = compute_underserved_zones(
         day_str=day_str,
@@ -245,15 +243,17 @@ def test_overlap_reachability_map_now() -> None:
         origin_lat=STADIUM_COORD[0],
         origin_lon=STADIUM_COORD[1],
         day_str=day_str,
-        time_str=time_str,
+        time_str=None,
     )
+
+    selected_time = str(reach_gdf["reach_time"].iloc[0]) if not reach_gdf.empty else "00:00:00"
 
     fig_map = create_overlap_reachability_map(
         reach_gdf=reach_gdf,
         origin_lat=STADIUM_COORD[0],
         origin_lon=STADIUM_COORD[1],
         day_str=day_str,
-        time_str=time_str,
+        time_str=selected_time,
     )
 
     out_dir = Path(__file__).resolve().parents[2] / OUTPUTS_OVERLAP_DIR

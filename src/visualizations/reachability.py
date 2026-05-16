@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
-
 import geopandas as gpd
-from shapely.ops import unary_union
 from overlap.transit import resolve_reference_day
 
 try:
@@ -81,11 +78,6 @@ def create_overlap_reachability_map(
     gdf = gdf[gdf.geometry.notna()].copy()
     gdf = gdf[gdf.geometry.is_valid].copy()
     gdf["reach_min"] = gdf["reach_min"].astype(float)
-    gdf_ll = gdf.to_crs("EPSG:4326").copy()
-    gdf_centers = gdf.to_crs("EPSG:3763").copy()
-    gdf_centers.geometry = gdf_centers.geometry.centroid
-    gdf_ll["center_lat"] = gdf_centers.to_crs("EPSG:4326").geometry.y.astype(float)
-    gdf_ll["center_lon"] = gdf_centers.to_crs("EPSG:4326").geometry.x.astype(float)
 
     try:
         metric_crs = gdf.estimate_utm_crs()
@@ -93,8 +85,6 @@ def create_overlap_reachability_map(
     except Exception:
         gdf_metric = gdf.to_crs("EPSG:3857")
 
-    thresholds = [10, 20, 30, 40, 50, 60]
-    smooth_m = 120.0
     color_by_band = {
         "0-10": "#1a9850",
         "10-20": "#66bd63",
@@ -104,86 +94,97 @@ def create_overlap_reachability_map(
         "50-60": "#d73027",
     }
 
-    cumulative_geoms: dict[int, object | None] = {}
-    for upper in thresholds:
-        subset = gdf_metric[gdf_metric["reach_min"] <= float(upper)]
-        if subset.empty:
-            cumulative_geoms[upper] = None
-            continue
-        merged = unary_union(subset.geometry.values)
-        if merged.is_empty:
-            cumulative_geoms[upper] = None
-            continue
-        smoothed = merged.buffer(smooth_m).buffer(-smooth_m)
-        if smoothed.is_empty:
-            smoothed = merged
-        cumulative_geoms[upper] = smoothed.buffer(0)
+    # Keep feature count manageable without fixed hardcoded values: tolerance scales with map extent
+    # and total vertex complexity of the current dataset.
+    def _vertex_count(geom: object) -> int:
+        if geom is None or geom.is_empty:
+            return 0
+        gtype = geom.geom_type
+        if gtype == "Polygon":
+            ext = len(getattr(geom.exterior, "coords", []))
+            holes = sum(len(r.coords) for r in geom.interiors)
+            return int(ext + holes)
+        if gtype == "MultiPolygon":
+            return int(sum(_vertex_count(g) for g in geom.geoms))
+        if hasattr(geom, "coords"):
+            return int(len(geom.coords))
+        return 0
 
-    band_records = []
-    prev_geom = None
-    for upper in thresholds:
-        curr_geom = cumulative_geoms.get(upper)
-        if curr_geom is None or curr_geom.is_empty:
-            continue
-        band_geom = curr_geom if prev_geom is None else curr_geom.difference(prev_geom)
-        band_geom = band_geom.buffer(0)
-        if band_geom.is_empty:
-            prev_geom = curr_geom
-            continue
-        lower = upper - 10
-        band_label = f"{lower}-{upper}"
-        mode_subset = gdf[(gdf["reach_min"] > float(lower)) & (gdf["reach_min"] <= float(upper))]
-        if lower == 0:
-            mode_subset = gdf[gdf["reach_min"] <= float(upper)]
-        if "reach_mode" in mode_subset.columns and not mode_subset.empty:
-            mode_counts = mode_subset["reach_mode"].astype(str).value_counts()
-            majority_mode = "a pé" if mode_counts.get("a pé", 0) >= mode_counts.get("transporte público", 0) else "transporte público"
-        else:
-            majority_mode = "transporte público"
-        band_records.append(
-            {
-                "band_label": band_label,
-                "upper_min": upper,
-                "area_km2": float(band_geom.area) / 1_000_000.0,
-                "band_mode": majority_mode,
-                "geometry": band_geom,
-            }
-        )
-        prev_geom = curr_geom
+    total_vertices = int(sum(_vertex_count(geom) for geom in gdf_metric.geometry.values))
+    minx, miny, maxx, maxy = gdf_metric.total_bounds
+    diagonal_m = float(((maxx - minx) ** 2 + (maxy - miny) ** 2) ** 0.5)
+    if total_vertices > 0 and diagonal_m > 0:
+        dynamic_tolerance_m = diagonal_m / max(total_vertices ** 0.5 * 3.0, 1.0)
+        if dynamic_tolerance_m > 0:
+            gdf_metric = gdf_metric.copy()
+            gdf_metric.geometry = gdf_metric.geometry.simplify(dynamic_tolerance_m, preserve_topology=True)
 
-    if not band_records:
+    gdf_ll = gdf_metric.to_crs("EPSG:4326").copy()
+    gdf_centers = gdf_metric.copy()
+    gdf_centers.geometry = gdf_centers.geometry.centroid
+    gdf_centers_ll = gdf_centers.to_crs("EPSG:4326")
+    gdf_ll["center_lat"] = gdf_centers_ll.geometry.y.astype(float)
+    gdf_ll["center_lon"] = gdf_centers_ll.geometry.x.astype(float)
+    gdf_ll["area_km2"] = (gdf_metric.geometry.area.astype(float) / 1_000_000.0)
+
+    dynamic_zones = gdf_ll[["reach_min", "center_lat", "center_lon", "reach_mode", "area_km2", "geometry"]].copy()
+    dynamic_zones = dynamic_zones[dynamic_zones.geometry.notna()].copy()
+    dynamic_zones = dynamic_zones[dynamic_zones.geometry.is_valid].copy()
+
+    if dynamic_zones.empty:
         m = folium.Map(location=[origin_lat, origin_lon], zoom_start=13, tiles="cartodbpositron", control_scale=True)
         _add_mouse_origin_marker(m)
         return m
 
-    iso_gdf_metric = gpd.GeoDataFrame(band_records, geometry="geometry", crs=gdf_metric.crs)
-    iso_gdf = iso_gdf_metric.to_crs("EPSG:4326")
-    dynamic_zones = gdf_ll[["reach_min", "center_lat", "center_lon", "reach_mode", "geometry"]].copy()
-    dynamic_zones = dynamic_zones[dynamic_zones.geometry.notna()].copy()
-    dynamic_zones = dynamic_zones[dynamic_zones.geometry.is_valid].copy()
-    dynamic_zone_geojson = json.dumps(dynamic_zones.__geo_interface__)
+    def _band_from_reach(v: float | None) -> str:
+        if v is None:
+            return "50-60"
+        val = float(v)
+        if val <= 10:
+            return "0-10"
+        if val <= 20:
+            return "10-20"
+        if val <= 30:
+            return "20-30"
+        if val <= 40:
+            return "30-40"
+        if val <= 50:
+            return "40-50"
+        return "50-60"
+
+    dynamic_zones["band_label"] = dynamic_zones["reach_min"].map(_band_from_reach)
+    dynamic_zones["band_mode"] = dynamic_zones["reach_mode"].fillna("transporte público").astype(str)
+
+    area_lookup = {
+        band: float(dynamic_zones.loc[dynamic_zones["band_label"] == band, "area_km2"].sum())
+        for band in color_by_band.keys()
+    }
+    pt_count = int((dynamic_zones["reach_mode"].astype(str) == "transporte público").sum())
+    walk_count = int((dynamic_zones["reach_mode"].astype(str) == "a pé").sum())
 
     m = folium.Map(
         location=[origin_lat, origin_lon],
         zoom_start=13,
         tiles="cartodbpositron",
         control_scale=True,
+        prefer_canvas=False,
     )
 
     def _style_fn(feature):
         label = str(feature["properties"].get("band_label", "50-60"))
-        mode = str(feature["properties"].get("band_mode", "transporte público"))
+        fill_color = color_by_band.get(label, "#1a9850")
         return {
-            "fillColor": color_by_band.get(label, "#1a9850"),
+            "fillColor": fill_color,
             "color": "#ffffff",
             "weight": 1.3,
-            "dashArray": "3,6" if mode == "a pé" else None,
+            "dashArray": None,
             "fillOpacity": 0.55,
         }
 
     iso_layer = folium.GeoJson(
-        data=iso_gdf,
+        data=dynamic_zones,
         name="Isócronas (10 min)",
+        smooth_factor=0.9,
         style_function=_style_fn,
         tooltip=folium.GeoJsonTooltip(
             fields=["band_label", "area_km2", "band_mode"],
@@ -216,8 +217,7 @@ def create_overlap_reachability_map(
         }}
 
         var baseOrigin = L.latLng({origin_lat}, {origin_lon});
-        var zoneGeoJson = {dynamic_zone_geojson};
-        var thresholds = [10, 20, 30, 40, 50, 60];
+        var WALK_METERS_PER_MIN = 80.0;
 
         function colorByBand(label) {{
             if (label === '0-10') return '#1a9850';
@@ -228,32 +228,88 @@ def create_overlap_reachability_map(
             return '#d73027';
         }}
 
-        function styleByMode(modeLabel) {{
-            if (modeLabel === 'a pé') {{
-                return {{ color: '#ffffff', weight: 1.3, dashArray: '3,6', fillOpacity: 0.55 }};
+        var patternsReady = false;
+
+        function ensurePatternDefs() {{
+            if (patternsReady) return true;
+
+            var svg = null;
+            isoLayer.eachLayer(function(layer) {{
+                if (!svg && layer && layer._path && layer._path.ownerSVGElement) {{
+                    svg = layer._path.ownerSVGElement;
+                }}
+            }});
+            if (!svg) return false;
+
+            var defs = svg.querySelector('defs[data-iso-patterns="1"]');
+            if (!defs) {{
+                defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                defs.setAttribute('data-iso-patterns', '1');
+                svg.insertBefore(defs, svg.firstChild);
             }}
+
+            var labels = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60'];
+            labels.forEach(function(label) {{
+                var pid = 'iso_walk_hatch_' + label.replace('-', '_');
+                if (defs.querySelector('#' + pid)) return;
+
+                var pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+                pattern.setAttribute('id', pid);
+                pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+                pattern.setAttribute('width', '8');
+                pattern.setAttribute('height', '8');
+                pattern.setAttribute('patternTransform', 'rotate(45)');
+
+                var bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                bg.setAttribute('x', '0');
+                bg.setAttribute('y', '0');
+                bg.setAttribute('width', '8');
+                bg.setAttribute('height', '8');
+                bg.setAttribute('fill', colorByBand(label));
+                pattern.appendChild(bg);
+
+                var stripe = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                stripe.setAttribute('x1', '0');
+                stripe.setAttribute('y1', '0');
+                stripe.setAttribute('x2', '0');
+                stripe.setAttribute('y2', '8');
+                stripe.setAttribute('stroke', 'rgba(25, 25, 25, 0.45)');
+                stripe.setAttribute('stroke-width', '2');
+                pattern.appendChild(stripe);
+
+                defs.appendChild(pattern);
+            }});
+
+            patternsReady = true;
+            return true;
+        }}
+
+        function applyFillPattern(layer, label, modeLabel) {{
+            if (!layer || !layer._path) return;
+
+            if (modeLabel === 'a pé') {{
+                if (ensurePatternDefs()) {{
+                    var patternId = 'iso_walk_hatch_' + label.replace('-', '_');
+                    layer._path.setAttribute('fill', 'url(#' + patternId + ')');
+                }} else {{
+                    layer._path.setAttribute('fill', colorByBand(label));
+                }}
+            }} else {{
+                layer._path.setAttribute('fill', colorByBand(label));
+            }}
+        }}
+
+        function styleByMode(modeLabel) {{
             return {{ color: '#ffffff', weight: 1.3, dashArray: null, fillOpacity: 0.55 }};
         }}
 
-        function unionFeatures(features) {{
-            if (!features || features.length === 0) return null;
-            var acc = features[0];
-            for (var i = 1; i < features.length; i++) {{
-                try {{
-                    acc = turf.union(acc, features[i]) || acc;
-                }} catch (e) {{}}
-            }}
-            return acc;
-        }}
-
-        function diffSafe(a, b) {{
-            if (!a) return null;
-            if (!b) return a;
-            try {{
-                return turf.difference(a, b) || null;
-            }} catch (e) {{
-                return a;
-            }}
+        function bandFromReach(mins) {{
+            if (mins <= 10) return '0-10';
+            if (mins <= 20) return '10-20';
+            if (mins <= 30) return '20-30';
+            if (mins <= 40) return '30-40';
+            if (mins <= 50) return '40-50';
+            return '50-60';
         }}
 
         function updateLegendAreaMap(areaByBand) {{
@@ -268,146 +324,94 @@ def create_overlap_reachability_map(
             if (totalEl) totalEl.textContent = total.toFixed(3) + ' km²';
         }}
 
-        function buildDynamicIsochrones(latlng) {{
-            var exactBands = {{
-                '0-10': [],
-                '10-20': [],
-                '20-30': [],
-                '30-40': [],
-                '40-50': [],
-                '50-60': [],
-            }};
-
-            var bandFeatures = [];
+        function refreshIsochrones(latlng) {{
             var areaByBand = {{'0-10': 0, '10-20': 0, '20-30': 0, '30-40': 0, '40-50': 0, '50-60': 0}};
-            var modeByBand = {{'0-10': 'transporte público', '10-20': 'transporte público', '20-30': 'transporte público', '30-40': 'transporte público', '40-50': 'transporte público', '50-60': 'transporte público'}};
-            var modeCounts = {{'0-10': {{walk: 0, pt: 0}}, '10-20': {{walk: 0, pt: 0}}, '20-30': {{walk: 0, pt: 0}}, '30-40': {{walk: 0, pt: 0}}, '40-50': {{walk: 0, pt: 0}}, '50-60': {{walk: 0, pt: 0}}}};
+            isoLayer.eachLayer(function(layer) {{
+                if (!layer || !layer.feature || !layer.feature.properties) return;
+                var props = layer.feature.properties;
+                var cLat = Number(props.center_lat);
+                var cLon = Number(props.center_lon);
+                var baseReach = Number(props.reach_min);
+                if (!isFinite(cLat) || !isFinite(cLon) || !isFinite(baseReach)) return;
 
-            zoneGeoJson.features.forEach(function(ft) {{
-                if (!ft || !ft.properties) return;
-                var cLat = Number(ft.properties.center_lat);
-                var cLon = Number(ft.properties.center_lon);
-                var baseReach = Number(ft.properties.reach_min);
-                var baseMode = String(ft.properties.reach_mode || 'transporte público');
-                if (isNaN(cLat) || isNaN(cLon) || isNaN(baseReach)) return;
                 var cPoint = L.latLng(cLat, cLon);
                 var dNow = mapObj.distance(latlng, cPoint);
                 var dBase = mapObj.distance(baseOrigin, cPoint);
-                var estMin = baseReach + ((dNow - dBase) / 80.0);
-                var bandLabel = null;
-                if (estMin <= 10) bandLabel = '0-10';
-                else if (estMin <= 20) bandLabel = '10-20';
-                else if (estMin <= 30) bandLabel = '20-30';
-                else if (estMin <= 40) bandLabel = '30-40';
-                else if (estMin <= 50) bandLabel = '40-50';
-                else if (estMin <= 60) bandLabel = '50-60';
-                if (!bandLabel) return;
+                var estMin = baseReach + ((dNow - dBase) / WALK_METERS_PER_MIN);
+                var bandLabel = bandFromReach(estMin);
+                var mode = String(props.reach_mode || 'transporte público');
 
-                exactBands[bandLabel].push(ft);
-                if (baseMode === 'a pé') modeCounts[bandLabel].walk += 1;
-                else modeCounts[bandLabel].pt += 1;
-            }});
+                props.band_label = bandLabel;
+                props.band_mode = mode;
 
-            Object.keys(modeCounts).forEach(function(label) {{
-                modeByBand[label] = modeCounts[label].walk >= modeCounts[label].pt ? 'a pé' : 'transporte público';
-            }});
-
-            var cumGeo = {{}};
-            var cumulative = null;
-            thresholds.forEach(function(upper) {{
-                var lower = upper - 10;
-                var label = lower + '-' + upper;
-
-                var thisBandUnion = unionFeatures(exactBands[label]);
-                var curr = null;
-                if (cumulative && thisBandUnion) curr = unionFeatures([cumulative, thisBandUnion]);
-                else curr = cumulative || thisBandUnion;
-                cumGeo[upper] = curr;
-
-                if (!curr) {{
-                    cumulative = curr || cumulative;
-                    return;
-                }}
-                var band = cumulative ? diffSafe(curr, cumulative) : curr;
-                if (!band) {{
-                    cumulative = curr;
-                    return;
-                }}
-                var areaKm2 = 0;
-                try {{ areaKm2 = turf.area(band) / 1000000.0; }} catch (e) {{ areaKm2 = 0; }}
-
-                band.properties = band.properties || {{}};
-                band.properties.band_label = label;
-                band.properties.area_km2 = areaKm2;
-                band.properties.band_mode = modeByBand[label] || 'transporte público';
-                bandFeatures.push(band);
-                areaByBand[label] = areaKm2;
-                cumulative = curr;
-            }});
-
-            return {{
-                geojson: {{ type: 'FeatureCollection', features: bandFeatures }},
-                areaByBand: areaByBand,
-            }};
-        }}
-
-        function refreshIsochrones(latlng) {{
-            var rebuilt = buildDynamicIsochrones(latlng);
-            isoLayer.clearLayers();
-            isoLayer.addData(rebuilt.geojson);
-            isoLayer.eachLayer(function(layer) {{
-                var label = '50-60';
-                if (layer.feature && layer.feature.properties && layer.feature.properties.band_label) {{
-                    label = String(layer.feature.properties.band_label);
-                }}
-                var mode = 'transporte público';
-                if (layer.feature && layer.feature.properties && layer.feature.properties.band_mode) {{
-                    mode = String(layer.feature.properties.band_mode);
-                }}
                 var styleMode = styleByMode(mode);
                 if (layer.setStyle) {{
                     layer.setStyle({{
-                        fillColor: colorByBand(label),
+                        fillColor: colorByBand(bandLabel),
                         color: styleMode.color,
                         weight: styleMode.weight,
                         dashArray: styleMode.dashArray,
                         fillOpacity: styleMode.fillOpacity
                     }});
                 }}
+                applyFillPattern(layer, bandLabel, mode);
+
+                var areaKm2 = Number(props.area_km2 || 0);
+                if (isFinite(areaKm2)) {{
+                    areaByBand[bandLabel] = (areaByBand[bandLabel] || 0) + areaKm2;
+                }}
             }});
-            updateLegendAreaMap(rebuilt.areaByBand || {{}});
+            updateLegendAreaMap(areaByBand);
         }}
 
-        var pendingLatLng = null;
-        var pendingForce = false;
-        var debounceTimer = null;
+        var latestLatLng = null;
+        var rafScheduled = false;
         var lastComputedLatLng = null;
-        var minMoveMeters = 80;
-        var debounceMs = 90;
+        var lastRunAt = 0;
+        var lastDurationMs = 16;
+
+        function currentMinMoveMeters() {{
+            var b = mapObj.getBounds();
+            var diagonal = mapObj.distance(b.getSouthWest(), b.getNorthEast());
+            var scaled = diagonal / 220.0;
+            return Math.max(6, Math.min(120, scaled));
+        }}
+
+        function currentMinIntervalMs() {{
+            return Math.max(16, Math.min(220, lastDurationMs * 1.5));
+        }}
 
         function shouldRecompute(latlng, force) {{
             if (force) return true;
             if (!lastComputedLatLng) return true;
-            return mapObj.distance(latlng, lastComputedLatLng) >= minMoveMeters;
+            return mapObj.distance(latlng, lastComputedLatLng) >= currentMinMoveMeters();
         }}
 
         function scheduleRefresh(latlng, force) {{
-            pendingLatLng = latlng;
-            pendingForce = pendingForce || !!force;
-            if (debounceTimer) clearTimeout(debounceTimer);
+            latestLatLng = latlng;
+            if (rafScheduled) return;
 
-            debounceTimer = setTimeout(function() {{
-                window.requestAnimationFrame(function() {{
-                    if (!pendingLatLng) return;
-                    if (!shouldRecompute(pendingLatLng, pendingForce)) return;
-                    refreshIsochrones(pendingLatLng);
-                    lastComputedLatLng = pendingLatLng;
-                    pendingForce = false;
-                }});
-            }}, debounceMs);
+            rafScheduled = true;
+            window.requestAnimationFrame(function() {{
+                rafScheduled = false;
+                if (!latestLatLng) return;
+
+                var now = performance.now();
+                if (!force && now - lastRunAt < currentMinIntervalMs()) return;
+                if (!shouldRecompute(latestLatLng, force)) return;
+
+                var t0 = performance.now();
+                refreshIsochrones(latestLatLng);
+                var t1 = performance.now();
+
+                lastDurationMs = Math.max(8, t1 - t0);
+                lastRunAt = now;
+                lastComputedLatLng = latestLatLng;
+            }});
         }}
 
         function bindMove() {{
+            ensurePatternDefs();
             mapObj.on('mousemove', function(e) {{
                 scheduleRefresh(e.latlng, false);
             }});
@@ -417,37 +421,41 @@ def create_overlap_reachability_map(
             scheduleRefresh(baseOrigin, true);
         }}
 
-        if (!window.turf) {{
-            var turfScript = document.createElement('script');
-            turfScript.src = 'https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js';
-            turfScript.onload = bindMove;
-            document.head.appendChild(turfScript);
-        }} else {{
-            bindMove();
-        }}
+        bindMove();
     }})();
     """
     m.get_root().script.add_child(folium.Element(dynamic_iso_script))
 
-    area_lookup = {str(row["band_label"]): float(row["area_km2"]) for _, row in iso_gdf_metric.iterrows()}
     total_20 = area_lookup.get("0-10", 0.0) + area_lookup.get("10-20", 0.0)
+    no_pt_warning = (
+        "<div style='margin-top:6px; color:#9c2f00; font-size:11px;'><strong>Aviso:</strong> sem vantagem de transporte público para o horário calculado.</div>"
+        if pt_count == 0
+        else ""
+    )
 
     legend_html = """
     <div style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;
                 background: white; border: 1px solid #999; padding: 10px 12px;
                 font-size: 12px; line-height: 1.3;">
     <div style="font-weight: 600; margin-bottom: 6px;">Mapa de Isócronas (intervalos de 10 min)</div>
+                <div style="font-size:11px; margin-bottom:6px; color:#333;"><strong>Data/Hora de cálculo:</strong> {day} {time}</div>
                 <div><span style="display:inline-block;width:12px;height:12px;background:#1a9850;margin-right:6px;"></span>0-10: <span id="legend-area-0_10">{a0:.3f} km²</span></div>
                 <div><span style="display:inline-block;width:12px;height:12px;background:#66bd63;margin-right:6px;"></span>10-20: <span id="legend-area-10_20">{a1:.3f} km²</span></div>
                 <div><span style="display:inline-block;width:12px;height:12px;background:#a6d96a;margin-right:6px;"></span>20-30: <span id="legend-area-20_30">{a2:.3f} km²</span></div>
                 <div><span style="display:inline-block;width:12px;height:12px;background:#fee08b;margin-right:6px;"></span>30-40: <span id="legend-area-30_40">{a3:.3f} km²</span></div>
                 <div><span style="display:inline-block;width:12px;height:12px;background:#f46d43;margin-right:6px;"></span>40-50: <span id="legend-area-40_50">{a4:.3f} km²</span></div>
                 <div><span style="display:inline-block;width:12px;height:12px;background:#d73027;margin-right:6px;"></span>50-60: <span id="legend-area-50_60">{a5:.3f} km²</span></div>
-                <div style="margin-top:6px; font-size:11px;"><span style="display:inline-block;width:16px;border-top:2px dashed #666; margin-right:6px;"></span>Maioria a pé</div>
-                <div style="font-size:11px;"><span style="display:inline-block;width:16px;border-top:2px solid #666; margin-right:6px;"></span>Maioria transporte público</div>
+                <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;"><strong>Zonas por modo:</strong></div>
+                <div style="font-size:11px;">Transporte público: <strong>{pt_count}</strong></div>
+                <div style="font-size:11px;">A pé: <strong>{walk_count}</strong></div>
+                <div style="margin-top:6px; font-size:11px;"><span style="display:inline-block;width:12px;height:12px;background:#66bd63; margin-right:6px; border:1px solid #999;"></span>Preenchimento liso: maioria transporte público</div>
+                <div style="font-size:11px;"><span style="display:inline-block;width:12px;height:12px;background:repeating-linear-gradient(45deg, #66bd63 0px, #66bd63 4px, #2b2b2b 4px, #2b2b2b 6px); margin-right:6px; border:1px solid #999;"></span>Preenchimento riscado: maioria a pé</div>
                 <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;"><strong>Total ≤ 20 min:</strong> <span id="legend-area-total-20">{at:.3f} km²</span></div>
+                {no_pt_warning}
     </div>
     """.format(
+        day=ref_day_str,
+        time=time_str,
         a0=area_lookup.get("0-10", 0.0),
         a1=area_lookup.get("10-20", 0.0),
         a2=area_lookup.get("20-30", 0.0),
@@ -455,6 +463,9 @@ def create_overlap_reachability_map(
         a4=area_lookup.get("40-50", 0.0),
         a5=area_lookup.get("50-60", 0.0),
         at=total_20,
+        pt_count=pt_count,
+        walk_count=walk_count,
+        no_pt_warning=no_pt_warning,
     )
     m.get_root().html.add_child(folium.Element(legend_html))
 

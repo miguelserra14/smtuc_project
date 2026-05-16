@@ -487,6 +487,88 @@ def _current_day_time() -> tuple[str, str]:
     return now.strftime("%Y-%m-%d"), now.strftime("%H:%M:%S")
 
 
+def _next_service_relevant_time(
+    day_str: str,
+    from_time_str: str,
+    datasets: tuple[str, ...],
+    origin_lat: float,
+    origin_lon: float,
+    walk_speed_m_min: float = WALK_SPEED_M_MIN,
+    max_board_walk_min: float = 20.0,
+    latest_time_str: str | None = None,
+    fallback_to_from_time: bool = True,
+) -> str | None:
+    """Return the next boardable departure time from the given origin across datasets.
+
+    If no relevant departure is found, keeps the original time.
+    """
+    day = _parse_day(day_str)
+    t0 = int(_to_seconds(from_time_str))
+    t1 = int(_to_seconds(latest_time_str)) if latest_time_str else None
+    board_walk_m = float(walk_speed_m_min) * float(max_board_walk_min)
+
+    best_departure_s: int | None = None
+
+    for dataset in datasets:
+        gtfs = _load_gtfs_cached(dataset)
+
+        stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
+        if stops.empty:
+            continue
+
+        stops["stop_id"] = stops["stop_id"].astype(str)
+        d_m = _distances_from_point_m(
+            origin_lat,
+            origin_lon,
+            stops["stop_lat"].astype(float).to_numpy(),
+            stops["stop_lon"].astype(float).to_numpy(),
+        )
+        boardable_ids = set(stops.loc[d_m <= board_walk_m, "stop_id"].astype(str).tolist())
+        if not boardable_ids:
+            continue
+
+        active_services = _active_service_ids(gtfs, day)
+        trips = gtfs.trips[["trip_id", "service_id"]].copy()
+        trips["trip_id"] = trips["trip_id"].astype(str)
+        trips["service_id"] = trips["service_id"].astype(str)
+        if active_services:
+            trips = trips[trips["service_id"].isin(active_services)]
+        if trips.empty:
+            continue
+
+        st = gtfs.stop_times[["trip_id", "stop_id", "departure_seconds"]].copy()
+        st["trip_id"] = st["trip_id"].astype(str)
+        st["stop_id"] = st["stop_id"].astype(str)
+        st = st.merge(trips, on="trip_id", how="inner")
+        if st.empty:
+            continue
+
+        dep_mask = (
+            st["stop_id"].isin(boardable_ids)
+            & st["departure_seconds"].notna()
+            & (st["departure_seconds"].astype(float) >= float(t0))
+        )
+        if t1 is not None:
+            dep_mask = dep_mask & (st["departure_seconds"].astype(float) <= float(t1))
+
+        dep = st[dep_mask]["departure_seconds"]
+
+        if dep.empty:
+            continue
+
+        dataset_best = int(dep.astype(float).min())
+        if best_departure_s is None or dataset_best < best_departure_s:
+            best_departure_s = dataset_best
+
+    if best_departure_s is None:
+        return from_time_str if fallback_to_from_time else None
+
+    h = best_departure_s // 3600
+    m = (best_departure_s % 3600) // 60
+    s = best_departure_s % 60
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
 def _reach_bin_label(minutes: float) -> str:
     if minutes <= 10.0:
         return "0-10"
@@ -623,10 +705,46 @@ def compute_bgri_reachability_now(
     max_min: float = 60.0,
 ) -> pd.DataFrame:
     """Calcula tempo mínimo estimado para alcançar cada zona BGRI no momento atual."""
+    auto_time_mode = time_str is None
+
     if day_str is None or time_str is None:
         now_day, now_time = _current_day_time()
         day_str = day_str or now_day
         time_str = time_str or now_time
+        # Prefer a representative service time. Outside useful daytime hours,
+        # prioritize a morning peak slot between 08:00 and 09:00.
+        if time_str < "08:00:00" or time_str > "21:00:00":
+            morning_peak_time = _next_service_relevant_time(
+                day_str=day_str,
+                from_time_str="08:00:00",
+                latest_time_str="09:00:00",
+                fallback_to_from_time=False,
+                datasets=datasets,
+                origin_lat=origin_lat,
+                origin_lon=origin_lon,
+                walk_speed_m_min=walk_speed_m_min,
+            )
+            if morning_peak_time is not None:
+                time_str = morning_peak_time
+            else:
+                time_str = _next_service_relevant_time(
+                    day_str=day_str,
+                    from_time_str="08:00:00",
+                    datasets=datasets,
+                    origin_lat=origin_lat,
+                    origin_lon=origin_lon,
+                    walk_speed_m_min=walk_speed_m_min,
+                )
+        else:
+            # During daytime, keep the next boardable time from now.
+            time_str = _next_service_relevant_time(
+                day_str=day_str,
+                from_time_str=time_str,
+                datasets=datasets,
+                origin_lat=origin_lat,
+                origin_lon=origin_lon,
+                walk_speed_m_min=walk_speed_m_min,
+            )
 
     stops_reach = []
     for dataset in datasets:
@@ -673,6 +791,31 @@ def compute_bgri_reachability_now(
 
     reach_min = np.minimum(direct_walk_min, pt_best_min)
     reach_mode = np.where(pt_best_min + 1e-9 < direct_walk_min, "transporte público", "a pé")
+
+    # If automatic "now" selection still yields no PT wins (e.g., night hours),
+    # fallback to a service-relevant morning slot.
+    if auto_time_mode and not np.any(reach_mode == "transporte público"):
+        morning_time = _next_service_relevant_time(
+            day_str=day_str,
+            from_time_str="08:00:00",
+            latest_time_str="09:00:00",
+            fallback_to_from_time=False,
+            datasets=datasets,
+            origin_lat=origin_lat,
+            origin_lon=origin_lon,
+            walk_speed_m_min=walk_speed_m_min,
+        )
+        if morning_time is not None and morning_time != time_str:
+            return compute_bgri_reachability_now(
+                merged_bgri=merged_bgri,
+                origin_lat=origin_lat,
+                origin_lon=origin_lon,
+                datasets=datasets,
+                day_str=day_str,
+                time_str=morning_time,
+                walk_speed_m_min=walk_speed_m_min,
+                max_min=max_min,
+            )
 
     out = merged_bgri.copy()
     out["reach_min"] = reach_min
