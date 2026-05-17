@@ -332,10 +332,10 @@
 
         function renderSummaryCards(items) {
                 const explanations = {
-                    'population': `<strong>Questões:</strong> Quais áreas têm alta população e baixa oferta? Onde priorizar reforços de serviço?<br><br><strong>Metodologia:</strong> Análise de distribuição populacional por BGRI, cálculo do índice de subserviço (população / (passagens + 1)) e avaliação de acessibilidade dentro de um raio de 2 km. Visualizações: heatmap de população e mapa de índice de subserviço.`,
-                    'overlap': `<strong>Questões:</strong> Quais linhas e paragens apresentam maior redundância? Qual a percentagem e extensão da sobreposição espacial e temporal entre SMTUC e Metrobus (ex.: <= 5 min, <= 400 m)?<br><br><strong>Metodologia:</strong> Exame de sobreposições espaciais e temporais através de isochronas e análise de reachability dinâmica. Visualizações: mapa interativo com reachability, tabelas de Top/Bottom linhas por overlap, resumo de estatísticas temporais.`,
-                    'integration-portagem': `<strong>Questões:</strong> Como melhorar ligações entre modos na Portagem? Quais paragens sofrem com longos tempos de espera? Como reduzir esperas e desigualdades?<br><br><strong>Metodologia:</strong> Análise da Linha 54 (Portela → Portagem) através de tempos de espera, padrões de conexão e medidas de equidade. Visualizações: heatmaps de espera por paragem e hora, mapas de equidade de serviço.`,
-                    'integration-portela': `<strong>Questões:</strong> Como melhorar complementaridade e reduzir redundâncias no sentido Portela? Quais oportunidades de integração existem?<br><br><strong>Metodologia:</strong> Análise simétrica da Linha 54 (Portagem → Portela) com foco em espera, conectividade e equidade. Visualizações: heatmaps de espera, mapas de integração intermodal, análise temporal de padrões de viagem.`
+                    'population': `<strong>Questões:</strong> Que áreas têm alta população e baixa oferta? Onde priorizar reforço de serviço?<br><br><strong>Metodologia:</strong> Análise de distribuição populacional por BGRI (unidade mínima de população nos Censos de 2021), cálculo do índice de subserviço (população / (passagens + 1)) e avaliação de acessibilidade dentro de um raio de 2 km do Estádio. Visualizações: heatmap de população e mapa de índice de subserviço.`,
+                    'overlap': `<strong>Questões:</strong> Que linhas e paragens de autocarro apresentam maior paralelismo com o Metrobus? Qual a percentagem e extensão da sobreposição espacial (<=400m) e temporal (<=5 minutos) entre SMTUC e Metrobus ?<br><br><strong>Metodologia:</strong> Exame de sobreposições espaciais e temporais através de um mapa de isócronas e análise de reachability dinâmica. Visualizações: mapa interativo com reachability, tabelas de Top/Bottom de linhas por overlap, resumo de estatísticas temporais.`,
+                    'integration-portagem': `<strong>Questões:</strong> Como melhorar a complementaridade SMTUC/Metrobus na Portagem? Case study da paragem da Portagem: Como reduzir esperas e desigualdades?<br><br><strong>Metodologia:</strong> Análise da Linha 54 (Portela → Portagem) através de tempos de espera, padrões de ligação e medidas de equidade. Visualizações: heatmaps de espera por paragem e hora, mapas de equidade de serviço.`,
+                    'integration-portela': `<strong>Questões:</strong> Como melhorar complementaridade e reduzir redundâncias no sentido Portela? Que oportunidades de integração existem?<br><br><strong>Metodologia:</strong> Análise simétrica da Linha 54 (Portagem → Portela) com foco em espera, conectividade e equidade. Visualizações: heatmaps de espera, mapas de integração intermodal, análise temporal de padrões de viagem.`
                 };
 
                 return items.map((item) => `
@@ -457,12 +457,10 @@
 
                 return `
                     <article class="tab-panel${index === 0 ? ' is-active' : ''}" id="panel-${item.id}" data-panel-id="${item.id}" role="tabpanel" aria-labelledby="tab-${item.id}">
-                        ${item.id === 'population' ? '' : `
                         <div class="panel-head">
                             <h2 class="panel-title">${item.label}</h2>
                             <p class="panel-desc">${item.description || ''}</p>
                         </div>
-                        `}
                         <div class="frame-wrap">
                             <iframe
                                 title="${item.label}"

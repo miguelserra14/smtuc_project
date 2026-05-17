@@ -32,15 +32,15 @@ def create_population_dashboard_html(
     merged: gpd.GeoDataFrame,
     merged_2km: gpd.GeoDataFrame,
     day_str: str,
-    title: str = "Painel de População",
+    title: str = "BGRI Coimbra — Painel de População",
 ) -> str:
     """Create a single HTML dashboard that embeds the three main population visualizations."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     heatmap_fig = create_population_heatmap(merged, day_str, color_scale="RdYlGn")
-    choropleth_fig = create_choropleth_map(merged, day_str, color_scale="RdYlGn_r")
-    stadium_fig = create_2km_choropleth_map(merged_2km, day_str, color_scale="RdYlGn_r")
+    choropleth_fig = create_choropleth_map(merged, day_str, color_scale="YlOrRd")
+    stadium_fig = create_2km_choropleth_map(merged_2km, day_str, color_scale="YlOrRd")
 
     heatmap_srcdoc = _figure_to_srcdoc(heatmap_fig)
     choropleth_srcdoc = _figure_to_srcdoc(choropleth_fig)
@@ -58,7 +58,7 @@ def create_population_dashboard_html(
 def _create_choropleth_generic(
     gdf: gpd.GeoDataFrame,
     title: str,
-    color_scale: str = "RdYlGn_r",
+    color_scale: str = "YlOrRd",
     color_col: str = "underservice_score",
     range_color: Optional[Tuple[float, float]] = None,
     hover_data: Optional[Dict] = None,
@@ -107,20 +107,20 @@ def _create_choropleth_generic(
 def create_choropleth_map(
     merged: gpd.GeoDataFrame,
     day_str: str,
-    color_scale: str = "RdYlGn_r",
+    color_scale: str = "YlOrRd",
 ) -> object:
     ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
-    map_title = f"Índice de Subserviço (dia {ref_day}, raio 500m)"
+    map_title = f"BGRI Coimbra — Índice de Subserviço (dia {ref_day}, raio 500m)"
     return _create_choropleth_generic(merged, map_title, color_scale)
 
 
 def create_2km_choropleth_map(
     merged_2km: gpd.GeoDataFrame,
     day_str: str,
-    color_scale: str = "RdYlGn_r",
+    color_scale: str = "YlOrRd",
 ) -> object:
     ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
-    map_title = f"Índice de Subserviço (dia {ref_day}, raio 2km)"
+    map_title = f"BGRI Coimbra — Índice de Subserviço (dia {ref_day}, raio 2km)"
     return _create_choropleth_generic(
         merged_2km,
         map_title,
@@ -134,7 +134,7 @@ def create_population_heatmap(
     color_scale: str = "RdYlGn",
 ) -> object:
     ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
-    map_title = f"Heatmap de População (dia {ref_day})"
+    map_title = f"BGRI Coimbra — Heatmap de População (dia {ref_day})"
     return _create_choropleth_generic(
         merged,
         map_title,

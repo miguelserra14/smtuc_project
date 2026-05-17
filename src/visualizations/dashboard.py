@@ -8,7 +8,6 @@ from typing import Any
 
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
-_POPULATION_CACHE_BUSTER = "20260517"
 
 
 def _read_template(template_name: str) -> str:
@@ -134,13 +133,13 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
                     "id": "overlap",
                     "label": "Overlap",
                     "description": "Mapa de subserviço.",
-                    "src": f"population/bgri.html?show=choropleth&v={_POPULATION_CACHE_BUSTER}",
+                    "src": "population/bgri.html?show=choropleth",
                 },
                 {
                     "id": "population",
                     "label": "População",
                     "description": "Heatmap, subserviço e raio a 2 km.",
-                    "src": f"population/bgri.html?v={_POPULATION_CACHE_BUSTER}",
+                    "src": "population/bgri.html",
                 },
                 {
                     "id": "integration-portagem",
@@ -161,7 +160,7 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
             "label": "População",
             "description": "Heatmap, subserviço e raio a 2 km.",
             "kind": "iframe",
-            "src": f"population/bgri.html?v={_POPULATION_CACHE_BUSTER}",
+            "src": "population/bgri.html",
         },
         {
             "id": "overlap",

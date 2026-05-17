@@ -457,12 +457,10 @@
 
                 return `
                     <article class="tab-panel${index === 0 ? ' is-active' : ''}" id="panel-${item.id}" data-panel-id="${item.id}" role="tabpanel" aria-labelledby="tab-${item.id}">
-                        ${item.id === 'population' ? '' : `
                         <div class="panel-head">
                             <h2 class="panel-title">${item.label}</h2>
                             <p class="panel-desc">${item.description || ''}</p>
                         </div>
-                        `}
                         <div class="frame-wrap">
                             <iframe
                                 title="${item.label}"
