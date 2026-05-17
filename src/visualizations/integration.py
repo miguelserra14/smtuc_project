@@ -371,9 +371,9 @@ def generate_connection_visualizations(
         legend_title_text="",
     )
 
-    # 3) Period equity heatmap (coverage<=10, lost>15, median wait)
+    # 3) Period equity heatmap (cobertura <=10, perdas >15, espera média)
     period_labels = {
-        "manha": "Manha (6h-12h)",
+        "manha": "Manhã (6h-12h)",
         "meio_dia": "Meio Dia (12h-17h)",
         "tarde_noite": "Tarde-Noite (17h-24h)",
         "dia_inteiro": "Dia Inteiro (6h-24h)",
@@ -400,10 +400,10 @@ def generate_connection_visualizations(
 
         heat_records.extend(
             [
-                {"period": period_labels[period], "metric": "coverage<=10 (%)", "value": cov10},
-                {"period": period_labels[period], "metric": "lost>15 (%)", "value": lost15},
-                {"period": period_labels[period], "metric": "median_wait (min)", "value": med_wait},
-                {"period": period_labels[period], "metric": "mean_wait (min)", "value": mean_wait},
+                {"period": period_labels[period], "metric": "Cobertura <= 10 (%)", "value": cov10},
+                {"period": period_labels[period], "metric": "Perda > 15 minutos (%)", "value": lost15},
+                {"period": period_labels[period], "metric": "Espera Mediana (min)", "value": med_wait},
+                {"period": period_labels[period], "metric": "Espera Média (min)", "value": mean_wait},
             ]
         )
 
@@ -415,7 +415,7 @@ def generate_connection_visualizations(
         aspect="auto",
         color_continuous_scale="YlOrRd",
         title=f"Equidade Temporal de Ligacoes ({sample_date})",
-        labels={"color": "Valor"},
+        labels={"color": "Valor", "x": "Período", "y": "Métrica"},
     )
     fig_heat.update_layout(plot_bgcolor="white")
 
