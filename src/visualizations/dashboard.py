@@ -130,16 +130,16 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
             "kind": "summary",
             "preview_items": [
                 {
-                    "id": "population",
-                    "label": "População",
-                    "description": "Heatmap, subserviço e raio a 2 km.",
-                    "src": "population/bgri.html",
-                },
-                {
                     "id": "overlap",
                     "label": "Overlap",
                     "description": "Mapa de subserviço.",
                     "src": "population/bgri.html?show=choropleth",
+                },
+                {
+                    "id": "population",
+                    "label": "População",
+                    "description": "Heatmap, subserviço e raio a 2 km.",
+                    "src": "population/bgri.html",
                 },
                 {
                     "id": "integration-portagem",
