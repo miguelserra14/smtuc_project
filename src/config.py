@@ -38,6 +38,7 @@ Nota: todas as datas mostradas nas visualizações são calculadas automaticamen
 
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
 http://localhost:8000/outputs/population/bgri.html
+http://localhost:8000/outputs/dashboard.html
 
 Views integração (linha 54, data útil automática):
 

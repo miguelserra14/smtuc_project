@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light only" />
+    <title>SMTUC 2.0 — Dashboard Geral</title>
+    <style>
+        :root {
+            --bg: #f9f5ff;
+            --bg-2: #f3eaff;
+            --card: #ffffff;
+            --card-soft: #fbf7ff;
+            --ink: #17202a;
+            --muted: #586579;
+            --border: #efe6fb;
+            --accent: #6A0DAD; /* roxo principal */
+            --accent-2: #B388EB; /* roxo suave */
+            --shadow: 0 18px 50px rgba(106, 13, 173, 0.08);
+            color-scheme: light only;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background:
+                radial-gradient(circle at top left, rgba(15, 91, 156, 0.10), transparent 34%),
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 28%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+            color: var(--ink);
+            font-family: Segoe UI, Tahoma, sans-serif;
+        }
+        .shell {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+        .hero {
+            background: linear-gradient(135deg, rgba(106, 13, 173, 0.98), rgba(179, 136, 235, 0.96));
+            color: #ffffff;
+            border-radius: 22px;
+            padding: 24px 24px 22px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: auto -12% -45% auto;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            filter: blur(4px);
+        }
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            font-size: 0.82rem;
+            letter-spacing: 0.02em;
+            margin-bottom: 10px;
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+            line-height: 1.1;
+            position: relative;
+            z-index: 1;
+        }
+        .hero p {
+            margin: 12px 0 0;
+            max-width: 900px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.9);
+            position: relative;
+            z-index: 1;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 18px 0 14px;
+            padding: 0;
+        }
+        .tab-btn {
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.72);
+            color: var(--ink);
+            border-radius: 999px;
+            padding: 11px 16px;
+            font: inherit;
+            cursor: pointer;
+            transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease, color 140ms ease;
+        }
+        .tab-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(19, 33, 57, 0.08);
+        }
+        .tab-btn[aria-selected="true"] {
+            background: var(--ink);
+            color: #ffffff;
+            border-color: var(--ink);
+        }
+        .tab-panels {
+            margin-top: 10px;
+        }
+        .tab-panel {
+            display: none;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .tab-panel.is-active {
+            display: block;
+            animation: fadeIn 160ms ease-out;
+        }
+        .panel-head {
+            padding: 18px 20px 10px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(248, 251, 255, 0.96), #ffffff);
+        }
+        .panel-title {
+            margin: 0 0 6px;
+            font-size: 1.05rem;
+        }
+        .panel-desc {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            padding: 18px 20px 20px;
+        }
+        .summary-card {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: linear-gradient(180deg, #ffffff, var(--card-soft));
+            padding: 16px 16px 14px;
+        }
+        .summary-card h3 {
+            margin: 0 0 6px;
+            font-size: 1rem;
+        }
+        .summary-card p {
+            margin: 0 0 12px;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+        .summary-card a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .summary-card a:hover {
+            text-decoration: underline;
+        }
+        .frame-wrap {
+            height: min(84vh, 980px);
+            background: #ffffff;
+        }
+        .frame-wrap iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #ffffff;
+        }
+        .stats-wrap {
+            padding: 16px 20px 20px;
+            border-top: 1px solid var(--border);
+            background: linear-gradient(180deg, #ffffff, var(--card-soft));
+        }
+        .stats-title {
+            margin: 0 0 10px;
+            font-size: 0.98rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .stats-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+        .stats-card h3 {
+            margin: 0;
+            font-size: 0.92rem;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            background: #fbf8ff;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.84rem;
+        }
+        .stats-table th,
+        .stats-table td {
+            text-align: center;
+            padding: 7px 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .stats-table th {
+            color: var(--muted);
+            font-weight: 600;
+            background: #fcfbff;
+        }
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 960px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .frame-wrap {
+                height: 78vh;
+            }
+        }
+        @media (max-width: 720px) {
+            .shell {
+                padding: 14px 10px 26px;
+            }
+            .hero {
+                border-radius: 18px;
+                padding: 18px 16px;
+            }
+            .tab-btn {
+                padding: 10px 14px;
+            }
+            .panel-head,
+            .summary-grid {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <div class="eyebrow">Dashboard unificado</div>
+            <h1>SMTUC 2.0 — Dashboard Geral</h1>
+            <p>
+                Uma única página para navegar entre os dashboards de integração, população e overlap.
+                Cada tab carrega o respetivo HTML existente, por isso a estrutura continua modular e o carregamento mantém-se leve.
+            </p>
+        </section>
+
+        <nav class="tabs" id="dashboard-tabs" aria-label="Secções do dashboard"></nav>
+
+        <section class="tab-panels" id="dashboard-panels"></section>
+    </main>
+
+    <script>
+        const tabs = [{"id": "summary", "label": "Resumo", "description": "Atalhos e pré-visualizações dos dashboards principais.", "kind": "summary", "preview_items": [{"id": "population", "label": "População", "description": "Heatmap, subserviço e raio a 2 km.", "src": "population/bgri.html"}, {"id": "overlap", "label": "Overlap", "description": "Mapa de subserviço.", "src": "population/bgri.html?show=choropleth"}, {"id": "integration-portagem", "label": "Integração Portagem", "description": "Heatmaps de espera e equidade.", "src": "integration/portagem/l54_portagem_all.html?show=heatmaps"}, {"id": "integration-portela", "label": "Integração Portela", "description": "Heatmaps de espera e equidade.", "src": "integration/portela/l54_all.html?show=heatmaps"}]}, {"id": "population", "label": "População", "description": "Heatmap, subserviço e raio a 2 km.", "kind": "iframe", "src": "population/bgri.html"}, {"id": "overlap", "label": "Overlap", "description": "Isochronas e reachability dinâmica.", "kind": "iframe", "src": "overlap/overlap_reachability_now.html", "overlap_stats": {"top5": [{"line": "9", "overlap_pct": "47.55%", "overlap_m": "19748.3", "extension_m": "41535.7", "overlap_stops": "73", "total_stops": "117", "avg_freq_min": "32.5"}, {"line": "11", "overlap_pct": "45.21%", "overlap_m": "3160.4", "extension_m": "6990.8", "overlap_stops": "14", "total_stops": "27", "avg_freq_min": "16.6"}, {"line": "45", "overlap_pct": "44.01%", "overlap_m": "8690.5", "extension_m": "19747.6", "overlap_stops": "31", "total_stops": "60", "avg_freq_min": "61.4"}, {"line": "24", "overlap_pct": "41.98%", "overlap_m": "3154.0", "extension_m": "7513.8", "overlap_stops": "12", "total_stops": "27", "avg_freq_min": "9.9"}, {"line": "10", "overlap_pct": "39.40%", "overlap_m": "17527.8", "extension_m": "44487.7", "overlap_stops": "69", "total_stops": "150", "avg_freq_min": "13.9"}], "bottom5": [{"line": "52", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "44398.5", "overlap_stops": "0", "total_stops": "88", "avg_freq_min": "52.5"}, {"line": "51", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "57656.1", "overlap_stops": "0", "total_stops": "167", "avg_freq_min": "67.5"}, {"line": "50", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "62127.7", "overlap_stops": "0", "total_stops": "189", "avg_freq_min": "21.2"}, {"line": "4", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "6995.2", "overlap_stops": "2", "total_stops": "28", "avg_freq_min": "11.5"}, {"line": "39", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "33806.2", "overlap_stops": "1", "total_stops": "110", "avg_freq_min": "32.6"}], "bottom5_stadium": [{"line": "4", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "6995.2", "overlap_stops": "2", "total_stops": "28", "avg_freq_min": "11.5"}, {"line": "34", "overlap_pct": "14.98%", "overlap_m": "1862.9", "extension_m": "12432.4", "overlap_stops": "11", "total_stops": "52", "avg_freq_min": "17.0"}, {"line": "38", "overlap_pct": "15.60%", "overlap_m": "2494.9", "extension_m": "15995.1", "overlap_stops": "12", "total_stops": "50", "avg_freq_min": "27.7"}, {"line": "37", "overlap_pct": "24.86%", "overlap_m": "5262.0", "extension_m": "21169.7", "overlap_stops": "23", "total_stops": "81", "avg_freq_min": "11.1"}, {"line": "7", "overlap_pct": "26.84%", "overlap_m": "2985.7", "extension_m": "11123.0", "overlap_stops": "13", "total_stops": "40", "avg_freq_min": "6.6"}], "temporal_summary": {"total_spatial_candidates": 13499, "overlap_stations": 597, "overlap_lines": 34, "temporal_overlap_pct": 79.5, "temporal_overlap_times": 10732, "temporal_overlap_stations": 40, "temporal_overlap_lines": 40, "TEMPORAL_OVERLAP_MAX_MIN": 5.0, "walk_distance_threshold": 400.0}}}, {"id": "integration-portagem", "label": "Integração Portagem", "description": "Linha 54 no sentido Portela -> Portagem.", "kind": "iframe", "src": "integration/portagem/l54_portagem_all.html"}, {"id": "integration-portela", "label": "Integração Portela", "description": "Linha 54 no sentido Portagem -> Portela.", "kind": "iframe", "src": "integration/portela/l54_all.html"}];
+        const tabsEl = document.getElementById('dashboard-tabs');
+        const panelsEl = document.getElementById('dashboard-panels');
+
+        function setActiveTab(tabId, focusButton = false) {
+            const buttons = tabsEl.querySelectorAll('[data-tab-id]');
+            const panels = panelsEl.querySelectorAll('[data-panel-id]');
+
+            buttons.forEach((button) => {
+                const isActive = button.dataset.tabId === tabId;
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                button.tabIndex = isActive ? 0 : -1;
+                if (focusButton && isActive) button.focus();
+            });
+
+            panels.forEach((panel) => {
+                const isActive = panel.dataset.panelId === tabId;
+                panel.classList.toggle('is-active', isActive);
+                panel.hidden = !isActive;
+                if (isActive) {
+                    // load ALL iframes inside the active panel (summary has multiple thumbnails)
+                    const iframes = panel.querySelectorAll('iframe[data-src]');
+                    iframes.forEach((iframe) => {
+                        if (iframe && !iframe.dataset.loaded) {
+                            iframe.src = iframe.dataset.src;
+                            iframe.dataset.loaded = '1';
+                        }
+                    });
+                }
+            });
+        }
+
+        function renderSummaryCards(items) {
+                return items.map((item) => `
+                    <article class="summary-card">
+                        <h3>${item.label}</h3>
+                        <p>${item.description || ''}</p>
+                        <div style="height:220px; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#fff;">
+                            <iframe loading="lazy" data-src="${item.src || ''}" style="width:100%;height:100%;border:0;"></iframe>
+                        </div>
+                        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
+                            <a href="#${item.id}" data-summary-target="${item.id}" style="margin-left:auto;color:var(--accent);font-weight:600;">Abrir</a>
+                        </div>
+                    </article>
+                `).join('');
+        }
+
+        function renderOverlapStatsTable(rows) {
+            const safeRows = Array.isArray(rows) ? rows : [];
+            const body = safeRows.map((r) => `
+                <tr>
+                    <td>${r.line || '-'}</td>
+                    <td>${r.overlap_pct || '-'}</td>
+                    <td>${r.overlap_m || '-'}</td>
+                    <td>${r.extension_m || '-'}</td>
+                    <td>${r.overlap_stops || '-'} / ${r.total_stops || '-'}</td>
+                    <td>${r.avg_freq_min || '-'}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Linha</th>
+                            <th>Overlap (% da linha)</th>
+                            <th>Overlap (m)</th>
+                            <th>Extensão (m)</th>
+                            <th>Paragens sobrepostas / total</th>
+                            <th>Frequência média (min)</th>
+                        </tr>
+                    </thead>
+                    <tbody>${body}</tbody>
+                </table>
+            `;
+        }
+
+        function renderOverlapStats(item) {
+            const stats = item && item.overlap_stats;
+            if (!stats || (!Array.isArray(stats.top5) && !Array.isArray(stats.bottom5))) {
+                return '';
+            }
+
+            return `
+                <section class="stats-wrap" aria-label="Resumo estatístico de overlap">
+                    <h3 class="stats-title">Principais estatísticas de overlap por linha (Top 5 e Bottom 5)</h3>
+                    <div class="stats-grid">
+                        <article class="stats-card">
+                            <h3>Top 5 maior overlap</h3>
+                            ${renderOverlapStatsTable(stats.top5 || [])}
+                        </article>
+                        <article class="stats-card">
+                            <h3>Bottom 5 menor overlap a <=2 km do estádio</h3>
+                            ${renderOverlapStatsTable(stats.bottom5_stadium || [])}
+                        </article>
+                    </div>
+                    ${(() => {
+                        const ts = stats.temporal_summary || {};
+                        if (!ts || !ts.total_spatial_candidates) return '';
+                        const total_spatial_candidates = ts.total_spatial_candidates || 0;
+                        const overlap_stations = ts.overlap_stations || 0;
+                        const overlap_lines = ts.overlap_lines || 0;
+                        const temporal_overlap_pct = (typeof ts.temporal_overlap_pct === 'number') ? ts.temporal_overlap_pct.toFixed(2) : (ts.temporal_overlap_pct || 0);
+                        const temporal_overlap_times = ts.temporal_overlap_times || 0;
+                        const temporal_overlap_stations = ts.temporal_overlap_stations || 0;
+                        const temporal_overlap_lines = ts.temporal_overlap_lines || 0;
+                        const TEMPORAL_OVERLAP_MAX_MIN = ts.TEMPORAL_OVERLAP_MAX_MIN || '';
+                        const walk_distance_threshold = ts.walk_distance_threshold || '';
+
+                        const sentence = `De todas as ${total_spatial_candidates} vezes, em ${overlap_stations} estações e ${overlap_lines} linhas que um autocarro dos SMTUC passa numa estação que tem overlap espacial (<=${walk_distance_threshold} metros) com o Metrobus, há overlap temporal (<=${TEMPORAL_OVERLAP_MAX_MIN} minutos) em ${temporal_overlap_pct}% delas (${temporal_overlap_times} vezes, em ${temporal_overlap_stations} estações e em ${temporal_overlap_lines} linhas).`;
+
+                        return `
+                            <article class="stats-card" style="grid-column: 1 / -1; margin-top:12px;">
+                                <h3 style="padding:10px 12px;">Resumo temporal</h3>
+                                <div style="padding:12px;color:var(--muted);line-height:1.45;font-weight:600;">${sentence}</div>
+                            </article>
+                        `;
+                    })()}
+                </section>
+            `;
+        }
+
+        function renderTabs() {
+            const interactiveTabs = tabs.filter((item) => item.kind !== 'summary');
+
+            tabsEl.innerHTML = tabs.map((item, index) => `
+                <button
+                    class="tab-btn"
+                    type="button"
+                    role="tab"
+                    id="tab-${item.id}"
+                    data-tab-id="${item.id}"
+                    aria-controls="panel-${item.id}"
+                    aria-selected="${index === 0 ? 'true' : 'false'}"
+                    tabindex="${index === 0 ? '0' : '-1'}"
+                >
+                    ${item.label}
+                </button>
+            `).join('');
+
+            panelsEl.innerHTML = tabs.map((item, index) => {
+                if (item.kind === 'summary') {
+                    return `
+                        <article class="tab-panel is-active" id="panel-${item.id}" data-panel-id="${item.id}" role="tabpanel" aria-labelledby="tab-${item.id}">
+                            <div class="panel-head">
+                                <h2 class="panel-title">${item.label}</h2>
+                                <p class="panel-desc">${item.description || ''}</p>
+                            </div>
+                            <div class="summary-grid">
+                                ${renderSummaryCards(item.preview_items || interactiveTabs)}
+                            </div>
+                        </article>
+                    `;
+                }
+
+                return `
+                    <article class="tab-panel${index === 0 ? ' is-active' : ''}" id="panel-${item.id}" data-panel-id="${item.id}" role="tabpanel" aria-labelledby="tab-${item.id}">
+                        <div class="panel-head">
+                            <h2 class="panel-title">${item.label}</h2>
+                            <p class="panel-desc">${item.description || ''}</p>
+                        </div>
+                        <div class="frame-wrap">
+                            <iframe
+                                title="${item.label}"
+                                loading="lazy"
+                                data-src="${item.src || ''}"
+                                referrerpolicy="no-referrer"
+                            ></iframe>
+                        </div>
+                        ${item.id === 'overlap' ? renderOverlapStats(item) : ''}
+                    </article>
+                `;
+            }).join('');
+
+            tabsEl.querySelectorAll('[data-tab-id]').forEach((button) => {
+                button.addEventListener('click', () => setActiveTab(button.dataset.tabId, false));
+                button.addEventListener('keydown', (event) => {
+                    const key = event.key;
+                    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'Home' && key !== 'End') return;
+
+                    const currentIndex = tabs.findIndex((item) => item.id === button.dataset.tabId);
+                    if (currentIndex < 0) return;
+
+                    let nextIndex = currentIndex;
+                    if (key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                    if (key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+                    if (key === 'Home') nextIndex = 0;
+                    if (key === 'End') nextIndex = tabs.length - 1;
+
+                    event.preventDefault();
+                    const nextTab = tabs[nextIndex];
+                    setActiveTab(nextTab.id, true);
+                });
+            });
+
+            panelsEl.querySelectorAll('a[data-summary-target]').forEach((link) => {
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    setActiveTab(link.dataset.summaryTarget, true);
+                });
+            });
+
+            setActiveTab(tabs[0].id, false);
+        }
+
+        renderTabs();
+    </script>
+</body>
+</html>

@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from visualizations import create_master_dashboard_html
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
 
 
@@ -185,3 +186,20 @@ def test_lines_54_38_portagem_bus_vs_metro_from_portela() -> None:
     )
     bus_times_54 = [t for t in df_54["bus_time"].tolist() if t]
     assert len(bus_times) >= len(bus_times_54)
+
+
+def test_master_dashboard_html(tmp_path: Path) -> None:
+    """Generate the unified HTML shell that links all main dashboards."""
+    output_html = tmp_path / "dashboard.html"
+
+    created = create_master_dashboard_html(output_html)
+
+    assert Path(created) == output_html
+    assert output_html.exists()
+
+    html_text = output_html.read_text(encoding="utf-8")
+    assert "Dashboard unificado" in html_text
+    assert "integration/portagem/l54_portagem_all.html" in html_text
+    assert "integration/portela/l54_all.html" in html_text
+    assert "population/bgri.html" in html_text
+    assert "overlap/overlap_reachability_now.html" in html_text

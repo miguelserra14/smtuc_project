@@ -53,6 +53,18 @@
         const figEquity = __EQUITY_JSON__;
         const cfg = { responsive: true };
 
+        // Support ?show=heatmaps query parameter to hide timeline
+        const urlParams = new URLSearchParams(window.location.search);
+        const showMode = urlParams.get('show');
+        
+        if (showMode === 'heatmaps') {
+            // Hide the timeline section (first panel)
+            const panels = document.querySelectorAll('section.panel');
+            if (panels.length > 0) {
+                panels[0].style.display = 'none';
+            }
+        }
+
         function pad2(v) {
             return String(v).padStart(2, '0');
         }
@@ -106,13 +118,17 @@
         }
 
         applyAutoBusinessDay();
-        Plotly.newPlot('plot_timeline', figTimeline.data, figTimeline.layout, cfg);
+        if (showMode !== 'heatmaps') {
+            Plotly.newPlot('plot_timeline', figTimeline.data, figTimeline.layout, cfg);
+        }
         Plotly.newPlot('plot_waits', figWaits.data, figWaits.layout, cfg);
         Plotly.newPlot('plot_equity', figEquity.data, figEquity.layout, cfg);
 
         setInterval(() => {
             applyAutoBusinessDay();
-            Plotly.relayout('plot_timeline', figTimeline.layout);
+            if (showMode !== 'heatmaps') {
+                Plotly.relayout('plot_timeline', figTimeline.layout);
+            }
             Plotly.relayout('plot_waits', figWaits.layout);
             Plotly.relayout('plot_equity', figEquity.layout);
         }, 60000);
