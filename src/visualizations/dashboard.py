@@ -126,19 +126,19 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
         {
             "id": "summary",
             "label": "Resumo",
-            "description": "Atalhos e pré-visualizações dos dashboards principais.",
+            "description": "Com a entrada do Metrobus em Coimbra, os SMTUC requerem uma reconfiguração para evitar redundância excessiva onde já existe boa cobertura de transportes públicos, reforçar zonas com baixa oferta relativa à população e melhorar a complementaridade espacial e temporal entre redes.",
             "kind": "summary",
             "preview_items": [
                 {
                     "id": "overlap",
                     "label": "Overlap",
-                    "description": "Mapa de subserviço.",
+                    "description": "Mapa de isócronas dinâmico e dados associados.",
                     "src": "population/bgri.html?show=choropleth",
                 },
                 {
                     "id": "population",
                     "label": "População",
-                    "description": "Heatmap, subserviço e raio a 2 km.",
+                    "description": "Mapas de população e de Índice de Subserviço.",
                     "src": "population/bgri.html",
                 },
                 {
@@ -158,14 +158,14 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
         {
             "id": "population",
             "label": "População",
-            "description": "Heatmap, subserviço e raio a 2 km.",
+            "description": "Mapas de população e de Índice de Subserviço.",
             "kind": "iframe",
             "src": "population/bgri.html",
         },
         {
             "id": "overlap",
             "label": "Overlap",
-            "description": "Isochronas e reachability dinâmica.",
+            "description": "Mapa de isócronas dinâmico e dados associados.",
             "kind": "iframe",
             "src": "overlap/overlap_reachability_now.html",
             "overlap_stats": overlap_stats,
