@@ -189,7 +189,7 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
 
 def create_master_dashboard_html(
     output_path: Path | str,
-    title: str = "SMTUC 2.0 — Dashboard Geral",
+    title: str = "SMTUC: A caminho da complementaridade",
     tabs: list[dict[str, Any]] | None = None,
 ) -> str:
     """Create a single HTML page that links to all main visualization dashboards."""
