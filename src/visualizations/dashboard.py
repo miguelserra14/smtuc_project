@@ -145,7 +145,7 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
                     "id": "integration-portagem",
                     "label": "Integração Portagem",
                     "description": "Heatmaps de espera e equidade.",
-                    "src": "integration/portagem/l54_portagem_all.html?show=heatmaps",
+                    "src": "integration/portagem/l54_38_all.html?show=heatmaps",
                 },
                 {
                     "id": "integration-portela",
@@ -175,7 +175,7 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
             "label": "Integração Portagem",
             "description": "Linha 54 no sentido Portela -> Portagem.",
             "kind": "iframe",
-            "src": "integration/portagem/l54_portagem_all.html",
+            "src": "integration/portagem/l54_38_all.html",
         },
         {
             "id": "integration-portela",

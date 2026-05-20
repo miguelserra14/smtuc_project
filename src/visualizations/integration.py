@@ -282,14 +282,16 @@ def generate_connection_visualizations(
             x=heatmap_labels_x,
             y=heatmap_labels_y,
             colorscale="YlOrRd",
-            text=heatmap_data,
-            texttemplate="%{text}",
-            textfont={"size": 10},
-            colorbar={"title": "Freq."},
+            colorbar={
+                "title": "Freq.",
+                "tickvals": [0, 1, 2],
+                "ticktext": ["0", "1", "2"],
+                "len": 0.3,
+            },
         )
     )
     fig_timeline.update_layout(
-        title=f"Frequencia de Passagens por Hora ({sample_date})",
+        title=f"Frequência de Passagens ({sample_date})",
         xaxis_title="Hora",
         yaxis_title="Rede",
         plot_bgcolor="white",
@@ -314,7 +316,7 @@ def generate_connection_visualizations(
         x="index_label",
         y="wait_min",
         color="wait_class",
-        title=f"Espera ate ao Proximo Autocarro ({sample_date})",
+        title=f"Espera até ao Próximo Autocarro ({sample_date})",
         labels={"index_label": "Hora de chegada do metro", "wait_min": "Espera (min)"},
         color_discrete_map={"<=10": "#2a9d8f", "10-15": "#e9c46a", ">15": "#e76f51"},
         hover_data={
