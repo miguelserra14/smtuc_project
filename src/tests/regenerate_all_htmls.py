@@ -171,7 +171,8 @@ def regenerate_integration_htmls() -> None:
         print(f"[INFO] Usando data: {day_str}")
         
         # Portagem: Linhas 54 + 38 (Portela â†’ Portagem)
-        print("\n[INFO] Gerando integraÃ§Ã£o Portagem (Portela â†’ Portagem) com linhas 54 + 38...")
+        # Generates: l54_38_wt.csv, line_54_38_bus_portagem_metro_portagem.csv, etc.
+        print("\n[INFO] Gerando integração Portagem (Portela → Portagem) com linhas 54 + 38...")
         try:
             results = generate_connection_visualizations(
                 metro_stop_ref="Portagem",
@@ -180,6 +181,7 @@ def regenerate_integration_htmls() -> None:
                 day_str=day_str,
                 metro_origin_ref="Portela",
                 bus_origin_ref="Portela do Mondego",
+                output_prefix="l54_38",  # Explicitly use prefix for lines 54+38
                 output_subdir="portagem",
                 fixed_html_name="l54_38_all.html",
             )
@@ -187,25 +189,9 @@ def regenerate_integration_htmls() -> None:
         except Exception as e:
             print(f"[WARNING] Erro na integraÃ§Ã£o Portagem (54+38): {e}")
         
-        # Portagem: Linha 54 apenas (Portela â†’ Portagem)
-        print("\n[INFO] Gerando integraÃ§Ã£o Portagem (Portela â†’ Portagem) com linha 54...")
-        try:
-            results = generate_connection_visualizations(
-                metro_stop_ref="Portagem",
-                bus_stop_ref="Portagem",
-                line_number="54",
-                day_str=day_str,
-                metro_origin_ref="Portela",
-                bus_origin_ref="Portela do Mondego",
-                output_subdir="portagem",
-                fixed_html_name="l54_portagem_all.html",
-            )
-            print(f"[SUCCESS] IntegraÃ§Ã£o Portagem (54): {results.get('html_path', 'N/A')}")
-        except Exception as e:
-            print(f"[WARNING] Erro na integraÃ§Ã£o Portagem (54): {e}")
-        
         # Portela: Linha 54 (Portagem â†’ Portela)
-        print("\n[INFO] Gerando integraÃ§Ã£o Portela (Portagem â†’ Portela) com linha 54...")
+        # Generates: l54_wt.csv, line_54_bus_portela_do_mondego_metro_portela.csv, etc.
+        print("\n[INFO] Gerando integração Portela (Portagem → Portela) com linha 54...")
         try:
             results = generate_connection_visualizations(
                 metro_stop_ref="Portela",
@@ -214,6 +200,7 @@ def regenerate_integration_htmls() -> None:
                 day_str=day_str,
                 metro_origin_ref="Portagem",
                 bus_origin_ref="Portagem",
+                output_prefix="l54",  # Explicitly use prefix for line 54 only
                 output_subdir="portela",
                 fixed_html_name="l54_all.html",
             )
@@ -268,3 +255,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
