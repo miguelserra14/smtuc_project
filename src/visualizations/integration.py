@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import html
 import shutil
 from pathlib import Path
 
@@ -135,7 +134,6 @@ def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
 
 def create_combined_integration_dashboard(
     output_path: Path | str,
-    title: str,
     timeline_fig: object,
     waits_fig: object,
     equity_fig: object,
@@ -152,7 +150,6 @@ def create_combined_integration_dashboard(
     equity_json = pio.to_json(equity_fig)
 
     page = _read_template("integration_dashboard.html")
-    page = page.replace("__TITLE__", html.escape(title))
     page = page.replace("__TIMELINE_JSON__", timeline_json)
     page = page.replace("__WAITS_JSON__", waits_json)
     page = page.replace("__EQUITY_JSON__", equity_json)
@@ -449,10 +446,6 @@ def generate_connection_visualizations(
     combined_path = out_root / combined_name
     create_combined_integration_dashboard(
         output_path=combined_path,
-        title=(
-            f"Integracao Linha {line_display}: {bus_origin_ref} -> {bus_stop_ref} "
-            f"vs Metro {metro_origin_ref} -> {metro_stop_ref} ({sample_date})"
-        ),
         timeline_fig=fig_timeline,
         waits_fig=fig_wait,
         equity_fig=fig_heat,

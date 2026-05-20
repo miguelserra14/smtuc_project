@@ -228,6 +228,14 @@ def create_overlap_reachability_map(
             return '#d73027';
         }}
 
+        function hatchStrokeColor(label) {{
+            var hex = String(colorByBand(label)).replace('#', '');
+            var r = parseInt(hex.slice(0, 2), 16);
+            var g = parseInt(hex.slice(2, 4), 16);
+            var b = parseInt(hex.slice(4, 6), 16);
+            return 'rgb(' + Math.max(0, Math.round(r * 0.35)) + ',' + Math.max(0, Math.round(g * 0.35)) + ',' + Math.max(0, Math.round(b * 0.35)) + ')';
+        }}
+
         var patternsReady = false;
 
         function ensurePatternDefs() {{
@@ -273,7 +281,8 @@ def create_overlap_reachability_map(
                 stripe.setAttribute('y1', '0');
                 stripe.setAttribute('x2', '0');
                 stripe.setAttribute('y2', '8');
-                stripe.setAttribute('stroke', 'rgba(25, 25, 25, 0.45)');
+                stripe.setAttribute('stroke', hatchStrokeColor(label));
+                stripe.setAttribute('stroke-opacity', '0.9');
                 stripe.setAttribute('stroke-width', '2');
                 pattern.appendChild(stripe);
 
@@ -284,23 +293,41 @@ def create_overlap_reachability_map(
             return true;
         }}
 
-        function applyFillPattern(layer, label, modeLabel) {{
-            if (!layer || !layer._path) return;
+        function applyFillPattern(layer, label, modeLabel, latlng) {{
+            if (!layer) return;
+
+            var fillValue = colorByBand(label);
+            var patternEl = null;
 
             if (modeLabel === 'a pé') {{
                 if (ensurePatternDefs()) {{
                     var patternId = 'iso_walk_hatch_' + label.replace('-', '_');
-                    layer._path.setAttribute('fill', 'url(#' + patternId + ')');
-                }} else {{
-                    layer._path.setAttribute('fill', colorByBand(label));
+                    fillValue = 'url(#' + patternId + ')';
+                    patternEl = document.getElementById(patternId);
+                    if (patternEl && latlng && mapObj && mapObj.latLngToLayerPoint) {{
+                        var pt = mapObj.latLngToLayerPoint(latlng);
+                        var offsetX = ((pt.x % 8) + 8) % 8;
+                        var offsetY = ((pt.y % 8) + 8) % 8;
+                        patternEl.setAttribute('patternTransform', 'rotate(45) translate(' + offsetX + ' ' + offsetY + ')');
+                    }}
                 }}
-            }} else {{
-                layer._path.setAttribute('fill', colorByBand(label));
+            }}
+
+            if (layer.setStyle) {{
+                layer.setStyle({{
+                    fillColor: fillValue,
+                    fillOpacity: 0.55
+                }});
+            }}
+
+            if (layer._path) {{
+                layer._path.style.fill = fillValue;
+                layer._path.setAttribute('fill', fillValue);
             }}
         }}
 
         function styleByMode(modeLabel) {{
-            return {{ color: '#ffffff', weight: 1.3, dashArray: null, fillOpacity: 0.55 }};
+            return {{ color: '#ffffff', weight: 1.3, dashArray: modeLabel === 'a pé' ? '6 4' : null, fillOpacity: 0.55 }};
         }}
 
         function bandFromReach(mins) {{
@@ -324,8 +351,17 @@ def create_overlap_reachability_map(
             if (totalEl) totalEl.textContent = total.toFixed(3) + ' km²';
         }}
 
+        function updateLegendModeCounts(modeCounts) {{
+            var ptEl = document.getElementById('legend-count-pt');
+            if (ptEl) ptEl.textContent = String(modeCounts['transporte público'] || 0);
+
+            var walkEl = document.getElementById('legend-count-walk');
+            if (walkEl) walkEl.textContent = String(modeCounts['a pé'] || 0);
+        }}
+
         function refreshIsochrones(latlng) {{
             var areaByBand = {{'0-10': 0, '10-20': 0, '20-30': 0, '30-40': 0, '40-50': 0, '50-60': 0}};
+            var modeCounts = {{'transporte público': 0, 'a pé': 0}};
             isoLayer.eachLayer(function(layer) {{
                 if (!layer || !layer.feature || !layer.feature.properties) return;
                 var props = layer.feature.properties;
@@ -338,8 +374,9 @@ def create_overlap_reachability_map(
                 var dNow = mapObj.distance(latlng, cPoint);
                 var dBase = mapObj.distance(baseOrigin, cPoint);
                 var estMin = baseReach + ((dNow - dBase) / WALK_METERS_PER_MIN);
+                var walkMin = dNow / WALK_METERS_PER_MIN;
                 var bandLabel = bandFromReach(estMin);
-                var mode = String(props.reach_mode || 'transporte público');
+                var mode = walkMin <= estMin ? 'a pé' : 'transporte público';
 
                 props.band_label = bandLabel;
                 props.band_mode = mode;
@@ -354,14 +391,17 @@ def create_overlap_reachability_map(
                         fillOpacity: styleMode.fillOpacity
                     }});
                 }}
-                applyFillPattern(layer, bandLabel, mode);
+                applyFillPattern(layer, bandLabel, mode, latlng);
 
                 var areaKm2 = Number(props.area_km2 || 0);
                 if (isFinite(areaKm2)) {{
                     areaByBand[bandLabel] = (areaByBand[bandLabel] || 0) + areaKm2;
                 }}
+
+                modeCounts[mode] = (modeCounts[mode] || 0) + 1;
             }});
             updateLegendAreaMap(areaByBand);
+            updateLegendModeCounts(modeCounts);
         }}
 
         var latestLatLng = null;
@@ -446,8 +486,8 @@ def create_overlap_reachability_map(
                 <div><span style="display:inline-block;width:12px;height:12px;background:#f46d43;margin-right:6px;"></span>40-50: <span id="legend-area-40_50">{a4:.3f} km²</span></div>
                 <div><span style="display:inline-block;width:12px;height:12px;background:#d73027;margin-right:6px;"></span>50-60: <span id="legend-area-50_60">{a5:.3f} km²</span></div>
                 <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;"><strong>Zonas por modo:</strong></div>
-                <div style="font-size:11px;">Transporte público: <strong>{pt_count}</strong></div>
-                <div style="font-size:11px;">A pé: <strong>{walk_count}</strong></div>
+                <div style="font-size:11px;">Transporte público: <strong id="legend-count-pt">{pt_count}</strong></div>
+                <div style="font-size:11px;">A pé: <strong id="legend-count-walk">{walk_count}</strong></div>
                 <div style="margin-top:6px; font-size:11px;"><span style="display:inline-block;width:12px;height:12px;background:#66bd63; margin-right:6px; border:1px solid #999;"></span>Preenchimento liso: maioria transporte público</div>
                 <div style="font-size:11px;"><span style="display:inline-block;width:12px;height:12px;background:repeating-linear-gradient(45deg, #66bd63 0px, #66bd63 4px, #2b2b2b 4px, #2b2b2b 6px); margin-right:6px; border:1px solid #999;"></span>Preenchimento riscado: maioria a pé</div>
                 <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;"><strong>Total ≤ 20 min:</strong> <span id="legend-area-total-20">{at:.3f} km²</span></div>

@@ -23,7 +23,7 @@ def _read_template(template_name: str) -> str:
 
 def _figure_to_srcdoc(fig: object) -> str:
     """Serialize a Plotly figure into escaped full HTML for iframe srcdoc."""
-    html_doc = fig.to_html(full_html=True, include_plotlyjs="cdn")
+    html_doc = fig.to_html(full_html=False, include_plotlyjs="cdn")
     return html.escape(html_doc, quote=True)
 
 
