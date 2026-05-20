@@ -30,6 +30,7 @@ from visualizations import (
     create_master_dashboard_html,
     create_population_dashboard_html,
     create_overlap_reachability_map,
+        create_overlap_lines_map,
     generate_connection_visualizations,
     _write_folium_html,
 )
@@ -210,6 +211,14 @@ def regenerate_overlap_htmls() -> None:
 
         _write_folium_html(fig_map, reachability_html, footer_html=footer_html)
         print(f"[SUCCESS] Mapa de reachability: {reachability_html}")
+
+        # Also create a standalone overlap lines map (top/bottom lines + metro)
+        try:
+            lines_map_html = out_dir / "overlap_lines_map.html"
+            created = create_overlap_lines_map(output_path=lines_map_html)
+            print(f"[SUCCESS] Mapa de linhas (overlap): {created}")
+        except Exception as e:
+            print(f"[WARNING] Não foi possível gerar mapa de linhas: {e}")
         
     except Exception as e:
         print(f"[ERROR] Erro ao regenerar HTMLs de overlap: {e}")

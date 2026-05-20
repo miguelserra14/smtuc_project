@@ -29,6 +29,7 @@ OUTPUTS_ROOT_DIR = "outputs"
 OUTPUTS_POPULATION_DIR = "outputs/population"
 OUTPUTS_OVERLAP_DIR = "outputs/overlap"
 OUTPUTS_INTEGRATION_DIR = "outputs/integration"
+OUTPUTS_OVERLAP_LINES_MAP = "outputs/overlap/overlap_lines_map.html"
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"
@@ -48,6 +49,7 @@ Links visualizações:
 Nota: todas as datas mostradas nas visualizações são calculadas automaticamente pela função de dia útil mais próximo (resolve_reference_day).
 
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
+http://localhost:8000/outputs/overlap/overlap_lines_map.html
 http://localhost:8000/outputs/population/bgri.html
 http://localhost:8000/outputs/dashboard.html
 

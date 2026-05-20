@@ -8,6 +8,7 @@ from .population_maps import (
     create_population_heatmap,
 )
 from .reachability import create_overlap_reachability_map
+from .lines_map import create_overlap_lines_map
 
 __all__ = [
     "_write_folium_html",
@@ -19,4 +20,5 @@ __all__ = [
     "create_population_dashboard_html",
     "create_population_heatmap",
     "create_overlap_reachability_map",
+    "create_overlap_lines_map",
 ]
