@@ -18,6 +18,7 @@ HOME_COORD = (40.207883, -8.398107)
 WORK_COORD = (40.186724, -8.416078)
 STADIUM_COORD = (40.203809, -8.407904)
 #meter coords outros sitos relevante, vale das flores, chuc, fuck it rebolim, etc
+#dps clarificar aqui melhor que metricas servem para que
 OVERLAP_TABLE_TOP_N = 5
 OVERLAP_SCAN_TOP_N = 10000
 UNDERSERVED_TOP_N = 20
@@ -51,13 +52,13 @@ Nota: todas as datas mostradas nas visualizações são calculadas automaticamen
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
 http://localhost:8000/outputs/overlap/overlap_lines_map.html
 http://localhost:8000/outputs/population/bgri.html
+
 http://localhost:8000/outputs/dashboard.html
 
 Views integração (linha 54, data útil automática):
 
 Portela (Portagem -> Portela do Mondego/Portela):
 http://localhost:8000/outputs/integration/portela/l54_all.html
-
 Portagem (Portela do Mondego/Portela -> Portagem):
 http://localhost:8000/outputs/integration/portagem/l54_portagem_all.html
 

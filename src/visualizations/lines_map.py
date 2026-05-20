@@ -109,6 +109,93 @@ def create_overlap_lines_map(
 
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # Save map
-    _write_folium_html(m, out_path)
+    # Prepare lines data (coords + metrics) to embed for interactive selection
+    try:
+        metrics_df = pd.read_csv(metrics_path).fillna("")
+        # only numeric-ish lines
+        metrics_df["line"] = metrics_df["line"].astype(str)
+    except Exception:
+        metrics_df = pd.DataFrame()
+
+    lines_data: dict = {}
+    try:
+        line_map_all = _line_to_route_ids(gtfs_smtuc)
+        for line in sorted(set(metrics_df["line"].tolist())):
+            if line not in line_map_all:
+                continue
+            route_ids = line_map_all.get(line, [])
+            coords = None
+            # pick longest representative route among route_ids
+            best_len = 0
+            for rid in route_ids:
+                for lat_arr, lon_arr, count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
+                    if len(lat_arr) > best_len:
+                        best_len = len(lat_arr)
+                        coords = list(zip(lat_arr.tolist(), lon_arr.tolist()))
+            if not coords:
+                continue
+            row = metrics_df[metrics_df["line"] == line].iloc[0].to_dict() if not metrics_df.empty else {}
+            lines_data[line] = {
+                "coords": coords,
+                "overlap_pct": row.get("overlap_pct", ""),
+                "overlap_m": row.get("overlap_extension_m", ""),
+                "extension_m": row.get("line_extension_m", ""),
+            }
+    except Exception:
+        lines_data = {}
+
+    # embed a small control and the lines_data JSON into the page
+    try:
+        import json
+
+        control_html = """
+        <div id="line-select-control" style="position: absolute; top: 10px; right: 10px; z-index: 9999; background: rgba(255,255,255,0.95); padding:8px; border-radius:6px; box-shadow:0 1px 6px rgba(0,0,0,0.2); font-size:13px;">
+          <div style="margin-bottom:6px; font-weight:600;">Mostrar linha</div>
+          <div style="display:flex; gap:6px;">
+            <input id="line-input" placeholder="Número da linha" style="width:110px;padding:4px;border:1px solid #ccc;border-radius:4px" />
+            <button id="line-show-btn" style="padding:4px 8px;border-radius:4px;border:none;background:#1976d2;color:#fff">Mostrar</button>
+            <button id="line-clear-btn" style="padding:4px 8px;border-radius:4px;border:none;background:#999;color:#fff">Limpar</button>
+          </div>
+          <div id="line-info" style="margin-top:6px;font-size:12px;color:#222"></div>
+        </div>
+        <script>
+          var __LINES_DATA__ = %s;
+          (function(){
+            var selectedLayer = null;
+            var map = map_7962740fa9b77b803d90ff8725c8108e;
+            function showLine(line){
+              if(!line) return;
+              var data = __LINES_DATA__[line];
+              if(!data) { document.getElementById('line-info').innerText = 'Linha não encontrada'; return; }
+              if(selectedLayer){ map.removeLayer(selectedLayer); selectedLayer = null; }
+              var latlngs = data.coords.map(function(p){ return [p[0], p[1]]; });
+              selectedLayer = L.polyline(latlngs, {color: '#ff5722', weight: 4, opacity:0.9}).addTo(map);
+              map.fitBounds(selectedLayer.getBounds(), {padding:[20,20]});
+              var info = 'Linha: ' + line + ' — Overlap: ' + (data.overlap_pct || '-') + ' %, Overlap m: ' + (data.overlap_m || '-') + ', Extensão m: ' + (data.extension_m || '-');
+              document.getElementById('line-info').innerText = info;
+              selectedLayer.bindPopup(info).openPopup();
+            }
+            document.addEventListener('DOMContentLoaded', function(){
+              var btn = document.getElementById('line-show-btn');
+              var clr = document.getElementById('line-clear-btn');
+              var inp = document.getElementById('line-input');
+              btn.addEventListener('click', function(){ showLine(inp.value.trim()); });
+              inp.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ showLine(inp.value.trim()); }});
+              clr.addEventListener('click', function(){ if(selectedLayer){ map.removeLayer(selectedLayer); selectedLayer=null; } document.getElementById('line-info').innerText=''; });
+            });
+          })();
+        </script>
+        """ % json.dumps(lines_data, ensure_ascii=False)
+
+        # append control_html before </body>
+        page = m.get_root().render()
+        insert_at = page.rfind('</body>')
+        if insert_at != -1:
+            new_page = page[:insert_at] + control_html + page[insert_at:]
+        else:
+            new_page = page + control_html
+        out_path.write_text(new_page, encoding='utf-8')
+    except Exception:
+        # fallback: save map normally
+        _write_folium_html(m, out_path)
     return str(out_path)
