@@ -7,7 +7,8 @@ import pandas as pd
 
 from config import (
     OVERLAP_TABLE_TOP_N,
-    REACHABILITY_MAX_BOARD_WALK_MIN,
+    REACHABILITY_MAX_BOARDING_WALK_MIN,
+    SPATIAL_OVERLAP_WALK_MIN,
     REACHABILITY_MAX_MIN,
     REACHABILITY_MAX_TRANSFERS,
     REACHABILITY_MAX_TRANSFER_WALK_MIN,
@@ -193,7 +194,7 @@ def compute_temporal_overlaps_for_db(
     gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
     gtfs_metro = _load_gtfs_cached(metrobus_dataset)
     
-    walk_5_min_m = walk_speed_m_min * 5
+    walk_5_min_m = walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN
     temporal_threshold_s = int(float(temporal_overlap_max_min) * 60)
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
     metro_stops["stop_id"] = metro_stops["stop_id"].astype(str)
@@ -593,7 +594,7 @@ def _reachable_stops_for_dataset_now(
     time_str: str,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     max_min: float = REACHABILITY_MAX_MIN,
-    max_board_walk_min: float = REACHABILITY_MAX_BOARD_WALK_MIN,
+    max_board_walk_min: float = REACHABILITY_MAX_BOARDING_WALK_MIN,
 ) -> pd.DataFrame:
     gtfs = _load_gtfs_cached(dataset)
 
@@ -706,7 +707,7 @@ def _reachable_stops_multimodal_now(
     time_str: str,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     max_min: float = REACHABILITY_MAX_MIN,
-    max_board_walk_min: float = REACHABILITY_MAX_BOARD_WALK_MIN,
+    max_board_walk_min: float = REACHABILITY_MAX_BOARDING_WALK_MIN,
     max_transfer_walk_min: float = REACHABILITY_MAX_TRANSFER_WALK_MIN,
     max_transfers: int = REACHABILITY_MAX_TRANSFERS,
 ) -> pd.DataFrame:

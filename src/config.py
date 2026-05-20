@@ -2,12 +2,17 @@ from __future__ import annotations
 
 WALK_SPEED_M_MIN = 80.0
 TEMPORAL_OVERLAP_MAX_MIN = 5.0
+SPATIAL_OVERLAP_MIN=3
 
 # Reachability tuning parameters
 REACHABILITY_MAX_MIN = 60.0
 REACHABILITY_MAX_BOARDING_WALK_MIN = 10.0
 REACHABILITY_MAX_TRANSFER_WALK_MIN = 5.0
 REACHABILITY_MAX_TRANSFERS = 2
+
+# Spatial overlap: how many minutes of walking to consider when testing spatial overlap
+# (used as `walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN`). Default: 3 minutes.
+SPATIAL_OVERLAP_WALK_MIN = 3.0
 
 HOME_COORD = (40.207883, -8.398107)
 WORK_COORD = (40.186724, -8.416078)

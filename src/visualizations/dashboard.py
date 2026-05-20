@@ -90,9 +90,9 @@ def _load_overlap_stats() -> dict[str, list[dict[str, str]]] | None:
     temporal_overlap_pct = (total_temporal_overlaps / total_spatial_candidates) * 100.0 if total_spatial_candidates > 0 else 0.0
 
     # Import configured temporal threshold and walk speed from central config
-    from config import TEMPORAL_OVERLAP_MAX_MIN, WALK_SPEED_M_MIN
+    from config import TEMPORAL_OVERLAP_MAX_MIN, WALK_SPEED_M_MIN, SPATIAL_OVERLAP_MIN
 
-    walk_distance_threshold = WALK_SPEED_M_MIN * 5.0
+    walk_distance_threshold = WALK_SPEED_M_MIN * SPATIAL_OVERLAP_MIN
 
     return {
         "top5": _fmt(top5),

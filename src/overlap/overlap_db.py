@@ -12,6 +12,7 @@ from config import (
     STADIUM_COORD,
     STADIUM_RADIUS_M,
     WALK_SPEED_M_MIN,
+    SPATIAL_OVERLAP_MIN,
 )
 from gtfs_processing.gtfs import load_gtfs
 
@@ -255,7 +256,7 @@ def _compute_line_metrics(
     gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
     gtfs_metro = _load_gtfs_cached(metrobus_dataset)
 
-    walk_5_min_m = walk_speed_m_min * 5
+    walk_5_min_m = walk_speed_m_min * SPATIAL_OVERLAP_MIN
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
     if metro_stops.empty:
         return pd.DataFrame()
@@ -340,6 +341,7 @@ def build_line_metrics_db(
                 and float(cached.iloc[0].get("__meta_stadium_lat", 999.0)) == float(stadium_lat)
                 and float(cached.iloc[0].get("__meta_stadium_lon", 999.0)) == float(stadium_lon)
                 and float(cached.iloc[0].get("__meta_radius_m", -1.0)) == float(radius_m)
+                and float(cached.iloc[0].get("__meta_spatial_overlap_min", -1.0)) == float(SPATIAL_OVERLAP_MIN)
                 and str(cached.iloc[0].get("__meta_sig_smtuc", "")) == signature_smtuc
                 and str(cached.iloc[0].get("__meta_sig_metro", "")) == signature_metro
             )
@@ -365,6 +367,7 @@ def build_line_metrics_db(
     fresh["__meta_stadium_lat"] = float(stadium_lat)
     fresh["__meta_stadium_lon"] = float(stadium_lon)
     fresh["__meta_radius_m"] = float(radius_m)
+    fresh["__meta_spatial_overlap_min"] = float(SPATIAL_OVERLAP_MIN)
     fresh["__meta_sig_smtuc"] = signature_smtuc
     fresh["__meta_sig_metro"] = signature_metro
     fresh.to_csv(csv_path, index=False)
