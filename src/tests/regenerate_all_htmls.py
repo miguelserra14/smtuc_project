@@ -33,7 +33,14 @@ from visualizations import (
     generate_connection_visualizations,
     _write_folium_html,
 )
-from src.config import CATCHMENT_M, STADIUM_RADIUS_M, OUTPUTS_POPULATION_DIR, OUTPUTS_INTEGRATION_DIR, STADIUM_COORD
+from src.config import (
+    CATCHMENT_M,
+    STADIUM_RADIUS_M,
+    OUTPUTS_POPULATION_DIR,
+    OUTPUTS_INTEGRATION_DIR,
+    STADIUM_COORD,
+    REACHABILITY_MAX_TRANSFERS,
+)
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
 
 
@@ -131,6 +138,7 @@ def regenerate_overlap_htmls() -> None:
             origin_lon=STADIUM_COORD[1],
             day_str=day_str,
             time_str=None,
+            max_transfers=REACHABILITY_MAX_TRANSFERS,
         )
         
         selected_time = str(reach_gdf["reach_time"].iloc[0]) if not reach_gdf.empty else "00:00:00"

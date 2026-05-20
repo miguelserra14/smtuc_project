@@ -7,6 +7,10 @@ import pandas as pd
 
 from config import (
     OVERLAP_TABLE_TOP_N,
+    REACHABILITY_MAX_BOARD_WALK_MIN,
+    REACHABILITY_MAX_MIN,
+    REACHABILITY_MAX_TRANSFERS,
+    REACHABILITY_MAX_TRANSFER_WALK_MIN,
     STADIUM_COORD,
     STADIUM_MIN_EXTENSION_PCT,
     STADIUM_RADIUS_M,
@@ -588,8 +592,8 @@ def _reachable_stops_for_dataset_now(
     day_str: str,
     time_str: str,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
-    max_min: float = 60.0,
-    max_board_walk_min: float = 20.0,
+    max_min: float = REACHABILITY_MAX_MIN,
+    max_board_walk_min: float = REACHABILITY_MAX_BOARD_WALK_MIN,
 ) -> pd.DataFrame:
     gtfs = _load_gtfs_cached(dataset)
 
@@ -694,6 +698,175 @@ def _reachable_stops_for_dataset_now(
     return out[["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"]]
 
 
+def _reachable_stops_multimodal_now(
+    datasets: tuple[str, ...],
+    origin_lat: float,
+    origin_lon: float,
+    day_str: str,
+    time_str: str,
+    walk_speed_m_min: float = WALK_SPEED_M_MIN,
+    max_min: float = REACHABILITY_MAX_MIN,
+    max_board_walk_min: float = REACHABILITY_MAX_BOARD_WALK_MIN,
+    max_transfer_walk_min: float = REACHABILITY_MAX_TRANSFER_WALK_MIN,
+    max_transfers: int = REACHABILITY_MAX_TRANSFERS,
+) -> pd.DataFrame:
+    """
+    Compute stop-level multimodal reachability allowing chained trips with transfers.
+
+    Model:
+    - Initial walk from origin to boardable stops.
+    - Ride on a trip to any downstream stop.
+    - Walk transfer between nearby stops, then board another trip.
+    """
+    day = _parse_day(day_str)
+    t0 = int(_to_seconds(time_str))
+
+    all_stops_parts: list[pd.DataFrame] = []
+    trip_tables: list[pd.DataFrame] = []
+
+    for dataset in datasets:
+        gtfs = _load_gtfs_cached(dataset)
+
+        stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
+        if stops.empty:
+            continue
+
+        stops["stop_id"] = stops["stop_id"].astype(str)
+        stops["global_stop_id"] = dataset + ":" + stops["stop_id"]
+        stops["dataset"] = dataset
+        all_stops_parts.append(stops[["dataset", "stop_id", "global_stop_id", "stop_lat", "stop_lon"]])
+
+        trips = gtfs.trips[["trip_id", "service_id"]].copy()
+        trips["trip_id"] = trips["trip_id"].astype(str)
+        trips["service_id"] = trips["service_id"].astype(str)
+        active_services = _active_service_ids(gtfs, day)
+        if active_services:
+            trips = trips[trips["service_id"].isin(active_services)]
+        if trips.empty:
+            continue
+
+        st_cols = ["trip_id", "stop_id", "stop_sequence", "departure_seconds", "arrival_seconds"]
+        stop_times = gtfs.stop_times[st_cols].copy()
+        stop_times["trip_id"] = stop_times["trip_id"].astype(str)
+        stop_times["stop_id"] = stop_times["stop_id"].astype(str)
+        stop_times = stop_times.merge(trips[["trip_id"]], on="trip_id", how="inner")
+        if stop_times.empty:
+            continue
+
+        stop_times["global_trip_id"] = dataset + ":" + stop_times["trip_id"]
+        stop_times["global_stop_id"] = dataset + ":" + stop_times["stop_id"]
+        stop_times["dep_s"] = pd.to_numeric(stop_times["departure_seconds"], errors="coerce")
+        stop_times["arr_s"] = pd.to_numeric(stop_times["arrival_seconds"], errors="coerce")
+        stop_times["dep_s"] = stop_times["dep_s"].fillna(stop_times["arr_s"])
+        stop_times["arr_s"] = stop_times["arr_s"].fillna(stop_times["dep_s"])
+        stop_times = stop_times.dropna(subset=["dep_s", "arr_s", "stop_sequence"])
+        if stop_times.empty:
+            continue
+
+        stop_times = stop_times[["global_trip_id", "global_stop_id", "stop_sequence", "dep_s", "arr_s"]]
+        trip_tables.append(stop_times)
+
+    if not all_stops_parts:
+        return pd.DataFrame(columns=["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"])
+
+    all_stops = pd.concat(all_stops_parts, ignore_index=True).drop_duplicates(subset=["global_stop_id"]) 
+    all_stops["stop_lat"] = all_stops["stop_lat"].astype(float)
+    all_stops["stop_lon"] = all_stops["stop_lon"].astype(float)
+
+    global_stop_ids = all_stops["global_stop_id"].astype(str).tolist()
+    stop_lats = all_stops["stop_lat"].to_numpy(dtype=float)
+    stop_lons = all_stops["stop_lon"].to_numpy(dtype=float)
+
+    # Initial access walk: restrict to boardable radius to avoid unrealistic long pre-walks.
+    direct_walk_m = _distances_from_point_m(origin_lat, origin_lon, stop_lats, stop_lons)
+    direct_walk_min = direct_walk_m / float(walk_speed_m_min)
+
+    inf_s = float("inf")
+    arrivals_prev_s = pd.Series(inf_s, index=global_stop_ids, dtype="float64")
+    boardable_mask = direct_walk_min <= float(max_board_walk_min)
+    if np.any(boardable_mask):
+        arrivals_prev_s.loc[np.array(global_stop_ids)[boardable_mask]] = (
+            float(t0) + direct_walk_min[boardable_mask] * 60.0
+        )
+
+    if not trip_tables:
+        out = all_stops[["dataset", "stop_id", "stop_lat", "stop_lon"]].copy()
+        out["reach_min"] = (arrivals_prev_s.reindex(all_stops["global_stop_id"]).to_numpy(dtype=float) - float(t0)) / 60.0
+        out = out[np.isfinite(out["reach_min"])].copy()
+        out = out[out["reach_min"] <= float(max_min)].copy()
+        return out
+
+    full_stop_times = pd.concat(trip_tables, ignore_index=True)
+    full_stop_times = full_stop_times.sort_values(["global_trip_id", "stop_sequence"]).reset_index(drop=True)
+
+    trips_grouped: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+    for _, group in full_stop_times.groupby("global_trip_id", sort=False):
+        stop_arr = group["global_stop_id"].astype(str).to_numpy()
+        dep_arr = group["dep_s"].astype(float).to_numpy()
+        arr_arr = group["arr_s"].astype(float).to_numpy()
+        if len(stop_arr) >= 2:
+            trips_grouped.append((stop_arr, dep_arr, arr_arr))
+
+    transfer_walk_m = float(max_transfer_walk_min) * float(walk_speed_m_min)
+    stop_id_to_idx = {sid: i for i, sid in enumerate(global_stop_ids)}
+    max_boardings = max(1, int(max_transfers) + 1)
+
+    for _round in range(max_boardings):
+        arrivals_curr_s = arrivals_prev_s.copy()
+        changed_stop_ids: set[str] = set()
+
+        # Trip relaxation: board any feasible trip and alight at any downstream stop.
+        for trip_stops, trip_dep_s, trip_arr_s in trips_grouped:
+            on_board = False
+            for i in range(len(trip_stops)):
+                sid = str(trip_stops[i])
+                earliest_at_stop_s = float(arrivals_prev_s.get(sid, inf_s))
+                dep_s = float(trip_dep_s[i])
+                arr_s = float(trip_arr_s[i])
+
+                if (not on_board) and np.isfinite(earliest_at_stop_s) and dep_s >= earliest_at_stop_s and dep_s >= float(t0):
+                    on_board = True
+
+                if on_board and arr_s < float(arrivals_curr_s.get(sid, inf_s)):
+                    arrivals_curr_s.loc[sid] = arr_s
+                    changed_stop_ids.add(sid)
+
+        # Transfer-walk relaxation from improved stops.
+        # One relaxation wave per round keeps runtime bounded while enabling chained transfers across rounds.
+        if changed_stop_ids:
+            for sid in list(changed_stop_ids):
+                src_idx = stop_id_to_idx.get(sid)
+                if src_idx is None:
+                    continue
+                base_arrival_s = float(arrivals_curr_s.get(sid, inf_s))
+                if not np.isfinite(base_arrival_s):
+                    continue
+
+                dists_m = _distances_from_point_m(stop_lats[src_idx], stop_lons[src_idx], stop_lats, stop_lons)
+                near_idx = np.where(dists_m <= transfer_walk_m)[0]
+                if len(near_idx) == 0:
+                    continue
+
+                walk_sec = (dists_m[near_idx] / float(walk_speed_m_min)) * 60.0
+                candidate_arrival_s = base_arrival_s + walk_sec
+
+                for j, cand_s in zip(near_idx, candidate_arrival_s):
+                    nid = global_stop_ids[int(j)]
+                    if cand_s < float(arrivals_curr_s.get(nid, inf_s)):
+                        arrivals_curr_s.loc[nid] = float(cand_s)
+
+        if not np.any((arrivals_curr_s - arrivals_prev_s) < -1e-9):
+            break
+        arrivals_prev_s = arrivals_curr_s
+
+    out = all_stops[["dataset", "stop_id", "stop_lat", "stop_lon", "global_stop_id"]].copy()
+    out["reach_min"] = (arrivals_prev_s.reindex(out["global_stop_id"]).to_numpy(dtype=float) - float(t0)) / 60.0
+    out = out[np.isfinite(out["reach_min"])].copy()
+    out = out[out["reach_min"] >= 0.0].copy()
+    out = out[out["reach_min"] <= float(max_min)].copy()
+    return out[["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"]]
+
+
 def compute_bgri_reachability_now(
     merged_bgri,
     origin_lat: float = STADIUM_COORD[0],
@@ -702,7 +875,8 @@ def compute_bgri_reachability_now(
     day_str: str | None = None,
     time_str: str | None = None,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
-    max_min: float = 60.0,
+    max_min: float = REACHABILITY_MAX_MIN,
+    max_transfers: int = REACHABILITY_MAX_TRANSFERS,
 ) -> pd.DataFrame:
     """Calcula tempo mínimo estimado para alcançar cada zona BGRI no momento atual."""
     auto_time_mode = time_str is None
@@ -746,21 +920,18 @@ def compute_bgri_reachability_now(
                 walk_speed_m_min=walk_speed_m_min,
             )
 
-    stops_reach = []
-    for dataset in datasets:
-        dataset_reach = _reachable_stops_for_dataset_now(
-            dataset=dataset,
-            origin_lat=origin_lat,
-            origin_lon=origin_lon,
-            day_str=day_str,
-            time_str=time_str,
-            walk_speed_m_min=walk_speed_m_min,
-            max_min=max_min,
-        )
-        if not dataset_reach.empty:
-            stops_reach.append(dataset_reach)
+    stop_df = _reachable_stops_multimodal_now(
+        datasets=datasets,
+        origin_lat=origin_lat,
+        origin_lon=origin_lon,
+        day_str=day_str,
+        time_str=time_str,
+        walk_speed_m_min=walk_speed_m_min,
+        max_min=max_min,
+        max_transfers=max_transfers,
+    )
 
-    if not stops_reach:
+    if stop_df.empty:
         out = merged_bgri.copy()
         out["reach_min"] = np.inf
         out["reach_mode"] = "a pé"
@@ -769,7 +940,6 @@ def compute_bgri_reachability_now(
         out["reach_time"] = time_str
         return out
 
-    stop_df = pd.concat(stops_reach, ignore_index=True)
     stop_lat = stop_df["stop_lat"].astype(float).to_numpy()
     stop_lon = stop_df["stop_lon"].astype(float).to_numpy()
     stop_reach = stop_df["reach_min"].astype(float).to_numpy()
