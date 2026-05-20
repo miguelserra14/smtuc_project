@@ -1,4 +1,4 @@
-"""
+﻿"""
 Script para regenerar todos os ficheiros HTML da dashboard.
 
 Uso:
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-# Importar as funções de geração
+# Importar as funÃ§Ãµes de geraÃ§Ã£o
 from population.data_processing import (
     _next_monday,
     _project_root,
@@ -38,32 +38,32 @@ from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_da
 
 
 def _require_dataset(dataset: str) -> Path:
-    """Verifica se um dataset GTFS está disponível."""
+    """Verifica se um dataset GTFS estÃ¡ disponÃ­vel."""
     root = _project_root()
     d = root / "data" / dataset
     required = ["routes.txt", "trips.txt", "stops.txt", "stop_times.txt"]
     if not d.exists() or any(not (d / f).exists() for f in required):
-        print(f"[WARNING] Dataset GTFS inválido/incompleto: {d}")
+        print(f"[WARNING] Dataset GTFS invÃ¡lido/incompleto: {d}")
         return None
     return d
 
 
 def regenerate_population_htmls() -> None:
-    """Regenera todos os HTMLs da população (BGRI)."""
+    """Regenera todos os HTMLs da populaÃ§Ã£o (BGRI)."""
     print("\n" + "=" * 60)
-    print("[INFO] Regenerando HTMLs de População...")
+    print("[INFO] Regenerando HTMLs de PopulaÃ§Ã£o...")
     print("=" * 60)
     
     try:
         _require_geo_stack()
     except Exception as e:
-        print(f"[WARNING] Geostack não disponível: {e}")
+        print(f"[WARNING] Geostack nÃ£o disponÃ­vel: {e}")
         return
     
     try:
         gpkg = _require_bgri_data()
     except Exception as e:
-        print(f"[WARNING] Dataset BGRI não disponível: {e}")
+        print(f"[WARNING] Dataset BGRI nÃ£o disponÃ­vel: {e}")
         return
     
     try:
@@ -87,23 +87,22 @@ def regenerate_population_htmls() -> None:
         out_dir = _project_root() / OUTPUTS_POPULATION_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         
-        # Filtrar zonas a 2km do estádio
+        # Filtrar zonas a 2km do estÃ¡dio
         merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M * 2)
         
-        # Criar dashboard de população
-        print("[INFO] Gerando dashboard de população...")
+        # Criar dashboard de populaÃ§Ã£o
+        print("[INFO] Gerando dashboard de populaÃ§Ã£o...")
         dashboard_html = out_dir / "bgri.html"
         create_population_dashboard_html(
             dashboard_html,
             merged,
             merged_2km,
             day_str,
-            title="Painel de População e Subserviço de Transportes",
         )
-        print(f"[SUCCESS] Dashboard população: {dashboard_html}")
+        print(f"[SUCCESS] Dashboard populaÃ§Ã£o: {dashboard_html}")
         
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar HTMLs de população: {e}")
+        print(f"[ERROR] Erro ao regenerar HTMLs de populaÃ§Ã£o: {e}")
         import traceback
         traceback.print_exc()
 
@@ -125,7 +124,7 @@ def regenerate_overlap_htmls() -> None:
         print("[INFO] Computando reachability...")
         merged = compute_underserved_zones(day_str=day_str)
         
-        # Computar reachability a partir do estádio
+        # Computar reachability a partir do estÃ¡dio
         reach_gdf = compute_bgri_reachability_now(
             merged_bgri=merged,
             origin_lat=STADIUM_COORD[0],
@@ -157,22 +156,22 @@ def regenerate_overlap_htmls() -> None:
 
 
 def regenerate_integration_htmls() -> None:
-    """Regenera HTMLs de integração (Portagem e Portela)."""
+    """Regenera HTMLs de integraÃ§Ã£o (Portagem e Portela)."""
     print("\n" + "=" * 60)
-    print("[INFO] Regenerando HTMLs de Integração...")
+    print("[INFO] Regenerando HTMLs de IntegraÃ§Ã£o...")
     print("=" * 60)
     
     # Verificar datasets
     if not _require_dataset("smtuc") or not _require_dataset("metrobus"):
-        print("[WARNING] Datasets GTFS não disponíveis. Pulando integração.")
+        print("[WARNING] Datasets GTFS nÃ£o disponÃ­veis. Pulando integraÃ§Ã£o.")
         return
     
     try:
         day_str = resolve_reference_day().strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
         
-        # Portagem: Linhas 54 + 38 (Portela → Portagem)
-        print("\n[INFO] Gerando integração Portagem (Portela → Portagem) com linhas 54 + 38...")
+        # Portagem: Linhas 54 + 38 (Portela â†’ Portagem)
+        print("\n[INFO] Gerando integraÃ§Ã£o Portagem (Portela â†’ Portagem) com linhas 54 + 38...")
         try:
             results = generate_connection_visualizations(
                 metro_stop_ref="Portagem",
@@ -184,12 +183,12 @@ def regenerate_integration_htmls() -> None:
                 output_subdir="portagem",
                 fixed_html_name="l54_38_all.html",
             )
-            print(f"[SUCCESS] Integração Portagem (54+38): {results.get('html_path', 'N/A')}")
+            print(f"[SUCCESS] IntegraÃ§Ã£o Portagem (54+38): {results.get('html_path', 'N/A')}")
         except Exception as e:
-            print(f"[WARNING] Erro na integração Portagem (54+38): {e}")
+            print(f"[WARNING] Erro na integraÃ§Ã£o Portagem (54+38): {e}")
         
-        # Portagem: Linha 54 apenas (Portela → Portagem)
-        print("\n[INFO] Gerando integração Portagem (Portela → Portagem) com linha 54...")
+        # Portagem: Linha 54 apenas (Portela â†’ Portagem)
+        print("\n[INFO] Gerando integraÃ§Ã£o Portagem (Portela â†’ Portagem) com linha 54...")
         try:
             results = generate_connection_visualizations(
                 metro_stop_ref="Portagem",
@@ -201,12 +200,12 @@ def regenerate_integration_htmls() -> None:
                 output_subdir="portagem",
                 fixed_html_name="l54_portagem_all.html",
             )
-            print(f"[SUCCESS] Integração Portagem (54): {results.get('html_path', 'N/A')}")
+            print(f"[SUCCESS] IntegraÃ§Ã£o Portagem (54): {results.get('html_path', 'N/A')}")
         except Exception as e:
-            print(f"[WARNING] Erro na integração Portagem (54): {e}")
+            print(f"[WARNING] Erro na integraÃ§Ã£o Portagem (54): {e}")
         
-        # Portela: Linha 54 (Portagem → Portela)
-        print("\n[INFO] Gerando integração Portela (Portagem → Portela) com linha 54...")
+        # Portela: Linha 54 (Portagem â†’ Portela)
+        print("\n[INFO] Gerando integraÃ§Ã£o Portela (Portagem â†’ Portela) com linha 54...")
         try:
             results = generate_connection_visualizations(
                 metro_stop_ref="Portela",
@@ -218,12 +217,12 @@ def regenerate_integration_htmls() -> None:
                 output_subdir="portela",
                 fixed_html_name="l54_all.html",
             )
-            print(f"[SUCCESS] Integração Portela (54): {results.get('html_path', 'N/A')}")
+            print(f"[SUCCESS] IntegraÃ§Ã£o Portela (54): {results.get('html_path', 'N/A')}")
         except Exception as e:
-            print(f"[WARNING] Erro na integração Portela (54): {e}")
+            print(f"[WARNING] Erro na integraÃ§Ã£o Portela (54): {e}")
         
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar HTMLs de integração: {e}")
+        print(f"[ERROR] Erro ao regenerar HTMLs de integraÃ§Ã£o: {e}")
         import traceback
         traceback.print_exc()
 
@@ -249,7 +248,7 @@ def regenerate_master_dashboard() -> None:
 
 
 def main() -> None:
-    """Executa regeneração completa de todos os HTMLs."""
+    """Executa regeneraÃ§Ã£o completa de todos os HTMLs."""
     print("\n" + "=" * 60)
     print("REGENERANDO TODOS OS HTMLS DA DASHBOARD")
     print("=" * 60 + "\n")
@@ -261,7 +260,7 @@ def main() -> None:
     regenerate_master_dashboard()
     
     print("\n" + "=" * 60)
-    print("[SUCCESS] REGENERAÇÃO CONCLUÍDA!")
+    print("[SUCCESS] REGENERAÃ‡ÃƒO CONCLUÃDA!")
     print("=" * 60)
     print("\n[INFO] Todos os ficheiros HTML foram atualizados em outputs/")
     print("[INFO] Abrir: file:///path/para/projeto/outputs/dashboard.html\n")

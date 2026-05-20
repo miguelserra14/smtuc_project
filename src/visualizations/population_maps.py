@@ -57,7 +57,7 @@ def create_population_dashboard_html(
 
 def _create_choropleth_generic(
     gdf: gpd.GeoDataFrame,
-    title: str,
+    title: str | None = None,
     color_scale: str = "RdYlGn",
     color_col: str = "underservice_score",
     range_color: Optional[Tuple[float, float]] = None,
@@ -110,13 +110,16 @@ def _create_choropleth_generic(
         featureidkey="properties.BGRI2021",
         color=color_col,
         hover_data=hover_data,
-        title=title,
         color_continuous_scale=color_scale,
         range_color=range_color,
         labels=labels,
     )
+    if title:
+        fig.update_layout(title={"text": title})
+    else:
+        fig.update_layout(title={"text": ""})
     fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 50, "b": 0})
+    fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})
 
     return fig
 
@@ -126,9 +129,8 @@ def create_choropleth_map(
     day_str: str,
     color_scale: str = "RdYlGn",
 ) -> object:
-    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
-    map_title = f"Dia {ref_day}"
-    return _create_choropleth_generic(merged, map_title, color_scale)
+    resolve_reference_day(day_str)
+    return _create_choropleth_generic(merged, None, color_scale)
 
 
 def create_2km_choropleth_map(
@@ -136,11 +138,10 @@ def create_2km_choropleth_map(
     day_str: str,
     color_scale: str = "RdYlGn",
 ) -> object:
-    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
-    map_title = f"Dia {ref_day}, raio 2km"
+    resolve_reference_day(day_str)
     return _create_choropleth_generic(
         merged_2km,
-        map_title,
+        None,
         color_scale,
     )
 
@@ -149,11 +150,9 @@ def create_population_heatmap(
     day_str: str,
     color_scale: str = "RdYlGn",
 ) -> object:
-    ref_day = resolve_reference_day(day_str).strftime("%Y-%m-%d")
-    map_title = f"Dia {ref_day}"
     return _create_choropleth_generic(
         merged,
-        map_title,
+        None,
         color_scale,
         color_col="N_INDIVIDUOS",
         hover_data={
