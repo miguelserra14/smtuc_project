@@ -13,6 +13,7 @@ from config import (
     STADIUM_RADIUS_M,
     WALK_SPEED_M_MIN,
     SPATIAL_OVERLAP_MIN,
+    TEMPORAL_OVERLAP_MAX_MIN,
 )
 from gtfs_processing.gtfs import load_gtfs
 
@@ -360,6 +361,22 @@ def build_line_metrics_db(
     )
     if fresh.empty:
         return fresh
+
+    # Compute temporal overlap candidates/counts per line before saving to CSV
+    try:
+        # Local import to avoid circular dependency between overlap_db and overlap
+        from overlap.overlap import compute_temporal_overlaps_for_db
+
+        fresh = compute_temporal_overlaps_for_db(
+            fresh,
+            smtuc_dataset=smtuc_dataset,
+            metrobus_dataset=metrobus_dataset,
+            walk_speed_m_min=walk_speed_m_min,
+            temporal_overlap_max_min=TEMPORAL_OVERLAP_MAX_MIN,
+        )
+    except Exception:
+        # If temporal computation fails, proceed without it (CSV will have zeros)
+        pass
 
     fresh["__meta_smtuc_dataset"] = smtuc_dataset
     fresh["__meta_metro_dataset"] = metrobus_dataset

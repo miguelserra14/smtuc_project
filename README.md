@@ -126,3 +126,41 @@ No fim do MVP, deve ser possível responder com dados a:
 - [x] Testes de integração para geração das visualizações principais
 - [x] Regressão validada após refatores de estrutura de módulos
 - [ ] Adicionar smoke test dedicado para garantir presença dos elementos-chave no HTML (legenda, classes, modo)
+
+## Atualizar parâmetros que exigem regeneração
+
+Resumo rápido: muitos parâmetros (ex.: `SPATIAL_OVERLAP_MIN`, `TEMPORAL_OVERLAP_MAX_MIN`, `WALK_SPEED_M_MIN`, `REACHABILITY_MAX_TRANSFERS`) vivem em `src/config.py` e são lidos por várias funções que geram a tabela de métricas em `outputs/overlap/line_metrics_db.csv`.
+
+- Quando alteras um parâmetro que afeta as métricas, é necessário regenerar a tabela e os HTMLs para que as visualizações reflitam a nova configuração.
+- O processo automatizado faz isto em dois passos principais:
+  1. Recalcular a base de métricas (`build_line_metrics_db`) — que agora popula também as contagens temporais (`temporal_spatial_candidates_count`, `temporal_overlaps_count`) antes de escrever o CSV.
+  2. Regenerar os HTMLs (`src/tests/regenerate_all_htmls.py`) que consomem o CSV e reconstroem o mapa e o dashboard.
+
+Comandos úteis:
+
+1) Regenerar tudo (leva alguns segundos/minutos dependendo dos GTFS):
+
+```powershell
+$env:PYTHONPATH='.;src'
+$env:PYTHONIOENCODING='utf-8'
+python src/tests/regenerate_all_htmls.py
+```
+
+2) Forçar apenas o recompute da tabela de métricas (útil em desenvolvimento):
+
+```python
+from overlap.overlap_db import build_line_metrics_db
+df = build_line_metrics_db(force_refresh=True)
+```
+
+3) Forçar recompute manual apagando o cache CSV antes de regenerar:
+
+```powershell
+del outputs\overlap\line_metrics_db.csv
+python src/tests/regenerate_all_htmls.py
+```
+
+Notas internas importantes:
+- A função `build_line_metrics_db` adiciona metadados `__meta_*` ao CSV para detectar mudanças de parâmetros (por exemplo `__meta_spatial_overlap_min`). Se um parâmetro mudar, o código invalida o cache e re-calcula automaticamente.
+- O cálculo de overlap temporal é feito por `compute_temporal_overlaps_for_db` (em `src/overlap/overlap.py`) e é executado automaticamente dentro de `build_line_metrics_db` antes de gravar o CSV.
+- Existe um script de watcher simples `scripts/watch_config_regenerate.py` que detecta alterações em `src/config.py` e executa a regeneração automaticamente — podes substituí‑lo por `watchdog`/FS events se preferires uma solução com eventos em vez de polling.
