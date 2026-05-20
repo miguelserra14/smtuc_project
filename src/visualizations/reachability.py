@@ -297,21 +297,6 @@ def create_overlap_reachability_map(
             if (!layer) return;
 
             var fillValue = colorByBand(label);
-            var patternEl = null;
-
-            if (modeLabel === 'a pé') {{
-                if (ensurePatternDefs()) {{
-                    var patternId = 'iso_walk_hatch_' + label.replace('-', '_');
-                    fillValue = 'url(#' + patternId + ')';
-                    patternEl = document.getElementById(patternId);
-                    if (patternEl && latlng && mapObj && mapObj.latLngToLayerPoint) {{
-                        var pt = mapObj.latLngToLayerPoint(latlng);
-                        var offsetX = ((pt.x % 8) + 8) % 8;
-                        var offsetY = ((pt.y % 8) + 8) % 8;
-                        patternEl.setAttribute('patternTransform', 'rotate(45) translate(' + offsetX + ' ' + offsetY + ')');
-                    }}
-                }}
-            }}
 
             if (layer.setStyle) {{
                 layer.setStyle({{
@@ -327,7 +312,7 @@ def create_overlap_reachability_map(
         }}
 
         function styleByMode(modeLabel) {{
-            return {{ color: '#ffffff', weight: 1.3, dashArray: modeLabel === 'a pé' ? '6 4' : null, fillOpacity: 0.55 }};
+            return {{ color: '#ffffff', weight: 1.3, dashArray: null, fillOpacity: 0.55 }};
         }}
 
         function bandFromReach(mins) {{
@@ -488,8 +473,6 @@ def create_overlap_reachability_map(
                 <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;"><strong>Zonas por modo:</strong></div>
                 <div style="font-size:11px;">Transporte público: <strong id="legend-count-pt">{pt_count}</strong></div>
                 <div style="font-size:11px;">A pé: <strong id="legend-count-walk">{walk_count}</strong></div>
-                <div style="margin-top:6px; font-size:11px;"><span style="display:inline-block;width:12px;height:12px;background:#66bd63; margin-right:6px; border:1px solid #999;"></span>Preenchimento liso: maioria transporte público</div>
-                <div style="font-size:11px;"><span style="display:inline-block;width:12px;height:12px;background:repeating-linear-gradient(45deg, #66bd63 0px, #66bd63 4px, #2b2b2b 4px, #2b2b2b 6px); margin-right:6px; border:1px solid #999;"></span>Preenchimento riscado: maioria a pé</div>
                 <div style="margin-top:6px;padding-top:6px;border-top:1px solid #ddd;"><strong>Total ≤ 20 min:</strong> <span id="legend-area-total-20">{at:.3f} km²</span></div>
                 {no_pt_warning}
     </div>
