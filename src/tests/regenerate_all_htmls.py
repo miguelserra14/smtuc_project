@@ -28,6 +28,7 @@ from overlap.overlap import (
 )
 from visualizations import (
     create_master_dashboard_html,
+    create_presentation_dashboard_html,
     create_population_dashboard_html,
     create_overlap_reachability_map,
         create_overlap_lines_map,
@@ -305,6 +306,26 @@ def regenerate_master_dashboard() -> None:
         traceback.print_exc()
 
 
+def regenerate_presentation_dashboard() -> None:
+    """Regenera o dashboard de mockups da apresentacao."""
+    print("\n" + "=" * 60)
+    print("[INFO] Regenerando Dashboard de Mockups...")
+    print("=" * 60)
+
+    try:
+        root = _project_root()
+        dashboard_path = root / "outputs" / "mockups_dashboard.html"
+
+        print("[INFO] Gerando dashboard de mockups...")
+        created = create_presentation_dashboard_html(dashboard_path)
+        print(f"[SUCCESS] Dashboard mockups: {created}")
+
+    except Exception as e:
+        print(f"[ERROR] Erro ao regenerar dashboard de mockups: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def main() -> None:
     """Executa regeneraÃ§Ã£o completa de todos os HTMLs."""
     print("\n" + "=" * 60)
@@ -316,6 +337,7 @@ def main() -> None:
     regenerate_overlap_htmls()
     regenerate_integration_htmls()
     regenerate_master_dashboard()
+    regenerate_presentation_dashboard()
     
     print("\n" + "=" * 60)
     print("[SUCCESS] REGENERAÃ‡ÃƒO CONCLUÃDA!")

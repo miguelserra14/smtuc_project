@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light only" />
+    <title>SMTUC: Mockups da apresentação</title>
+    <style>
+        :root {
+            --bg: #f7f4ff;
+            --bg-2: #f2edf9;
+            --card: #ffffff;
+            --card-soft: #fcfaff;
+            --ink: #16202c;
+            --muted: #5d6878;
+            --border: #e7dff2;
+            --accent: #6a0dad;
+            --accent-2: #2d8f85;
+            --accent-3: #0f5b9c;
+            --shadow: 0 18px 50px rgba(106, 13, 173, 0.10);
+            color-scheme: light only;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background:
+                radial-gradient(circle at top left, rgba(15, 91, 156, 0.12), transparent 30%),
+                radial-gradient(circle at top right, rgba(45, 143, 133, 0.10), transparent 26%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+            color: var(--ink);
+            font-family: Segoe UI, Tahoma, sans-serif;
+        }
+        .shell {
+            max-width: 1520px;
+            margin: 0 auto;
+            padding: 22px 16px 40px;
+        }
+        .hero {
+            background: linear-gradient(135deg, rgba(106, 13, 173, 0.98), rgba(15, 91, 156, 0.96));
+            color: #ffffff;
+            border-radius: 24px;
+            padding: 22px 24px 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::after {
+            content: "";
+            position: absolute;
+            right: -120px;
+            bottom: -120px;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.10);
+            filter: blur(2px);
+        }
+        .eyebrow {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            font-size: 0.82rem;
+            letter-spacing: 0.02em;
+            margin-bottom: 10px;
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(1.6rem, 2.8vw, 2.55rem);
+            line-height: 1.08;
+            position: relative;
+            z-index: 1;
+        }
+        .hero p {
+            margin: 10px auto 0;
+            max-width: 980px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.90);
+            position: relative;
+            z-index: 1;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 18px 0 14px;
+        }
+        .tab-btn {
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.82);
+            color: var(--ink);
+            border-radius: 999px;
+            padding: 11px 16px;
+            font: inherit;
+            cursor: pointer;
+            transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease, color 140ms ease;
+        }
+        .tab-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(19, 33, 57, 0.08);
+        }
+        .tab-btn[aria-selected="true"] {
+            background: var(--ink);
+            color: #ffffff;
+            border-color: var(--ink);
+        }
+        .tab-panels {
+            margin-top: 10px;
+        }
+        .tab-panel {
+            display: none;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .tab-panel.is-active {
+            display: block;
+            animation: fadeIn 160ms ease-out;
+        }
+        .panel-head {
+            padding: 18px 20px 12px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(248, 251, 255, 0.96), #ffffff);
+        }
+        .panel-title {
+            margin: 0 0 6px;
+            font-size: 1.08rem;
+        }
+        .panel-desc {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+        .panel-body {
+            padding: 18px 20px 20px;
+        }
+        .panel-note {
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, #ffffff, var(--card-soft));
+            border-radius: 18px;
+            padding: 14px 16px;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: rgba(106, 13, 173, 0.08);
+            color: var(--accent);
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 14px;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .grid-hero {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 14px;
+        }
+        .card,
+        .frame-card,
+        .metric-card,
+        .closing-card {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: linear-gradient(180deg, #ffffff, var(--card-soft));
+            overflow: hidden;
+        }
+        .card-head,
+        .frame-head {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            background: #fbf8ff;
+        }
+        .card-head h3,
+        .frame-head h3,
+        .metric-card h3 {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+        .card-body,
+        .metric-body {
+            padding: 14px;
+        }
+        .lead-text {
+            font-size: 1.03rem;
+            line-height: 1.55;
+            color: var(--ink);
+            margin: 0 0 14px;
+        }
+        .bullet-list {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+        .bullet-list li + li {
+            margin-top: 8px;
+        }
+        .steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #ffffff;
+            color: var(--ink);
+            font-weight: 600;
+        }
+        .frame-shell {
+            padding: 0;
+        }
+        .frame-shell iframe {
+            width: 100%;
+            height: 500px;
+            border: 0;
+            display: block;
+            background: #ffffff;
+        }
+        .frame-shell.tall iframe {
+            height: 560px;
+        }
+        .frame-shell.slim iframe {
+            height: 420px;
+        }
+        .metric-card .frame-shell iframe {
+            height: 440px;
+        }
+        .comparison-col {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .target-card {
+            border: 1px dashed var(--border);
+            border-radius: 18px;
+            background: #fcfbff;
+            padding: 14px 16px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+        .target-card h4 {
+            margin: 0 0 8px;
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+        .target-card ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .target-card li + li {
+            margin-top: 6px;
+        }
+        .stats-wrap {
+            margin-top: 14px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .stats-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+        .stats-card h4 {
+            margin: 0;
+            padding: 10px 12px;
+            font-size: 0.92rem;
+            border-bottom: 1px solid var(--border);
+            background: #fbf8ff;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.84rem;
+        }
+        .stats-table th,
+        .stats-table td {
+            text-align: center;
+            padding: 7px 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .stats-table th {
+            color: var(--muted);
+            background: #fcfbff;
+            font-weight: 600;
+        }
+        .closing-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+            gap: 14px;
+        }
+        .closing-hero {
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(106, 13, 173, 0.98), rgba(15, 91, 156, 0.96));
+            color: #ffffff;
+            padding: 22px 20px;
+            box-shadow: var(--shadow);
+        }
+        .closing-hero h2 {
+            margin: 0;
+            font-size: clamp(1.35rem, 2.2vw, 2rem);
+            line-height: 1.15;
+        }
+        .closing-hero p {
+            margin: 10px 0 0;
+            color: rgba(255, 255, 255, 0.90);
+            line-height: 1.55;
+            max-width: 780px;
+        }
+        .closing-card {
+            padding: 14px 16px;
+        }
+        .thanks-layout {
+            min-height: 60vh;
+            display: grid;
+            place-items: center;
+        }
+        .thanks-card {
+            width: min(920px, 100%);
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(18, 28, 42, 0.98), rgba(35, 51, 74, 0.98));
+            color: #ffffff;
+            padding: 34px 28px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .thanks-card h2 {
+            margin: 0;
+            font-size: clamp(1.8rem, 4vw, 3rem);
+        }
+        .thanks-card p {
+            margin: 10px auto 0;
+            max-width: 720px;
+            color: rgba(255, 255, 255, 0.88);
+            line-height: 1.55;
+        }
+        .thanks-card .chip-row {
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 1100px) {
+            .grid-hero,
+            .grid-2,
+            .grid-3,
+            .closing-layout {
+                grid-template-columns: 1fr;
+            }
+            .frame-shell iframe,
+            .frame-shell.tall iframe,
+            .frame-shell.slim iframe,
+            .metric-card .frame-shell iframe {
+                height: 440px;
+            }
+            .thanks-card {
+                padding: 24px 18px;
+            }
+        }
+        @media (max-width: 760px) {
+            .shell {
+                padding: 14px 10px 28px;
+            }
+            .hero {
+                border-radius: 18px;
+                padding: 18px 16px;
+            }
+            .tab-btn {
+                padding: 10px 14px;
+            }
+            .panel-head,
+            .panel-body {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+            .frame-shell iframe,
+            .frame-shell.tall iframe,
+            .frame-shell.slim iframe,
+            .metric-card .frame-shell iframe {
+                height: 360px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <div class="eyebrow">Mockups da apresentação</div>
+            <h1>SMTUC: A caminho da complementaridade</h1>
+            <p>Tabs organizadas como o fluxo da apresentação: introdução, metodologia, subserviço, overlap, integração, conclusões e agradecimentos.</p>
+        </section>
+
+        <nav class="tabs" id="dashboard-tabs" aria-label="Tabs da apresentação"></nav>
+
+        <section class="tab-panels" id="dashboard-panels"></section>
+    </main>
+
+    <script>
+        const tabs = [{"id": "intro", "label": "Introdução", "kind": "hero", "eyebrow": "Apresentação final", "title": "SMTUC: A caminho da complementaridade", "subtitle": "Como o Metrobus mudou a mobilidade em Coimbra e o que o SMTUC pode adaptar já", "lead": "As obras ainda não estão acabadas, mas o estudo já está encaminhado e já há bastante que pode ser feito com impacto tangível.", "chips": ["Metrobus", "SMTUC", "Coimbra", "Urgência em setembro"], "highlights": ["Mudança estrutural da mobilidade", "Resposta já possível com os dados que existem", "Janela de oportunidade para a entrada de caloiros"]}, {"id": "metodologia", "label": "Metodologia", "kind": "methodology", "description": "Como os dados de SMTUC, Metrobus e população entram no mesmo fluxo de análise.", "note": "Cruza-se oferta de transporte, população e contexto urbano para perceber onde a rede mudou e onde o SMTUC pode ajustar-se já.", "steps": ["Recolha", "Limpeza", "Métricas", "Visualização"], "source_tags": ["SMTUC", "Metrobus", "População", "Locais de trabalho", "Locais de convívio"], "iframes": [{"title": "Heatmap de população", "src": "population/heatmap.html", "caption": "Distribuição da população por Coimbra."}, {"title": "Índice de subserviço", "src": "population/choropleth.html", "caption": "Primeira leitura da pressão de serviço."}]}, {"id": "subservico", "label": "Subserviço + Isócronas", "kind": "three-up", "description": "A métrica de subserviço e a leitura territorial das isócronas.", "note": "A taxa de subserviço relaciona população com oferta e ajuda a perceber onde o serviço está mais pressionado. As isócronas devem passar a incluir também locais de trabalho e convívio.", "iframes": [{"title": "Mapa global de subserviço", "src": "population/choropleth.html", "caption": "Índice de subserviço em Coimbra."}, {"title": "Subserviço a 2 km", "src": "population/stadium.html", "caption": "Leitura de detalhe da pressão territorial."}, {"title": "Isócronas dinâmicas", "src": "overlap/overlap_reachability_now.html", "caption": "Cobertura, acessibilidade e overlap temporal."}]}, {"id": "overlap", "label": "Overlap", "kind": "overlap", "description": "Onde a rede SMTUC e o Metrobus mais se sobrepõem.", "note": "Este bloco mostra onde existe redundância espacial e temporal. A leitura deve ser visual, direta e rápida.", "iframes": [{"title": "Reachability e overlap temporal", "src": "overlap/overlap_reachability_now.html", "caption": "Mapa principal com cobertura e temporalidade."}, {"title": "Mapa de linhas sobrepostas", "src": "overlap/overlap_lines_map.html", "caption": "Linhas com maior e menor overlap."}], "stats": {"top5": [{"line": "45", "overlap_pct": "20.51%", "overlap_m": "4051.0", "extension_m": "19747.6", "overlap_stops": "21", "total_stops": "60", "avg_freq_min": "61.4"}, {"line": "26", "overlap_pct": "18.45%", "overlap_m": "5547.0", "extension_m": "30060.6", "overlap_stops": "33", "total_stops": "121", "avg_freq_min": "23.8"}, {"line": "33", "overlap_pct": "16.42%", "overlap_m": "4280.7", "extension_m": "26069.4", "overlap_stops": "22", "total_stops": "75", "avg_freq_min": "27.2"}, {"line": "9", "overlap_pct": "16.17%", "overlap_m": "6717.3", "extension_m": "41535.7", "overlap_stops": "44", "total_stops": "117", "avg_freq_min": "32.5"}, {"line": "54", "overlap_pct": "15.57%", "overlap_m": "1412.5", "extension_m": "9070.7", "overlap_stops": "9", "total_stops": "28", "avg_freq_min": "20.0"}], "bottom5": [{"line": "52", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "44398.5", "overlap_stops": "0", "total_stops": "88", "avg_freq_min": "52.5"}, {"line": "51", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "57656.1", "overlap_stops": "0", "total_stops": "167", "avg_freq_min": "67.5"}, {"line": "50", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "62127.7", "overlap_stops": "0", "total_stops": "189", "avg_freq_min": "21.2"}, {"line": "4", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "6995.2", "overlap_stops": "0", "total_stops": "28", "avg_freq_min": "11.5"}, {"line": "39", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "33806.2", "overlap_stops": "1", "total_stops": "110", "avg_freq_min": "32.6"}], "bottom5_stadium": [{"line": "4", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "6995.2", "overlap_stops": "0", "total_stops": "28", "avg_freq_min": "11.5"}, {"line": "34", "overlap_pct": "5.16%", "overlap_m": "641.4", "extension_m": "12432.4", "overlap_stops": "5", "total_stops": "52", "avg_freq_min": "17.0"}, {"line": "38", "overlap_pct": "6.55%", "overlap_m": "1048.3", "extension_m": "15995.1", "overlap_stops": "5", "total_stops": "50", "avg_freq_min": "27.7"}, {"line": "37", "overlap_pct": "9.37%", "overlap_m": "1983.8", "extension_m": "21169.7", "overlap_stops": "14", "total_stops": "81", "avg_freq_min": "11.1"}, {"line": "7", "overlap_pct": "9.81%", "overlap_m": "1090.8", "extension_m": "11123.0", "overlap_stops": "7", "total_stops": "40", "avg_freq_min": "6.6"}], "temporal_summary": {"total_spatial_candidates": 7744, "overlap_stations": 381, "overlap_lines": 34, "temporal_overlap_pct": 77.94, "temporal_overlap_times": 6036, "temporal_overlap_stations": 38, "temporal_overlap_lines": 38, "TEMPORAL_OVERLAP_MAX_MIN": 5.0, "walk_distance_threshold": 240.0}}}, {"id": "integracao", "label": "Integração", "kind": "comparison", "description": "Comparação Portagem e Portela com a linha 54.", "note": "A versão otimizada ainda é um objetivo do projeto, por isso o foco aqui é mostrar o estado atual e a direção de melhoria: menos espera, melhor coordenação e horários mais úteis.", "columns": [{"title": "Portagem", "subtitle": "Linha 54 + 38", "current": {"title": "Estado atual", "src": "integration/portagem/l54_38_all.html", "caption": "Integração atual no sentido Portela → Portagem."}, "optimized": ["Reduzir tempos de espera no transbordo", "Ajustar horários ao Metrobus", "Evidenciar a correspondência entre modos"]}, {"title": "Portela", "subtitle": "Linha 54", "current": {"title": "Estado atual", "src": "integration/portela/l54_all.html", "caption": "Integração atual no sentido Portagem → Portela."}, "optimized": ["Simplificar o percurso de ligação", "Reorganizar a cadência horária", "Mostrar melhor o ganho tangível para o utilizador"]}]}, {"id": "conclusao", "label": "Conclusões", "kind": "closing", "description": "O que a apresentação quer deixar claro no final.", "headline": "O Metrobus alterou a mobilidade em Coimbra e o SMTUC precisa de se adaptar.", "points": ["Há já impacto tangível que pode ser mostrado antes de as obras terminarem.", "O reforço do SMTUC deve responder ao novo contexto, não competir com ele.", "Setembro é a oportunidade para demonstrar a nova era da mobilidade em Coimbra."]}, {"id": "agradecimentos", "label": "Agradecimentos", "kind": "thanks", "description": "Fecho minimalista e limpo para o ecrã final.", "title": "Obrigado", "subtitle": "Nomes, instituição e contactos", "contacts": ["Nome 1", "Nome 2", "Curso / Unidade curricular", "Setembro 2026"]}];
+        const tabsEl = document.getElementById('dashboard-tabs');
+        const panelsEl = document.getElementById('dashboard-panels');
+
+        function esc(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderChips(items) {
+            if (!Array.isArray(items) || !items.length) return '';
+            return `<div class="chip-row">${items.map((item) => `<span class="chip">${esc(item)}</span>`).join('')}</div>`;
+        }
+
+        function renderIframeFrame(item, extraClass = '') {
+            const title = esc(item.title || item.label || 'Visualização');
+            const src = esc(item.src || '');
+            const caption = item.caption ? `<div class="panel-note" style="margin:0;padding:12px 14px;border-radius:0;border-left:0;border-right:0;border-bottom:0;">${esc(item.caption)}</div>` : '';
+            return `
+                <article class="frame-card ${extraClass}">
+                    <div class="frame-head"><h3>${title}</h3></div>
+                    <div class="frame-shell ${extraClass}"><iframe title="${title}" loading="lazy" data-src="${src}" referrerpolicy="no-referrer"></iframe></div>
+                    ${caption}
+                </article>
+            `;
+        }
+
+        function renderOverlapTable(rows) {
+            const safeRows = Array.isArray(rows) ? rows : [];
+            const body = safeRows.map((row) => `
+                <tr>
+                    <td>${esc(row.line || '-')}</td>
+                    <td>${esc(row.overlap_pct || '-')}</td>
+                    <td>${esc(row.overlap_m || '-')}</td>
+                    <td>${esc(row.extension_m || '-')}</td>
+                    <td>${esc(row.overlap_stops || '-')} / ${esc(row.total_stops || '-')}</td>
+                    <td>${esc(row.avg_freq_min || '-')}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Linha</th>
+                            <th>Overlap (%)</th>
+                            <th>Overlap (m)</th>
+                            <th>Extensão (m)</th>
+                            <th>Paragens</th>
+                            <th>Freq. média</th>
+                        </tr>
+                    </thead>
+                    <tbody>${body}</tbody>
+                </table>
+            `;
+        }
+
+        function renderOverlapStats(item) {
+            const stats = item && item.stats;
+            if (!stats || (!Array.isArray(stats.top5) && !Array.isArray(stats.bottom5) && !Array.isArray(stats.bottom5_stadium))) {
+                return '';
+            }
+
+            const temporal = stats.temporal_summary || {};
+            const summary = temporal.total_spatial_candidates ? `
+                <div class="panel-note" style="margin-top:14px;">
+                    <strong>Resumo temporal:</strong> ${esc(temporal.temporal_overlap_pct || 0)}% das combinações espaciais passaram também o limiar temporal definido.
+                </div>
+            ` : '';
+
+            return `
+                <section class="stats-wrap">
+                    <div class="stats-grid">
+                        <article class="stats-card">
+                            <h4>Top 5 maior overlap</h4>
+                            ${renderOverlapTable(stats.top5 || [])}
+                        </article>
+                        <article class="stats-card">
+                            <h4>Bottom 5 menor overlap</h4>
+                            ${renderOverlapTable(stats.bottom5_stadium || stats.bottom5 || [])}
+                        </article>
+                    </div>
+                    ${summary}
+                </section>
+            `;
+        }
+
+        function renderPanel(item) {
+            const kind = item.kind || 'hero';
+
+            if (kind === 'hero') {
+                const highlights = Array.isArray(item.highlights) ? item.highlights : [];
+                return `
+                    <article class="tab-panel is-active" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}">
+                        <div class="panel-head">
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="grid-hero">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="eyebrow" style="background:rgba(106,13,173,0.10);color:var(--accent);">${esc(item.eyebrow || 'Apresentação')}</div>
+                                        <h2 style="margin:0 0 10px;font-size:clamp(1.8rem,3vw,3rem);line-height:1.08;">${esc(item.title || '')}</h2>
+                                        <p class="lead-text">${esc(item.subtitle || '')}</p>
+                                        <p class="lead-text" style="color:var(--muted);margin-bottom:0;">${esc(item.lead || '')}</p>
+                                        ${renderChips(item.chips || [])}
+                                    </div>
+                                </div>
+                                <div class="comparison-col">
+                                    ${highlights.map((text) => `
+                                        <div class="metric-card">
+                                            <div class="metric-body">
+                                                <p class="lead-text" style="margin:0;">${esc(text)}</p>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'methodology') {
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        <div class="panel-head">
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="grid-2">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p class="lead-text">${esc(item.note || '')}</p>
+                                        <div class="steps">${(item.steps || []).map((step) => `<span class="step">${esc(step)}</span>`).join('')}</div>
+                                        ${renderChips(item.source_tags || [])}
+                                    </div>
+                                </div>
+                                <div class="grid-2">
+                                    ${(item.iframes || []).map((frame) => renderIframeFrame(frame, 'slim')).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'three-up') {
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        <div class="panel-head">
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="panel-note">${esc(item.note || '')}</div>
+                            <div class="grid-3">
+                                ${(item.iframes || []).map((frame) => renderIframeFrame(frame, 'slim')).join('')}
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'overlap') {
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        <div class="panel-head">
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="panel-note">${esc(item.note || '')}</div>
+                            <div class="grid-2">
+                                ${(item.iframes || []).map((frame) => renderIframeFrame(frame, 'tall')).join('')}
+                            </div>
+                            ${renderOverlapStats(item)}
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'comparison') {
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        <div class="panel-head">
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="panel-note">${esc(item.note || '')}</div>
+                            <div class="grid-2">
+                                ${(item.columns || []).map((column) => `
+                                    <div class="comparison-col">
+                                        <div class="card">
+                                            <div class="card-head"><h3>${esc(column.title || '')}</h3></div>
+                                            <div class="card-body">
+                                                <p class="lead-text" style="margin-top:0;">${esc(column.subtitle || '')}</p>
+                                            </div>
+                                        </div>
+                                        ${renderIframeFrame(column.current || {}, 'slim')}
+                                        <div class="target-card">
+                                            <h4>Versão otimizada</h4>
+                                            <ul>${(column.optimized || []).map((point) => `<li>${esc(point)}</li>`).join('')}</ul>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'closing') {
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        <div class="panel-head">
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="closing-layout">
+                                <div class="closing-hero">
+                                    <h2>${esc(item.headline || '')}</h2>
+                                    <p>O foco da apresentação é mostrar que já existe impacto mensurável e que o SMTUC pode responder com rapidez, antes de a narrativa pública da mobilidade em Coimbra ficar fechada sem esta adaptação.</p>
+                                </div>
+                                <div class="comparison-col">
+                                    ${(item.points || []).map((point) => `
+                                        <div class="closing-card">
+                                            <p class="lead-text" style="margin:0;">${esc(point)}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'thanks') {
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        <div class="panel-head">
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+                        <div class="panel-body thanks-layout">
+                            <div class="thanks-card">
+                                <h2>${esc(item.title || 'Obrigado')}</h2>
+                                <p>${esc(item.subtitle || '')}</p>
+                                ${renderChips(item.contacts || [])}
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }
+
+            return '';
+        }
+
+        function setActiveTab(tabId, focusButton = false) {
+            const buttons = tabsEl.querySelectorAll('[data-tab-id]');
+            const panels = panelsEl.querySelectorAll('[data-panel-id]');
+
+            buttons.forEach((button) => {
+                const active = button.dataset.tabId === tabId;
+                button.setAttribute('aria-selected', active ? 'true' : 'false');
+                button.tabIndex = active ? 0 : -1;
+                if (active && focusButton) button.focus();
+            });
+
+            panels.forEach((panel) => {
+                const active = panel.dataset.panelId === tabId;
+                panel.classList.toggle('is-active', active);
+                panel.hidden = !active;
+                if (active) {
+                    panel.querySelectorAll('iframe[data-src]').forEach((iframe) => {
+                        if (!iframe.dataset.loaded) {
+                            iframe.src = iframe.dataset.src;
+                            iframe.dataset.loaded = '1';
+                        }
+                    });
+                }
+            });
+        }
+
+        function renderTabs() {
+            tabsEl.innerHTML = tabs.map((item, index) => `
+                <button
+                    class="tab-btn"
+                    type="button"
+                    role="tab"
+                    id="tab-${esc(item.id)}"
+                    data-tab-id="${esc(item.id)}"
+                    aria-controls="panel-${esc(item.id)}"
+                    aria-selected="${index === 0 ? 'true' : 'false'}"
+                    tabindex="${index === 0 ? '0' : '-1'}"
+                >
+                    ${esc(item.label)}
+                </button>
+            `).join('');
+
+            panelsEl.innerHTML = tabs.map((item, index) => {
+                const html = renderPanel(item);
+                if (index === 0) return html;
+                return html.replace('tab-panel is-active', 'tab-panel').replace(' hidden', ' hidden');
+            }).join('');
+
+            tabsEl.querySelectorAll('[data-tab-id]').forEach((button) => {
+                button.addEventListener('click', () => setActiveTab(button.dataset.tabId, false));
+                button.addEventListener('keydown', (event) => {
+                    const key = event.key;
+                    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'Home' && key !== 'End') return;
+
+                    const currentIndex = tabs.findIndex((item) => item.id === button.dataset.tabId);
+                    if (currentIndex < 0) return;
+
+                    let nextIndex = currentIndex;
+                    if (key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                    if (key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+                    if (key === 'Home') nextIndex = 0;
+                    if (key === 'End') nextIndex = tabs.length - 1;
+
+                    event.preventDefault();
+                    setActiveTab(tabs[nextIndex].id, true);
+                });
+            });
+
+            setActiveTab(tabs[0].id, false);
+        }
+
+        renderTabs();
+    </script>
+</body>
+</html>

@@ -195,3 +195,164 @@ def create_master_dashboard_html(
 
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
+
+
+def _default_presentation_tabs() -> list[dict[str, Any]]:
+    overlap_stats = _load_overlap_stats()
+    return [
+        {
+            "id": "intro",
+            "label": "Introdução",
+            "kind": "hero",
+            "eyebrow": "Apresentação final",
+            "title": "SMTUC: A caminho da complementaridade",
+            "subtitle": "Como o Metrobus mudou a mobilidade em Coimbra e o que o SMTUC pode adaptar já",
+            "lead": "As obras ainda não estão acabadas, mas o estudo já está encaminhado e já há bastante que pode ser feito com impacto tangível.",
+            "chips": ["Metrobus", "SMTUC", "Coimbra", "Urgência em setembro"],
+            "highlights": [
+                "Mudança estrutural da mobilidade",
+                "Resposta já possível com os dados que existem",
+                "Janela de oportunidade para a entrada de caloiros",
+            ],
+        },
+        {
+            "id": "metodologia",
+            "label": "Metodologia",
+            "kind": "methodology",
+            "description": "Como os dados de SMTUC, Metrobus e população entram no mesmo fluxo de análise.",
+            "note": "Cruza-se oferta de transporte, população e contexto urbano para perceber onde a rede mudou e onde o SMTUC pode ajustar-se já.",
+            "steps": ["Recolha", "Limpeza", "Métricas", "Visualização"],
+            "source_tags": ["SMTUC", "Metrobus", "População", "Locais de trabalho", "Locais de convívio"],
+            "iframes": [
+                {
+                    "title": "Heatmap de população",
+                    "src": "population/heatmap.html",
+                    "caption": "Distribuição da população por Coimbra.",
+                },
+                {
+                    "title": "Índice de subserviço",
+                    "src": "population/choropleth.html",
+                    "caption": "Primeira leitura da pressão de serviço.",
+                },
+            ],
+        },
+        {
+            "id": "subservico",
+            "label": "Subserviço + Isócronas",
+            "kind": "three-up",
+            "description": "A métrica de subserviço e a leitura territorial das isócronas.",
+            "note": "A taxa de subserviço relaciona população com oferta e ajuda a perceber onde o serviço está mais pressionado. As isócronas devem passar a incluir também locais de trabalho e convívio.",
+            "iframes": [
+                {
+                    "title": "Mapa global de subserviço",
+                    "src": "population/choropleth.html",
+                    "caption": "Índice de subserviço em Coimbra.",
+                },
+                {
+                    "title": "Subserviço a 2 km",
+                    "src": "population/stadium.html",
+                    "caption": "Leitura de detalhe da pressão territorial.",
+                },
+                {
+                    "title": "Isócronas dinâmicas",
+                    "src": "overlap/overlap_reachability_now.html",
+                    "caption": "Cobertura, acessibilidade e overlap temporal.",
+                },
+            ],
+        },
+        {
+            "id": "overlap",
+            "label": "Overlap",
+            "kind": "overlap",
+            "description": "Onde a rede SMTUC e o Metrobus mais se sobrepõem.",
+            "note": "Este bloco mostra onde existe redundância espacial e temporal. A leitura deve ser visual, direta e rápida.",
+            "iframes": [
+                {
+                    "title": "Reachability e overlap temporal",
+                    "src": "overlap/overlap_reachability_now.html",
+                    "caption": "Mapa principal com cobertura e temporalidade.",
+                },
+                {
+                    "title": "Mapa de linhas sobrepostas",
+                    "src": "overlap/overlap_lines_map.html",
+                    "caption": "Linhas com maior e menor overlap.",
+                },
+            ],
+            "stats": overlap_stats,
+        },
+        {
+            "id": "integracao",
+            "label": "Integração",
+            "kind": "comparison",
+            "description": "Comparação Portagem e Portela com a linha 54.",
+            "note": "A versão otimizada ainda é um objetivo do projeto, por isso o foco aqui é mostrar o estado atual e a direção de melhoria: menos espera, melhor coordenação e horários mais úteis.",
+            "columns": [
+                {
+                    "title": "Portagem",
+                    "subtitle": "Linha 54 + 38",
+                    "current": {
+                        "title": "Estado atual",
+                        "src": "integration/portagem/l54_38_all.html",
+                        "caption": "Integração atual no sentido Portela → Portagem.",
+                    },
+                    "optimized": [
+                        "Reduzir tempos de espera no transbordo",
+                        "Ajustar horários ao Metrobus",
+                        "Evidenciar a correspondência entre modos",
+                    ],
+                },
+                {
+                    "title": "Portela",
+                    "subtitle": "Linha 54",
+                    "current": {
+                        "title": "Estado atual",
+                        "src": "integration/portela/l54_all.html",
+                        "caption": "Integração atual no sentido Portagem → Portela.",
+                    },
+                    "optimized": [
+                        "Simplificar o percurso de ligação",
+                        "Reorganizar a cadência horária",
+                        "Mostrar melhor o ganho tangível para o utilizador",
+                    ],
+                },
+            ],
+        },
+        {
+            "id": "conclusao",
+            "label": "Conclusões",
+            "kind": "closing",
+            "description": "O que a apresentação quer deixar claro no final.",
+            "headline": "O Metrobus alterou a mobilidade em Coimbra e o SMTUC precisa de se adaptar.",
+            "points": [
+                "Há já impacto tangível que pode ser mostrado antes de as obras terminarem.",
+                "O reforço do SMTUC deve responder ao novo contexto, não competir com ele.",
+                "Setembro é a oportunidade para demonstrar a nova era da mobilidade em Coimbra.",
+            ],
+        },
+        {
+            "id": "agradecimentos",
+            "label": "Agradecimentos",
+            "kind": "thanks",
+            "description": "Fecho minimalista e limpo para o ecrã final.",
+            "title": "Obrigado",
+            "subtitle": "Nomes, instituição e contactos",
+            "contacts": ["Nome 1", "Nome 2", "Curso / Unidade curricular", "Setembro 2026"],
+        },
+    ]
+
+
+def create_presentation_dashboard_html(
+    output_path: Path | str,
+    title: str = "SMTUC: Mockups da apresentação",
+    tabs: list[dict[str, Any]] | None = None,
+) -> str:
+    """Create a tabbed HTML dashboard aligned with the presentation mockups."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    page = _read_template("presentation_dashboard.html")
+    page = page.replace("__TITLE__", html.escape(title))
+    page = page.replace("__TABS_JSON__", json.dumps(tabs or _default_presentation_tabs(), ensure_ascii=False))
+
+    output_path.write_text(page, encoding="utf-8")
+    return str(output_path)
