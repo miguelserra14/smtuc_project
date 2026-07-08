@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -199,6 +200,18 @@ def _line_to_route_ids(gtfs_smtuc) -> dict[str, list[str]]:
     )
 
 
+def _line_numeric_prefix(line: object) -> float | None:
+    """Leading numeric part of a line label (e.g. "24T" -> 24, "103" -> 103, "5F" -> 5).
+
+    Used to exclude only the genuinely-numbered->=100 special lines while keeping lettered
+    variants (turno/reforço/feriado, etc.) of the base numbered lines in the overlap analysis.
+    """
+    match = re.match(r"^\s*(\d+)", str(line))
+    if not match:
+        return None
+    return float(match.group(1))
+
+
 def _project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
@@ -209,9 +222,15 @@ def _resolve_db_path(path: str | None = None) -> Path:
 
 
 def _dataset_signature(dataset: str) -> str:
+    # Recursive on purpose: load_gtfs()/_find_gtfs_dir() accept the dataset's GTFS files sitting
+    # in a nested subfolder (e.g. data/smtuc/some_export/routes.txt), not just directly under
+    # data/{dataset}/. A non-recursive glob here would never detect changes in that layout.
     folder = _project_root() / "data" / dataset
-    txt_files = sorted(folder.glob("*.txt")) if folder.exists() else []
-    raw = "|".join(f"{p.name}:{p.stat().st_size}:{p.stat().st_mtime_ns}" for p in txt_files)
+    txt_files = sorted(folder.rglob("*.txt")) if folder.exists() else []
+    raw = "|".join(
+        f"{p.relative_to(folder).as_posix()}:{p.stat().st_size}:{p.stat().st_mtime_ns}"
+        for p in txt_files
+    )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -321,7 +340,8 @@ def _compute_line_metrics(
         return pd.DataFrame()
 
     df = pd.DataFrame(out_rows)
-    return df[pd.to_numeric(df["line"], errors="coerce") < 100].reset_index(drop=True)
+    numeric_prefix = df["line"].map(_line_numeric_prefix)
+    return df[numeric_prefix.notna() & (numeric_prefix < 100)].reset_index(drop=True)
 
 
 def build_line_metrics_db(

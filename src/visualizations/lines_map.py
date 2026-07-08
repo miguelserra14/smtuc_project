@@ -11,7 +11,7 @@ except Exception:  # pragma: no cover - optional dependency
 
 import pandas as pd
 
-from config import STADIUM_COORD
+from config import STADIUM_COORD, STADIUM_RADIUS_M, STADIUM_MIN_EXTENSION_PCT
 from gtfs_processing.gtfs import load_gtfs
 from overlap.overlap_db import _line_to_route_ids, _iter_route_direction_stop_arrays
 from visualizations.io import _write_folium_html
@@ -31,6 +31,9 @@ def create_overlap_lines_map(
     metrobus_dataset: str = "metrobus",
     top_n: int = 5,
     bottom_n: int = 5,
+    stadium_n: int = 5,
+    stadium_radius_m: float = STADIUM_RADIUS_M,
+    stadium_min_extension_pct: float = STADIUM_MIN_EXTENSION_PCT,
 ) -> str:
     """Create a standalone HTML map showing Metrobus and selected SMTUC lines (top/bottom overlap).
 
@@ -54,6 +57,20 @@ def create_overlap_lines_map(
     top_lines = list(df.sort_values(["overlap_pct", "overlap_extension_m"], ascending=False).head(top_n)["line"].astype(str))
     bottom_lines = list(df.sort_values(["overlap_pct", "overlap_extension_m"], ascending=True).head(bottom_n)["line"].astype(str))
 
+    # Linhas com pelo menos `stadium_min_extension_pct`% da extensão dentro de `stadium_radius_m`
+    # do estádio, ordenadas por menor overlap - mesma regra usada em line_low_overlap_near_stadium_top.
+    stadium_lines: list[str] = []
+    if {"radius_m", "radius_extension_pct"}.issubset(df.columns):
+        near_stadium = df[
+            (df["radius_extension_pct"].fillna(-1) >= stadium_min_extension_pct)
+            & (df["radius_m"].sub(stadium_radius_m).abs().fillna(float("inf")) <= 1e-6)
+        ]
+        stadium_lines = list(
+            near_stadium.sort_values(["overlap_pct", "overlap_extension_m"], ascending=True)
+            .head(stadium_n)["line"]
+            .astype(str)
+        )
+
     # Load GTFS
     gtfs_smtuc = load_gtfs(dataset=smtuc_dataset)
     gtfs_metro = load_gtfs(dataset=metrobus_dataset)
@@ -70,11 +87,23 @@ def create_overlap_lines_map(
                 if len(pts) >= 2:
                     folium.PolyLine(pts, color="#1976d2", weight=3, opacity=0.8).add_to(metro_fg)
         else:
-            # Simplified fallback: draw metro stops as markers only (avoid reconstructing many polylines
-            # from trips/stop_times which can create confusing/overlapping traces and heavy DOM).
+            # Sem shapes.txt: liga as paragens pela ordem real dos trips (stop_sequence de um
+            # trip representativo por sentido), tal como já fazemos para as linhas SMTUC, em vez
+            # de deixar só pontos soltos.
+            try:
+                if hasattr(gtfs_metro, "routes") and not gtfs_metro.routes.empty:
+                    metro_route_ids = gtfs_metro.routes["route_id"].astype(str).tolist()
+                    for rid in metro_route_ids:
+                        for lat_arr, lon_arr, _stop_ids, _count in _iter_route_direction_stop_arrays(gtfs_metro, rid):
+                            pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
+                            if len(pts) >= 2:
+                                folium.PolyLine(pts, color="#1976d2", weight=3, opacity=0.8).add_to(metro_fg)
+            except Exception:
+                pass
+
             try:
                 if hasattr(gtfs_metro, "stops") and not gtfs_metro.stops.empty:
-                    stops = gtfs_metro.stops.dropna(subset=["stop_lat", "stop_lon"]) 
+                    stops = gtfs_metro.stops.dropna(subset=["stop_lat", "stop_lon"])
                     for _, s in stops.iterrows():
                         folium.CircleMarker(location=(float(s.stop_lat), float(s.stop_lon)), radius=3, color="#1976d2", fill=True, fillOpacity=0.9).add_to(metro_fg)
             except Exception:
@@ -83,6 +112,20 @@ def create_overlap_lines_map(
     except Exception:
         pass
     m.add_child(metro_fg)
+
+    # Estádio: marcador de referência (usado no filtro "linhas junto ao estádio" a <=stadium_radius_m)
+    stadium_fg = FeatureGroup(name="Estádio", show=True)
+    folium.CircleMarker(
+        location=center,
+        radius=6,
+        color="#000000",
+        weight=1,
+        fill=True,
+        fill_color="#ffd600",
+        fill_opacity=1.0,
+        popup="Estádio",
+    ).add_to(stadium_fg)
+    m.add_child(stadium_fg)
 
     # Helper to add SMTUC line feature groups
     def _add_line_groups(lines: Iterable[str], color: str, prefix: str) -> None:
@@ -104,6 +147,7 @@ def create_overlap_lines_map(
 
     _add_line_groups(top_lines, "#2e7d32", "Top")
     _add_line_groups(bottom_lines, "#b71c1c", "Bottom")
+    _add_line_groups(stadium_lines, "#f57c00", "Estádio")
 
     folium.LayerControl(collapsed=False).add_to(m)
 

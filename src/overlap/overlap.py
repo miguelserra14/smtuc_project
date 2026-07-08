@@ -23,6 +23,7 @@ from overlap.overlap_db import (
     load_line_metrics_db,
     _load_gtfs_cached,
     _line_to_route_ids,
+    _line_numeric_prefix,
 )
 from gtfs_processing.gtfs_probe import _active_service_ids, _parse_day, _to_seconds
 
@@ -30,7 +31,8 @@ from gtfs_processing.gtfs_probe import _active_service_ids, _parse_day, _to_seco
 def _filter_numeric_bus_lines(df: pd.DataFrame) -> pd.DataFrame:
     if "line" not in df.columns:
         return df
-    return df[pd.to_numeric(df["line"], errors="coerce") < 100]
+    numeric_prefix = df["line"].map(_line_numeric_prefix)
+    return df[numeric_prefix.notna() & (numeric_prefix < 100)]
 
 
 def line_overlap_top(

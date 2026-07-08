@@ -204,8 +204,8 @@ def test_master_dashboard_html(tmp_path: Path) -> None:
     assert output_html.exists()
 
     html_text = output_html.read_text(encoding="utf-8")
-    assert "Dashboard unificado" in html_text
-    assert "integration/portagem/l54_portagem_all.html" in html_text
+    assert "SMTUC: A caminho da complementaridade" in html_text
+    assert "integration/portagem/l54_38_all.html" in html_text
     assert "integration/portela/l54_all.html" in html_text
     assert "population/bgri.html" in html_text
     assert "overlap/overlap_reachability_now.html" in html_text

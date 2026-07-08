@@ -8,6 +8,7 @@ Uso:
 
 from __future__ import annotations
 
+import html
 import sys
 from datetime import date
 from pathlib import Path
@@ -26,6 +27,7 @@ from population.data_processing import (
 from overlap.overlap import (
     compute_bgri_reachability_now,
 )
+from overlap.overlap_db import load_line_metrics_db
 from visualizations import (
     create_master_dashboard_html,
     create_presentation_dashboard_html,
@@ -126,10 +128,17 @@ def regenerate_overlap_htmls() -> None:
     try:
         out_dir = _project_root() / "outputs" / "overlap"
         out_dir.mkdir(parents=True, exist_ok=True)
-        
+
+        # Garantir que outputs/overlap/line_metrics_db.csv está atualizado antes de qualquer
+        # coisa que o leia diretamente do disco (_load_overlap_stats, create_overlap_lines_map).
+        # load_line_metrics_db valida a assinatura dos dados/parâmetros e só recalcula se algo
+        # mudou - não regenera do zero em cada execução.
+        print("[INFO] Verificando cache de métricas de linha (line_metrics_db)...")
+        load_line_metrics_db()
+
         day_str = resolve_reference_day().strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
-        
+
         # Computar zonas subservidas como base
         print("[INFO] Computando reachability...")
         merged = compute_underserved_zones(day_str=day_str)
