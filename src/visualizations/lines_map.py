@@ -168,19 +168,18 @@ def create_overlap_lines_map(
             if line not in line_map_all:
                 continue
             route_ids = line_map_all.get(line, [])
-            coords = None
-            # pick longest representative route among route_ids
-            best_len = 0
+            # Guarda TODOS os sentidos/variantes da linha (não só o mais comprido) - cada um
+            # vira um segmento da mesma polyline multi-parte no mapa.
+            directions_coords: list[list[tuple[float, float]]] = []
             for rid in route_ids:
-                for lat_arr, lon_arr, _stop_ids, count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
-                    if len(lat_arr) > best_len:
-                        best_len = len(lat_arr)
-                        coords = list(zip(lat_arr.tolist(), lon_arr.tolist()))
-            if not coords:
+                for lat_arr, lon_arr, _stop_ids, _count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
+                    if len(lat_arr) >= 2:
+                        directions_coords.append(list(zip(lat_arr.tolist(), lon_arr.tolist())))
+            if not directions_coords:
                 continue
             row = metrics_df[metrics_df["line"] == line].iloc[0].to_dict() if not metrics_df.empty else {}
             lines_data[line] = {
-                "coords": coords,
+                "coords": directions_coords,
                 "overlap_pct": row.get("overlap_pct", ""),
                 "overlap_m": row.get("overlap_extension_m", ""),
                 "extension_m": row.get("line_extension_m", ""),
@@ -193,7 +192,7 @@ def create_overlap_lines_map(
         import json
 
         control_html = """
-        <div id="line-select-control" style="position: absolute; top: 10px; right: 10px; z-index: 9999; background: rgba(255,255,255,0.95); padding:8px; border-radius:6px; box-shadow:0 1px 6px rgba(0,0,0,0.2); font-size:13px;">
+        <div id="line-select-control" style="position: absolute; bottom: 20px; left: 10px; z-index: 9999; background: rgba(255,255,255,0.95); padding:8px; border-radius:6px; box-shadow:0 1px 6px rgba(0,0,0,0.2); font-size:13px;">
           <div style="margin-bottom:6px; font-weight:600;">Mostrar linha</div>
           <div style="display:flex; gap:6px;">
             <input id="line-input" placeholder="Número da linha" style="width:110px;padding:4px;border:1px solid #ccc;border-radius:4px" />
@@ -203,37 +202,56 @@ def create_overlap_lines_map(
           <div id="line-info" style="margin-top:6px;font-size:12px;color:#222"></div>
         </div>
         <script>
-          var __LINES_DATA__ = %s;
+          var __LINES_DATA__ = __LINES_DATA_JSON__;
           (function(){
             var selectedLayer = null;
-            var map = map_7962740fa9b77b803d90ff8725c8108e;
+            var map = null;
             function showLine(line){
-              if(!line) return;
-              var data = __LINES_DATA__[line];
+              if(!line || !map) return;
+              var data = __LINES_DATA__[line] || __LINES_DATA__[line.toUpperCase()];
               if(!data) { document.getElementById('line-info').innerText = 'Linha não encontrada'; return; }
               if(selectedLayer){ map.removeLayer(selectedLayer); selectedLayer = null; }
-              var latlngs = data.coords.map(function(p){ return [p[0], p[1]]; });
+              // data.coords é uma lista de sentidos/variantes; cada um vira um segmento da
+              // mesma polyline multi-parte (o Leaflet desenha arrays aninhados como uma única
+              // camada com vários troços, incluindo os dois sentidos da linha).
+              var latlngs = data.coords.map(function(dir){
+                return dir.map(function(p){ return [p[0], p[1]]; });
+              });
               selectedLayer = L.polyline(latlngs, {color: '#ff5722', weight: 4, opacity:0.9}).addTo(map);
               map.fitBounds(selectedLayer.getBounds(), {padding:[20,20]});
               var info = 'Linha: ' + line + ' — Overlap: ' + (data.overlap_pct || '-') + ' %, Overlap m: ' + (data.overlap_m || '-') + ', Extensão m: ' + (data.extension_m || '-');
               document.getElementById('line-info').innerText = info;
               selectedLayer.bindPopup(info).openPopup();
             }
-            document.addEventListener('DOMContentLoaded', function(){
+            function wire(){
+              // Só resolvemos a variável do mapa aqui dentro: por esta altura o script de
+              // inicialização do Leaflet gerado pelo folium (que cria a variável do mapa) já
+              // correu de certeza, mesmo que apareça fisicamente depois deste bloco no HTML.
+              map = __MAP_VAR_NAME__;
               var btn = document.getElementById('line-show-btn');
               var clr = document.getElementById('line-clear-btn');
               var inp = document.getElementById('line-input');
               btn.addEventListener('click', function(){ showLine(inp.value.trim()); });
               inp.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ showLine(inp.value.trim()); }});
               clr.addEventListener('click', function(){ if(selectedLayer){ map.removeLayer(selectedLayer); selectedLayer=null; } document.getElementById('line-info').innerText=''; });
-            });
+            }
+            if(document.readyState === 'loading'){
+              document.addEventListener('DOMContentLoaded', wire);
+            } else {
+              wire();
+            }
           })();
         </script>
-        """ % json.dumps(lines_data, ensure_ascii=False)
+        """
+        control_html = control_html.replace("__LINES_DATA_JSON__", json.dumps(lines_data, ensure_ascii=False))
+        control_html = control_html.replace("__MAP_VAR_NAME__", m.get_name())
 
-        # append control_html before </body>
+        # O folium coloca o <script> que cria de facto o objeto do mapa (L.map(...)) DEPOIS do
+        # </body> (antes só de </html>). Inserir antes de </body> corria antes de o mapa existir.
         page = m.get_root().render()
-        insert_at = page.rfind('</body>')
+        insert_at = page.rfind('</html>')
+        if insert_at == -1:
+            insert_at = page.rfind('</body>')
         if insert_at != -1:
             new_page = page[:insert_at] + control_html + page[insert_at:]
         else:
