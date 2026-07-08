@@ -310,12 +310,17 @@ def build_line_stop_vs_metro_table(
     metro_origin_ref: str = "Portagem",
     bus_origin_ref: str = "Portagem",
     output_csv_name: str | None = None,
+    output_dir: str | Path | None = None,
 ) -> pd.DataFrame:
     """
     Gera uma tabela comparando horários de autocarro e metro numa paragem de destino.
 
     Requer apenas: nome/id da paragem de metro, nome/id da paragem de autocarro e número da linha.
     O dia de referência é sempre o dia útil atual (ou o dia útil mais próximo).
+
+    Por omissão escreve o CSV em `OUTPUTS_INTEGRATION_DIR` (o mesmo diretório partilhado usado
+    pelo dashboard). Passa `output_dir` (ex.: `tmp_path` de um teste) para escrever noutro sítio
+    sem afetar os ficheiros publicados.
     """
     day = resolve_reference_day(day_str)
 
@@ -428,8 +433,9 @@ def build_line_stop_vs_metro_table(
     ]
     if n == 0:
         out_df = pd.DataFrame(columns=columns)
-        root = Path(__file__).resolve().parents[2]
-        out_dir = root / OUTPUTS_INTEGRATION_DIR
+        out_dir = Path(output_dir) if output_dir is not None else (
+            Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+        )
         out_dir.mkdir(parents=True, exist_ok=True)
         csv_name = output_csv_name or (
             f"line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
@@ -456,8 +462,9 @@ def build_line_stop_vs_metro_table(
 
     out_df = pd.DataFrame(rows, columns=columns)
 
-    root = Path(__file__).resolve().parents[2]
-    out_dir = root / OUTPUTS_INTEGRATION_DIR
+    out_dir = Path(output_dir) if output_dir is not None else (
+        Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
         f"line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"

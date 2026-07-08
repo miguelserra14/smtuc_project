@@ -80,19 +80,32 @@ def _load_overlap_stats() -> dict[str, list[dict[str, str]]] | None:
     except Exception:
         total_temporal_overlaps = 0
 
-    overlap_stations = int(sum(_to_float(r.get("overlap_stops")) for r in rows))
+    def _split_ids(value: str | None) -> set[str]:
+        if not value:
+            return set()
+        return {v for v in str(value).split(";") if v}
+
+    # Distinct physical stops, not a sum across lines (a stop shared by several lines must
+    # only count once) - derived from the per-line stop_id sets stored in the CSV.
+    overlap_stations_set: set[str] = set()
+    temporal_overlap_stations_set: set[str] = set()
+    for r in rows:
+        overlap_stations_set |= _split_ids(r.get("overlap_stop_ids"))
+        temporal_overlap_stations_set |= _split_ids(r.get("temporal_overlap_stop_ids"))
+
+    overlap_stations = len(overlap_stations_set)
     overlap_lines = int(len([r for r in rows if _to_float(r.get("overlap_pct")) > 0]))
 
     temporal_overlap_times = total_temporal_overlaps
-    temporal_overlap_stations = int(len([r for r in rows if _to_float(r.get("temporal_overlaps_count")) > 0]))
+    temporal_overlap_stations = len(temporal_overlap_stations_set)
     temporal_overlap_lines = int(len({r.get("line") for r in rows if _to_float(r.get("temporal_overlaps_count")) > 0}))
 
     temporal_overlap_pct = (total_temporal_overlaps / total_spatial_candidates) * 100.0 if total_spatial_candidates > 0 else 0.0
 
     # Import configured temporal threshold and walk speed from central config
-    from config import TEMPORAL_OVERLAP_MAX_MIN, WALK_SPEED_M_MIN, SPATIAL_OVERLAP_MIN
+    from config import TEMPORAL_OVERLAP_MAX_MIN, WALK_SPEED_M_MIN, SPATIAL_OVERLAP_WALK_MIN
 
-    walk_distance_threshold = WALK_SPEED_M_MIN * SPATIAL_OVERLAP_MIN
+    walk_distance_threshold = WALK_SPEED_M_MIN * SPATIAL_OVERLAP_WALK_MIN
 
     return {
         "top5": _fmt(top5),

@@ -93,7 +93,7 @@ def create_overlap_lines_map(
                 line_map = _line_to_route_ids(gtfs_smtuc)
                 route_ids = line_map.get(str(line), [])
                 for rid in route_ids:
-                    for lat_arr, lon_arr, _ in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
+                    for lat_arr, lon_arr, _stop_ids, _count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
                         pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
                         if len(pts) >= 2:
                             folium.PolyLine(pts, color=color, weight=3, opacity=0.85).add_to(fg)
@@ -128,7 +128,7 @@ def create_overlap_lines_map(
             # pick longest representative route among route_ids
             best_len = 0
             for rid in route_ids:
-                for lat_arr, lon_arr, count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
+                for lat_arr, lon_arr, _stop_ids, count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
                     if len(lat_arr) > best_len:
                         best_len = len(lat_arr)
                         coords = list(zip(lat_arr.tolist(), lon_arr.tolist()))

@@ -10,6 +10,7 @@ from config import (
     HOME_COORD,
     OVERLAP_SCAN_TOP_N,
     OVERLAP_TABLE_TOP_N,
+    SPATIAL_OVERLAP_WALK_MIN,
     TEMPORAL_OVERLAP_MAX_MIN,
     WALK_SPEED_M_MIN,
     STADIUM_COORD,
@@ -303,12 +304,11 @@ def test_temporal_overlaps() -> None:
     )
 
     print(
-        f"\n\n\nDe todas as {total_spatial_candidates} vezes, em {overlap_stations} estações e {overlap_lines} linhas que um autocarro dos SMTUC passa numa estação que tem overlap espacial (<={WALK_SPEED_M_MIN*5} metros) "
+        f"\n\n\nDe todas as {total_spatial_candidates} vezes, em {overlap_stations} estações e {overlap_lines} linhas que um autocarro dos SMTUC passa numa estação que tem overlap espacial (<={WALK_SPEED_M_MIN*SPATIAL_OVERLAP_WALK_MIN} metros) "
         f" com o Metrobus, "
         f"há overlap temporal (<={TEMPORAL_OVERLAP_MAX_MIN} minutos) em {temporal_overlap_pct:.2f}% delas ({temporal_overlap_times} vezes, "
         f"em {temporal_overlap_stations} estações e em {temporal_overlap_lines} linhas)."
     )
-    """De todas as 4038 vezes, em 199 estações e 5 linhas que um autocarro dos SMTUC passa numa estação que tem overlap espacial (<=400.0 metros)  com o Metrobus, há overlap temporal (<=5.0 minutos) em 77.41% delas (3126 vezes, em 49 estações e em 5 linhas)."""
     if events.empty:
         print("Sem eventos de overlap temporal para apresentar top 5.")
     else:

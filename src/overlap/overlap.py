@@ -190,11 +190,13 @@ def compute_temporal_overlaps_for_db(
         metrics_df["temporal_overlaps_count"] = 0
     if "temporal_overlaps_pct" not in metrics_df.columns:
         metrics_df["temporal_overlaps_pct"] = 0.0
-    
+    if "temporal_overlap_stop_ids" not in metrics_df.columns:
+        metrics_df["temporal_overlap_stop_ids"] = ""
+
     gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
     gtfs_metro = _load_gtfs_cached(metrobus_dataset)
-    
-    walk_5_min_m = walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN
+
+    walk_catchment_m = walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN
     temporal_threshold_s = int(float(temporal_overlap_max_min) * 60)
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
     metro_stops["stop_id"] = metro_stops["stop_id"].astype(str)
@@ -267,15 +269,16 @@ def compute_temporal_overlaps_for_db(
         
         total_passages_nearby = 0
         temporal_overlaps = 0
-        
+        temporal_overlap_stop_ids: set[str] = set()
+
         for _, passage in smtuc_stop_times.iterrows():
             smtuc_lat = float(passage["stop_lat"])
             smtuc_lon = float(passage["stop_lon"])
             smtuc_time_s = int(passage["time_sec"])
             smtuc_service_id = str(passage.get("service_id", ""))
-            
+
             distances = _distances_from_point_m(smtuc_lat, smtuc_lon, metro_stop_lats, metro_stop_lons)
-            nearby_stop_ids = metro_stop_ids[distances <= walk_5_min_m]
+            nearby_stop_ids = metro_stop_ids[distances <= walk_catchment_m]
 
             if len(nearby_stop_ids) == 0:
                 continue
@@ -315,9 +318,11 @@ def compute_temporal_overlaps_for_db(
 
             if has_temporal_overlap:
                 temporal_overlaps += 1
-        
+                temporal_overlap_stop_ids.add(str(passage["stop_id"]))
+
         metrics_df.at[idx, "temporal_spatial_candidates_count"] = total_passages_nearby
         metrics_df.at[idx, "temporal_overlaps_count"] = temporal_overlaps
+        metrics_df.at[idx, "temporal_overlap_stop_ids"] = ";".join(sorted(temporal_overlap_stop_ids))
         if total_passages_nearby > 0:
             metrics_df.at[idx, "temporal_overlaps_pct"] = round(
                 (temporal_overlaps / total_passages_nearby) * 100, 2
@@ -334,6 +339,7 @@ def temporal_overlap_events_for_metrics(
     metrobus_dataset: str = "metrobus",
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     temporal_overlap_max_min: float = TEMPORAL_OVERLAP_MAX_MIN,
+    spatial_overlap_walk_min: float = SPATIAL_OVERLAP_WALK_MIN,
 ) -> pd.DataFrame:
     """Devolve eventos de overlap temporal para um conjunto de linhas em métricas."""
     if metrics_df.empty or "line" not in metrics_df.columns:
@@ -352,7 +358,7 @@ def temporal_overlap_events_for_metrics(
     gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
     gtfs_metro = _load_gtfs_cached(metrobus_dataset)
 
-    walk_5_min_m = walk_speed_m_min * 5
+    walk_catchment_m = walk_speed_m_min * spatial_overlap_walk_min
     temporal_threshold_s = int(float(temporal_overlap_max_min) * 60)
 
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
@@ -432,7 +438,7 @@ def temporal_overlap_events_for_metrics(
             smtuc_service_id = str(passage.get("service_id", ""))
 
             distances = _distances_from_point_m(smtuc_lat, smtuc_lon, metro_stop_lats, metro_stop_lons)
-            nearby_stop_ids = metro_stop_ids[distances <= walk_5_min_m]
+            nearby_stop_ids = metro_stop_ids[distances <= walk_catchment_m]
             if len(nearby_stop_ids) == 0:
                 continue
 

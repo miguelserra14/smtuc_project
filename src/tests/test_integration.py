@@ -23,7 +23,7 @@ def _require_dataset(dataset: str) -> Path:
 
 
 @pytest.mark.integration
-def test_line_54_portela_bus_vs_metro_from_portagem() -> None:
+def test_line_54_portela_bus_vs_metro_from_portagem(tmp_path: Path) -> None:
     """
     Verifica a pergunta:
     "a que horas a linha 54 passa na paragem de autocarros da Portela
@@ -42,6 +42,7 @@ def test_line_54_portela_bus_vs_metro_from_portagem() -> None:
         day_str="2026-04-20",
         metro_origin_ref="Portagem",
         bus_origin_ref="Portagem",
+        output_dir=tmp_path,
     )
     # Reforço: outra data hardcoded também deve convergir para o mesmo dia útil.
     df_alt = build_line_stop_vs_metro_table(
@@ -51,6 +52,7 @@ def test_line_54_portela_bus_vs_metro_from_portagem() -> None:
         day_str="1999-12-31",
         metro_origin_ref="Portagem",
         bus_origin_ref="Portagem",
+        output_dir=tmp_path,
     )
 
     expected_cols = {
@@ -87,7 +89,7 @@ def test_line_54_portela_bus_vs_metro_from_portagem() -> None:
 
 
 @pytest.mark.integration
-def test_line_54_portagem_bus_vs_metro_from_portela() -> None:
+def test_line_54_portagem_bus_vs_metro_from_portela(tmp_path: Path) -> None:
     """
     Verifica a pergunta espelho:
     "a que horas a linha 54 passa na Portagem e a que horas o metro
@@ -106,6 +108,7 @@ def test_line_54_portagem_bus_vs_metro_from_portela() -> None:
         day_str="2026-04-20",
         metro_origin_ref="Portela",
         bus_origin_ref="Portela do Mondego",
+        output_dir=tmp_path,
     )
     # Reforço: outra data hardcoded também deve convergir para o mesmo dia útil.
     df_alt = build_line_stop_vs_metro_table(
@@ -115,6 +118,7 @@ def test_line_54_portagem_bus_vs_metro_from_portela() -> None:
         day_str="1999-12-31",
         metro_origin_ref="Portela",
         bus_origin_ref="Portela do Mondego",
+        output_dir=tmp_path,
     )
 
     expected_cols = {
@@ -151,7 +155,7 @@ def test_line_54_portagem_bus_vs_metro_from_portela() -> None:
 
 
 @pytest.mark.integration
-def test_lines_54_38_portagem_bus_vs_metro_from_portela() -> None:
+def test_lines_54_38_portagem_bus_vs_metro_from_portela(tmp_path: Path) -> None:
     """Valida suporte a múltiplas linhas no cenário da Portagem (54 + 38)."""
     _require_dataset("smtuc")
     _require_dataset("metrobus")
@@ -165,6 +169,7 @@ def test_lines_54_38_portagem_bus_vs_metro_from_portela() -> None:
         day_str="2026-04-20",
         metro_origin_ref="Portela",
         bus_origin_ref="Portela do Mondego",
+        output_dir=tmp_path,
     )
 
     assert not df.empty
@@ -183,6 +188,7 @@ def test_lines_54_38_portagem_bus_vs_metro_from_portela() -> None:
         day_str="2026-04-20",
         metro_origin_ref="Portela",
         bus_origin_ref="Portela do Mondego",
+        output_dir=tmp_path,
     )
     bus_times_54 = [t for t in df_54["bus_time"].tolist() if t]
     assert len(bus_times) >= len(bus_times_54)

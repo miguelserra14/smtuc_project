@@ -12,7 +12,7 @@ from config import (
     STADIUM_COORD,
     STADIUM_RADIUS_M,
     WALK_SPEED_M_MIN,
-    SPATIAL_OVERLAP_MIN,
+    SPATIAL_OVERLAP_WALK_MIN,
     TEMPORAL_OVERLAP_MAX_MIN,
 )
 from gtfs_processing.gtfs import load_gtfs
@@ -86,7 +86,7 @@ def _representative_route_stops_for_subset(gtfs, route_trips: pd.DataFrame) -> p
 def _iter_route_direction_stop_arrays(
     gtfs_smtuc,
     route_id: str,
-) -> list[tuple[np.ndarray, np.ndarray, int]]:
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, int]]:
     route_trips = gtfs_smtuc.trips[gtfs_smtuc.trips["route_id"].astype(str) == str(route_id)].copy()
     if route_trips.empty:
         return []
@@ -96,7 +96,7 @@ def _iter_route_direction_stop_arrays(
     else:
         direction_values = ["na"]
 
-    directions: list[tuple[np.ndarray, np.ndarray, int]] = []
+    directions: list[tuple[np.ndarray, np.ndarray, np.ndarray, int]] = []
     for direction in direction_values:
         subset = route_trips if direction == "na" else route_trips[route_trips["direction_id"].astype(str) == direction]
 
@@ -107,7 +107,8 @@ def _iter_route_direction_stop_arrays(
 
         route_lat = route_stops["stop_lat"].astype(float).to_numpy()
         route_lon = route_stops["stop_lon"].astype(float).to_numpy()
-        directions.append((route_lat, route_lon, int(len(route_stops))))
+        route_stop_ids = route_stops["stop_id"].astype(str).to_numpy()
+        directions.append((route_lat, route_lon, route_stop_ids, int(len(route_stops))))
 
     return directions
 
@@ -116,16 +117,16 @@ def _route_direction_summaries(
     gtfs_smtuc,
     route_id: str,
     metro_stops: pd.DataFrame,
-    walk_5_min_m: float,
+    walk_catchment_m: float,
 ) -> list[dict]:
     metro_lat = metro_stops["stop_lat"].astype(float).to_numpy()
     metro_lon = metro_stops["stop_lon"].astype(float).to_numpy()
     summaries: list[dict] = []
 
-    for route_lat, route_lon, total_stops in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
+    for route_lat, route_lon, route_stop_ids, total_stops in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
 
         min_dist = _min_distance_to_points_m(route_lat, route_lon, metro_lat, metro_lon)
-        is_overlap = min_dist <= walk_5_min_m
+        is_overlap = min_dist <= walk_catchment_m
 
         seg_lengths = _haversine_pairwise_m(route_lat[:-1], route_lon[:-1], route_lat[1:], route_lon[1:])
         overlap_segments = is_overlap[:-1] & is_overlap[1:]
@@ -141,6 +142,7 @@ def _route_direction_summaries(
                 "total_ext_m": total_ext_m,
                 "overlap_ext_m": overlap_ext_m,
                 "overlap_stops": int(is_overlap.sum()),
+                "overlap_stop_ids": set(route_stop_ids[is_overlap].tolist()),
                 "total_stops": total_stops,
             }
         )
@@ -222,7 +224,7 @@ def _route_direction_radius_coverage_summaries(
 ) -> list[dict]:
     summaries: list[dict] = []
 
-    for route_lat, route_lon, _ in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
+    for route_lat, route_lon, _stop_ids, _ in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
 
         dist_to_center = _haversine_pairwise_m(
             np.full(route_lat.shape, center_lat, dtype=float),
@@ -257,7 +259,7 @@ def _compute_line_metrics(
     gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
     gtfs_metro = _load_gtfs_cached(metrobus_dataset)
 
-    walk_5_min_m = walk_speed_m_min * SPATIAL_OVERLAP_MIN
+    walk_catchment_m = walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
     if metro_stops.empty:
         return pd.DataFrame()
@@ -271,7 +273,7 @@ def _compute_line_metrics(
         line_summaries: list[dict] = []
         radius_summaries: list[dict] = []
         for route_id in route_ids:
-            line_summaries.extend(_route_direction_summaries(gtfs_smtuc, route_id, metro_stops, walk_5_min_m))
+            line_summaries.extend(_route_direction_summaries(gtfs_smtuc, route_id, metro_stops, walk_catchment_m))
             radius_summaries.extend(
                 _route_direction_radius_coverage_summaries(gtfs_smtuc, route_id, stadium_lat, stadium_lon, radius_m)
             )
@@ -284,6 +286,10 @@ def _compute_line_metrics(
             continue
 
         overlap_ext_m = sum(s["overlap_ext_m"] for s in line_summaries)
+        overlap_stop_ids: set[str] = set()
+        for s in line_summaries:
+            overlap_stop_ids |= s.get("overlap_stop_ids", set())
+
         row = {
             "line": str(line),
             "avg_freq_min": _line_avg_frequency_min(gtfs_smtuc, route_ids),
@@ -291,6 +297,7 @@ def _compute_line_metrics(
             "line_extension_m": round(total_ext_m, 1),
             "overlap_pct": round((overlap_ext_m / total_ext_m) * 100.0, 2),
             "overlap_stops": int(sum(s["overlap_stops"] for s in line_summaries)),
+            "overlap_stop_ids": ";".join(sorted(overlap_stop_ids)),
             "total_stops": int(sum(s["total_stops"] for s in line_summaries)),
             "directions_considered": len(line_summaries),
             "radius_extension_m": np.nan,
@@ -298,6 +305,7 @@ def _compute_line_metrics(
             "radius_m": float(radius_m),
             "temporal_overlaps_count": 0,
             "temporal_overlaps_pct": 0.0,
+            "temporal_overlap_stop_ids": "",
         }
 
         if radius_summaries:
@@ -342,7 +350,8 @@ def build_line_metrics_db(
                 and float(cached.iloc[0].get("__meta_stadium_lat", 999.0)) == float(stadium_lat)
                 and float(cached.iloc[0].get("__meta_stadium_lon", 999.0)) == float(stadium_lon)
                 and float(cached.iloc[0].get("__meta_radius_m", -1.0)) == float(radius_m)
-                and float(cached.iloc[0].get("__meta_spatial_overlap_min", -1.0)) == float(SPATIAL_OVERLAP_MIN)
+                and float(cached.iloc[0].get("__meta_spatial_overlap_walk_min", -1.0)) == float(SPATIAL_OVERLAP_WALK_MIN)
+                and float(cached.iloc[0].get("__meta_temporal_overlap_max_min", -1.0)) == float(TEMPORAL_OVERLAP_MAX_MIN)
                 and str(cached.iloc[0].get("__meta_sig_smtuc", "")) == signature_smtuc
                 and str(cached.iloc[0].get("__meta_sig_metro", "")) == signature_metro
             )
@@ -384,7 +393,8 @@ def build_line_metrics_db(
     fresh["__meta_stadium_lat"] = float(stadium_lat)
     fresh["__meta_stadium_lon"] = float(stadium_lon)
     fresh["__meta_radius_m"] = float(radius_m)
-    fresh["__meta_spatial_overlap_min"] = float(SPATIAL_OVERLAP_MIN)
+    fresh["__meta_spatial_overlap_walk_min"] = float(SPATIAL_OVERLAP_WALK_MIN)
+    fresh["__meta_temporal_overlap_max_min"] = float(TEMPORAL_OVERLAP_MAX_MIN)
     fresh["__meta_sig_smtuc"] = signature_smtuc
     fresh["__meta_sig_metro"] = signature_metro
     fresh.to_csv(csv_path, index=False)
