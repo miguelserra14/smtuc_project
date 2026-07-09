@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 import pandas as pd
-import pytest
 
 from config import STADIUM_RADIUS_M, CATCHMENT_M, DEFAULT_OUTPUT_GAP_CSV
 from population._common import (
@@ -29,19 +28,28 @@ def _project_root() -> Path:
 
 
 def _require_geo_stack() -> None:
-    """Check if geospatial stack is available and skip test if not."""
+    """Check if the geospatial stack is available.
+
+    Raises a plain RuntimeError (not pytest.skip - this module is imported by production
+    code in regenerate_all_htmls.py, not just tests, and pytest.skip's exception subclasses
+    BaseException rather than Exception, so a plain `except Exception` around a production
+    call site would NOT have caught it - it would have crashed instead of degrading
+    gracefully as intended). Tests that want skip-on-missing-dependency behavior should catch
+    this and call `pytest.skip()` themselves.
+    """
     try:
         import geopandas as gpd
         import shapely
-    except ImportError:
-        pytest.skip("GeoPandas or Shapely não está disponível")
+    except ImportError as exc:
+        raise RuntimeError("GeoPandas or Shapely não está disponível") from exc
 
 
 def _require_bgri_data() -> Path:
-    """Require BGRI GeoPackage file and skip test if not found."""
+    """Require the BGRI GeoPackage file to exist (see _require_geo_stack for why this
+    raises RuntimeError instead of calling pytest.skip directly)."""
     gpkg = project_root() / "data" / "dadospopulacaoBGRI" / "BGRI2021_0603.gpkg"
     if not gpkg.exists():
-        pytest.skip(f"BGRI GPKG não encontrado: {gpkg}")
+        raise RuntimeError(f"BGRI GPKG não encontrado: {gpkg}")
     return gpkg
 
 

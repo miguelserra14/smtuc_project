@@ -18,7 +18,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Run tests (pytest_conftest.py adds `src/` to `sys.path`, so tests import modules directly, e.g. `from overlap.transit import ...`):
+Run tests (`pythonpath = src` in `pytest.ini` adds `src/` to `sys.path`, so tests import modules directly, e.g. `from overlap.transit import ...` - no manual `PYTHONPATH` needed):
 ```
 pytest
 pytest -m "not integration"          # skip tests needing real GTFS data on disk

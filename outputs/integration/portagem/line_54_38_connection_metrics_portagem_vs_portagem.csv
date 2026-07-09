@@ -1,0 +1,30 @@
+scope,metric,value,unit,note
+overall,metro_arrivals_count,41,count,
+overall,bus_arrivals_count,21,count,
+overall,bus_vs_metro_ratio,0.512,ratio,passagens_autocarro / passagens_metro
+overall,wait_median_min,19.5,min,tempo de espera para o próximo autocarro
+overall,wait_p75_min,30.0,min,tempo de espera para o próximo autocarro
+overall,wait_p90_min,37.0,min,tempo de espera para o próximo autocarro
+overall,wait_max_min,70.0,min,tempo de espera para o próximo autocarro
+overall,coverage_le_5_min_pct,7.32,pct,percentagem de chegadas de metro com autocarro ate T minutos
+overall,coverage_le_10_min_pct,31.71,pct,percentagem de chegadas de metro com autocarro ate T minutos
+overall,coverage_le_15_min_pct,31.71,pct,percentagem de chegadas de metro com autocarro ate T minutos
+overall,lost_connection_gt_15_min_pct,68.29,pct,espera superior ao limiar ou sem autocarro seguinte
+overall,critical_window_start,19:21:00,hh:mm:ss,inicio da maior janela continua de ligacoes perdidas
+overall,critical_window_end,23:28:00,hh:mm:ss,fim da maior janela continua de ligacoes perdidas
+overall,critical_window_span_min,247.0,min,duracao entre primeira e ultima chegada de metro da janela critica
+manha,metro_arrivals_count,24,count,
+manha,wait_median_min,19.5,min,tempo de espera para o próximo autocarro
+manha,wait_p90_min,37.0,min,tempo de espera para o próximo autocarro
+manha,coverage_le_10_min_pct,33.33,pct,percentagem de chegadas com autocarro ate 10 minutos
+manha,lost_connection_gt_15_min_pct,66.67,pct,espera superior ao limiar ou sem autocarro seguinte
+meio_dia,metro_arrivals_count,7,count,
+meio_dia,wait_median_min,10.0,min,tempo de espera para o próximo autocarro
+meio_dia,wait_p90_min,30.0,min,tempo de espera para o próximo autocarro
+meio_dia,coverage_le_10_min_pct,57.14,pct,percentagem de chegadas com autocarro ate 10 minutos
+meio_dia,lost_connection_gt_15_min_pct,42.86,pct,espera superior ao limiar ou sem autocarro seguinte
+tarde_noite,metro_arrivals_count,10,count,
+tarde_noite,wait_median_min,27.0,min,tempo de espera para o próximo autocarro
+tarde_noite,wait_p90_min,36.4,min,tempo de espera para o próximo autocarro
+tarde_noite,coverage_le_10_min_pct,10.0,pct,percentagem de chegadas com autocarro ate 10 minutos
+tarde_noite,lost_connection_gt_15_min_pct,90.0,pct,espera superior ao limiar ou sem autocarro seguinte
