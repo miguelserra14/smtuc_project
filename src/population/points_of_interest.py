@@ -51,6 +51,10 @@ import csv
 from dataclasses import dataclass
 from pathlib import Path
 
+import pandas as pd
+
+from config import POINTS_OF_INTEREST_CSV
+
 
 @dataclass(frozen=True)
 class PointOfInterest:
@@ -459,6 +463,26 @@ POINTS_OF_INTEREST: list[PointOfInterest] = [
         ),
     ),
     PointOfInterest(
+        nome="CoimbraShopping (centro comercial, Vale das Flores)",
+        lat=40.1942091,
+        lon=-8.4096513,
+        categoria="outro",
+        pessoas_estimadas=13100,
+        confianca="baixa",
+        fonte=(
+            "https://news.cision.com/pt/sonae-sierra/ (gerido pela Sonae Sierra, 58 lojas, "
+            "27.048 m² GLA); Nominatim/OpenStreetMap para coordenadas (Avenida Mendes Silva, "
+            "Vale das Flores, perto do ISEC)"
+        ),
+        raciocinio=(
+            "NOVA nesta 3ª ronda - um 3º centro comercial que faltava no levantamento "
+            "original (só tinha Forum e Alma Shopping). Mesmo método do Alma Shopping: rácio "
+            "de GLA face ao Forum Coimbra (27.048/48.000 ≈ 0,56) aplicado aos 8,5M "
+            "visitantes/ano do Forum → ~4,79M/ano ≈ 13.100/dia. Mesma ressalva de confiança "
+            "baixa - é uma estimativa por analogia de área, não uma medição."
+        ),
+    ),
+    PointOfInterest(
         nome="IKEA Coimbra (Mondego Retail Park, Taveiro)",
         lat=40.1972592,
         lon=-8.5109848,
@@ -534,7 +558,7 @@ POINTS_OF_INTEREST: list[PointOfInterest] = [
 ]
 
 
-def export_to_csv(output_path: str | Path = "data/points_of_interest.csv") -> Path:
+def export_to_csv(output_path: str | Path = POINTS_OF_INTEREST_CSV) -> Path:
     """Regenera o CSV de consulta tabular a partir de POINTS_OF_INTEREST.
 
     Correr manualmente sempre que a lista acima for editada - o CSV não se atualiza sozinho.
@@ -557,6 +581,48 @@ def export_to_csv(output_path: str | Path = "data/points_of_interest.csv") -> Pa
                 p.raciocinio,
             ])
     return out_path
+
+
+# Pontos com confianca="baixa" incluídos manualmente por pedido explícito (2026-07), apesar de
+# a estimativa continuar a ser uma divisão proporcional de um total agregado (ver raciocinio de
+# cada um em POINTS_OF_INTEREST) - não foram "promovidos" para boa/media, porque isso seria
+# fingir uma certeza que a pesquisa não sustenta. É uma escolha deliberada de mostrar estes
+# marcos conhecidos na visualização mesmo com a confiança documentada como baixa, não uma
+# correção de confiança.
+MANUALLY_INCLUDED_LOW_CONFIDENCE_POI: tuple[str, ...] = (
+    "Universidade de Coimbra - Polo II - Faculdade de Ciências e Tecnologia (FCTUC)",
+    "Hospitais da Universidade de Coimbra (HUC) - ULS Coimbra",
+    "Instituto Pedro Nunes (IPN) + Talkdesk (mesmo edifício, Edifício IPN D)",
+    "IPC - ISEC (Instituto Superior de Engenharia de Coimbra)",
+    "CoimbraShopping (centro comercial, Vale das Flores)",
+)
+
+
+def load_points_of_interest(
+    csv_path: str | Path = POINTS_OF_INTEREST_CSV,
+    min_confidence: tuple[str, ...] = ("boa", "media"),
+    include_names: tuple[str, ...] = MANUALLY_INCLUDED_LOW_CONFIDENCE_POI,
+) -> pd.DataFrame:
+    """Carrega `data/points_of_interest.csv` e filtra a pontos com confiança >= `min_confidence`
+    (mais qualquer nome em `include_names`, independentemente da confiança) e com
+    `pessoas_estimadas` preenchido.
+
+    Usado pelas visualizações que sobrepõem polos de interesse ao índice de subserviço -
+    por omissão exclui os pontos `confianca="baixa"` (a maioria das estimativas da
+    Universidade de Coimbra, IPC, ULS Coimbra por edifício, etc. - ver `raciocinio` de cada
+    entrada em POINTS_OF_INTEREST) para não misturar palpites por ordem de grandeza com o
+    resto de um índice que, de outra forma, é uma medição direta - exceto os nomes em
+    `include_names`, incluídos de propósito mesmo sendo confiança baixa (ver
+    MANUALLY_INCLUDED_LOW_CONFIDENCE_POI). Passa `include_names=()` para voltar ao filtro
+    estrito por confiança.
+    """
+    df = pd.read_csv(csv_path)
+    mask = df["confianca"].isin(min_confidence)
+    if include_names:
+        mask = mask | df["nome"].isin(include_names)
+    df = df[mask & df["pessoas_estimadas"].notna()].copy()
+    df["pessoas_estimadas"] = df["pessoas_estimadas"].astype(float)
+    return df.reset_index(drop=True)
 
 
 if __name__ == "__main__":

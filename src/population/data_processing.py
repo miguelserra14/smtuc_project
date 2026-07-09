@@ -16,7 +16,9 @@ from population._common import (
 )
 from population.operations_population import (
     compute_bgri_population_transport_gap,
+    compute_poi_transport_gap,
 )
+from population.points_of_interest import load_points_of_interest
 
 if TYPE_CHECKING:
     import geopandas as gpd
@@ -133,6 +135,30 @@ def compute_underserved_zones(
         merged = merged.to_crs("EPSG:3763")
 
     return merged
+
+
+def compute_poi_underservice(
+    day_str: str,
+    catchment_m: float = CATCHMENT_M,
+    datasets: tuple = ("smtuc", "metrobus"),
+) -> pd.DataFrame:
+    """Carrega os pontos de interesse de confiança boa/média e calcula o `poi_underservice_score`
+    de cada um (ver `operations_population.compute_poi_transport_gap`).
+
+    Devolve um DataFrame vazio (não levanta erro) se o CSV não tiver nenhum ponto com
+    confiança suficiente - as visualizações que consomem isto tratam esse caso como "sem
+    camada de POI para mostrar", não como uma falha.
+    """
+    points_df = load_points_of_interest()
+    if points_df.empty:
+        return points_df
+
+    return compute_poi_transport_gap(
+        day_str=day_str,
+        points_df=points_df,
+        catchment_m=catchment_m,
+        datasets=datasets,
+    )
 
 
 def filter_zones_by_distance(

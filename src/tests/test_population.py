@@ -13,10 +13,12 @@ from population.data_processing import (
     _project_root,
     _require_bgri_data,
     _require_geo_stack,
+    compute_poi_underservice,
     compute_underserved_zones,
     filter_zones_by_distance,
     get_population_near_stadium,
 )
+from population.points_of_interest import MANUALLY_INCLUDED_LOW_CONFIDENCE_POI
 from visualizations import (
     create_population_dashboard_html,
 )
@@ -79,11 +81,14 @@ def bgri_underserved_context() -> dict[str, object]:
     out_dir = _project_root() / OUTPUTS_POPULATION_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    poi_df = compute_poi_underservice(day_str=day_str, catchment_m=CATCHMENT_M)
+
     assert len(merged) > 0
     return {
         "merged": merged,
         "day_str": day_str,
         "out_dir": out_dir,
+        "poi_df": poi_df,
     }
 
 
@@ -103,11 +108,39 @@ def test_bgri_underserved_zones_dataset(bgri_underserved_context: dict[str, obje
 
 
 @pytest.mark.integration
+def test_poi_underservice_dataset(bgri_underserved_context: dict[str, object]) -> None:
+    """Validate the points-of-interest underservice dataset (confiança boa/média + os
+    incluídos manualmente apesar de confiança baixa - ver MANUALLY_INCLUDED_LOW_CONFIDENCE_POI
+    em points_of_interest.py)."""
+    poi_df = bgri_underserved_context["poi_df"]
+    assert isinstance(poi_df, pd.DataFrame)
+
+    if poi_df.empty:
+        pytest.skip("Sem pontos de interesse a incluir em data/points_of_interest.csv")
+
+    assert {"nome", "lat", "lon", "pessoas_estimadas", "supply_departures", "poi_underservice_score"}.issubset(poi_df.columns)
+    assert set(poi_df["confianca"].unique()).issubset({"boa", "media", "baixa"})
+    # Todo ponto "baixa" presente tem de estar na lista de inclusão manual explícita -
+    # garante que nenhum outro ponto baixa entra por engano (ex.: bug futuro no filtro).
+    baixa_names = set(poi_df.loc[poi_df["confianca"] == "baixa", "nome"])
+    assert baixa_names.issubset(set(MANUALLY_INCLUDED_LOW_CONFIDENCE_POI))
+    assert (poi_df["supply_departures"] >= 0).all()
+
+    print("\n=== Pontos de interesse (confiança boa/média + inclusões manuais) e índice de subserviço ===")
+    print(
+        poi_df[["nome", "pessoas_estimadas", "supply_departures", "poi_underservice_score", "confianca"]]
+        .sort_values("poi_underservice_score", ascending=False)
+        .to_string(index=False)
+    )
+
+
+@pytest.mark.integration
 def test_bgri_population_dashboard(bgri_underserved_context: dict[str, object]) -> None:
     """Generate the combined population dashboard with embedded population maps."""
     merged = bgri_underserved_context["merged"]
     day_str = bgri_underserved_context["day_str"]
     out_dir = bgri_underserved_context["out_dir"]
+    poi_df = bgri_underserved_context["poi_df"]
     merged_2km = filter_zones_by_distance(merged, distance_m=POPULATION_STADIUM_MAP_RADIUS_M)
 
     dashboard_html = out_dir / "bgri.html"
@@ -117,6 +150,7 @@ def test_bgri_population_dashboard(bgri_underserved_context: dict[str, object]) 
         merged_2km=merged_2km,
         day_str=day_str,
         stadium_radius_m=POPULATION_STADIUM_MAP_RADIUS_M,
+        poi_df=poi_df,
     )
 
     print(f"Dashboard de população gerado: {dashboard_html}")

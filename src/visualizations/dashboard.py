@@ -125,6 +125,41 @@ def _load_overlap_stats() -> dict[str, list[dict[str, str]]] | None:
     }
 
 
+def _cache_busted_src(root: Path, src: str) -> str:
+    """Acrescenta `?v=<mtime do ficheiro>` (ou `&v=...` se já houver query string) a um `src`
+    de iframe que aponte para um ficheiro local existente, relativo a `root`.
+
+    Sem isto, `<iframe src="...">` fica à mercê da heurística de cache do browser: como
+    `python -m http.server` não envia `Cache-Control`, browsers como o Chrome podem servir o
+    iframe da cache sem revalidar mesmo depois de um refresh normal da página principal e do
+    ficheiro ter sido genuinamente regenerado no disco - confirmado com o utilizador (painel
+    de população a mostrar dados antigos depois de regenerar `bgri.html`). Uma query string
+    diferente é sempre um URL novo aos olhos do browser, o que força um pedido fresco.
+    """
+    if src.startswith(("http://", "https://", "data:")):
+        return src
+    path_part = src.split("?", 1)[0].split("#", 1)[0]
+    file_path = root / path_part
+    if not file_path.exists():
+        return src
+    version = int(file_path.stat().st_mtime)
+    separator = "&" if "?" in src else "?"
+    return f"{src}{separator}v={version}"
+
+
+def _add_cache_busting(obj: Any, root: Path) -> Any:
+    """Percorre recursivamente uma estrutura de tabs (dicts/listas aninhadas) e aplica
+    `_cache_busted_src` a qualquer valor sob uma chave "src"."""
+    if isinstance(obj, dict):
+        return {
+            k: (_cache_busted_src(root, v) if k == "src" and isinstance(v, str) else _add_cache_busting(v, root))
+            for k, v in obj.items()
+        }
+    if isinstance(obj, list):
+        return [_add_cache_busting(item, root) for item in obj]
+    return obj
+
+
 def _default_dashboard_tabs() -> list[dict[str, Any]]:
     # Put population and overlap first (displayed on top of the page), integrations below
     overlap_stats = _load_overlap_stats()
@@ -202,9 +237,11 @@ def create_master_dashboard_html(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    resolved_tabs = _add_cache_busting(tabs or _default_dashboard_tabs(), output_path.parent)
+
     page = _read_template("master_dashboard.html")
     page = page.replace("__TITLE__", html.escape(title))
-    page = page.replace("__TABS_JSON__", json.dumps(tabs or _default_dashboard_tabs(), ensure_ascii=False))
+    page = page.replace("__TABS_JSON__", json.dumps(resolved_tabs, ensure_ascii=False))
 
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
@@ -363,9 +400,11 @@ def create_presentation_dashboard_html(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    resolved_tabs = _add_cache_busting(tabs or _default_presentation_tabs(), output_path.parent)
+
     page = _read_template("presentation_dashboard.html")
     page = page.replace("__TITLE__", html.escape(title))
-    page = page.replace("__TABS_JSON__", json.dumps(tabs or _default_presentation_tabs(), ensure_ascii=False))
+    page = page.replace("__TABS_JSON__", json.dumps(resolved_tabs, ensure_ascii=False))
 
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)

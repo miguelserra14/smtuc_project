@@ -152,6 +152,77 @@ def compute_bgri_population_transport_gap(
     return out
 
 
+def compute_poi_transport_gap(
+    day_str: str,
+    points_df: pd.DataFrame,
+    catchment_m: float = CATCHMENT_M,
+    datasets: Tuple[str, ...] = ("smtuc", "metrobus"),
+) -> pd.DataFrame:
+    """Mesma mecânica de `compute_bgri_population_transport_gap`, mas para pontos de
+    interesse (polos de emprego/locais concorridos, ver `population/points_of_interest.py`)
+    em vez de zonas BGRI: soma as partidas dos stops num raio `catchment_m` à volta de cada
+    ponto (não do centroide de um polígono) e calcula um score análogo,
+    `pessoas_estimadas / (supply_departures + 1)`.
+
+    `points_df` tem de ter as colunas `lat`, `lon`, `pessoas_estimadas` (ex.: o resultado de
+    `points_of_interest.load_points_of_interest`).
+    """
+    _require_geopandas()
+
+    if points_df.empty:
+        out = points_df.copy()
+        out["supply_departures"] = pd.Series(dtype=float)
+        out["poi_underservice_score"] = pd.Series(dtype=float)
+        return out
+
+    d = _parse_day(day_str)
+
+    dep_frames: list[pd.DataFrame] = []
+    for dataset in datasets:
+        dep = _departures_per_stop_for_day(dataset=dataset, day=d)
+        if not dep.empty:
+            dep_frames.append(dep)
+
+    if not dep_frames:
+        out = points_df.copy()
+        out["supply_departures"] = 0.0
+        out["poi_underservice_score"] = out["pessoas_estimadas"].astype(float)
+        return out
+
+    departures = pd.concat(dep_frames, ignore_index=True)
+    departures = departures.groupby(["stop_id", "stop_lat", "stop_lon"], as_index=False).agg(
+        supply_departures=("departures", "sum")
+    )
+    stops_gdf = gpd.GeoDataFrame(
+        departures,
+        geometry=gpd.points_from_xy(departures["stop_lon"], departures["stop_lat"]),
+        crs="EPSG:4326",
+    ).to_crs("EPSG:3763")
+
+    poi_gdf = gpd.GeoDataFrame(
+        points_df.reset_index(drop=True),
+        geometry=gpd.points_from_xy(points_df["lon"], points_df["lat"]),
+        crs="EPSG:4326",
+    ).to_crs("EPSG:3763")
+    # Chave de junção própria em vez de "nome" - não depende dos nomes serem únicos no catálogo.
+    poi_gdf["_poi_idx"] = poi_gdf.index
+    poi_buffers = poi_gdf[["_poi_idx", "geometry"]].copy()
+    poi_buffers["geometry"] = poi_buffers.geometry.buffer(float(catchment_m))
+
+    joined = gpd.sjoin(
+        poi_buffers,
+        stops_gdf[["supply_departures", "geometry"]],
+        how="left",
+        predicate="intersects",
+    )
+    supply_by_poi = joined.groupby("_poi_idx", as_index=False)["supply_departures"].sum(min_count=1)
+
+    out = poi_gdf.drop(columns="geometry").merge(supply_by_poi, on="_poi_idx", how="left").drop(columns="_poi_idx")
+    out["supply_departures"] = out["supply_departures"].fillna(0.0)
+    out["poi_underservice_score"] = out["pessoas_estimadas"] / (out["supply_departures"] + 1.0)
+    return out
+
+
 def top_bgri_underserved(
     day_str: str,
     top_n: int = UNDERSERVED_TOP_N,
@@ -176,5 +247,6 @@ def top_bgri_underserved(
 
 __all__ = [
     "compute_bgri_population_transport_gap",
+    "compute_poi_transport_gap",
     "top_bgri_underserved",
 ]

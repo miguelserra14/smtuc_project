@@ -19,6 +19,7 @@ from population.data_processing import (
     _project_root,
     _require_bgri_data,
     _require_geo_stack,
+    compute_poi_underservice,
     compute_underserved_zones,
     filter_zones_by_distance,
 )
@@ -108,6 +109,15 @@ def regenerate_population_htmls() -> None:
         # é partilhado por outras análises (ver comentário em config.py).
         merged_2km = filter_zones_by_distance(merged, distance_m=POPULATION_STADIUM_MAP_RADIUS_M)
 
+        # Camada opcional de polos de emprego/locais concorridos (só confiança boa/média - ver
+        # points_of_interest.py) para os painéis de índice de subserviço. Falha graciosamente:
+        # sem isto os painéis ficam exatamente como antes, sem o botão "Com POI"/"Sem POI".
+        try:
+            poi_df = compute_poi_underservice(day_str=day_str, catchment_m=CATCHMENT_M)
+        except Exception as e:
+            print(f"[WARNING] Não foi possível calcular a camada de pontos de interesse: {e}")
+            poi_df = None
+
         # Criar dashboard de populaÃ§Ã£o
         print("[INFO] Gerando dashboard de populaÃ§Ã£o...")
         dashboard_html = out_dir / "bgri.html"
@@ -117,6 +127,7 @@ def regenerate_population_htmls() -> None:
             merged_2km,
             day_str,
             stadium_radius_m=POPULATION_STADIUM_MAP_RADIUS_M,
+            poi_df=poi_df,
         )
         print(f"[SUCCESS] Dashboard populaÃ§Ã£o: {dashboard_html}")
         

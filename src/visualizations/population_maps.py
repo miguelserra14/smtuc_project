@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import geopandas as gpd
+import pandas as pd
 from config import POPULATION_STADIUM_MAP_RADIUS_M
 from overlap.transit import resolve_reference_day
 
@@ -35,19 +36,26 @@ def create_population_dashboard_html(
     day_str: str,
     title: str = "Painel de População",
     stadium_radius_m: float = POPULATION_STADIUM_MAP_RADIUS_M,
+    poi_df: Optional[pd.DataFrame] = None,
 ) -> str:
     """Create a single HTML dashboard that embeds the three main population visualizations.
 
     `stadium_radius_m` deve corresponder ao `distance_m` já usado para filtrar `merged_2km`
     (via `filter_zones_by_distance`) - só controla o texto do painel ("Estádio a X km"), não
     volta a filtrar os dados.
+
+    `poi_df` (opcional) é o resultado de `population.data_processing.compute_poi_underservice`
+    - se passado, os dois painéis de índice de subserviço (choropleth geral e "Estádio a X
+    km") ganham um botão "Com POI"/"Sem POI" para sobrepor os polos de emprego/locais
+    concorridos de confiança boa/média. Sem `poi_df`, os painéis ficam exatamente como antes
+    (sem botão nenhum) - a camada é opcional em todos os sentidos: no clique E na chamada.
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     heatmap_fig = create_population_heatmap(merged, day_str, color_scale="RdYlGn")
-    choropleth_fig = create_choropleth_map(merged, day_str, color_scale="YlOrRd")
-    stadium_fig = create_2km_choropleth_map(merged_2km, day_str, color_scale="YlOrRd")
+    choropleth_fig = create_choropleth_map(merged, day_str, color_scale="YlOrRd", poi_df=poi_df)
+    stadium_fig = create_2km_choropleth_map(merged_2km, day_str, color_scale="YlOrRd", poi_df=poi_df)
 
     heatmap_srcdoc = _figure_to_srcdoc(heatmap_fig)
     choropleth_srcdoc = _figure_to_srcdoc(choropleth_fig)
@@ -135,26 +143,93 @@ def _create_choropleth_generic(
     return fig
 
 
+def _add_poi_overlay(fig: object, poi_df: Optional[pd.DataFrame]) -> None:
+    """Sobrepõe os polos de interesse (`poi_df`) a um choropleth de índice de subserviço,
+    escondidos por omissão, com um botão a alternar "Com POI"/"Sem POI".
+
+    `poi_df` já deve vir filtrado a confiança boa/média (ver
+    `data_processing.compute_poi_underservice`) e ter as colunas `nome`, `lat`, `lon`,
+    `pessoas_estimadas`, `supply_departures`, `poi_underservice_score`, `confianca`. Não faz
+    nada (função no-op) se `poi_df` for None/vazio - é assim que a camada fica opcional
+    também ao nível da chamada, não só do clique no botão.
+    """
+    if poi_df is None or poi_df.empty:
+        return
+
+    hover_text = [
+        f"{row['nome']}<br>"
+        f"Pessoas/dia (estimado): {row['pessoas_estimadas']:,.0f}<br>"
+        f"Partidas no dia (raio de captação): {row['supply_departures']:,.0f}<br>"
+        f"Índice de subserviço (POI): {row['poi_underservice_score']:.1f}<br>"
+        f"Confiança da estimativa: {row['confianca']}"
+        for _, row in poi_df.iterrows()
+    ]
+
+    fig.add_scattergeo(
+        lat=poi_df["lat"],
+        lon=poi_df["lon"],
+        mode="markers",
+        marker=dict(
+            size=11,
+            symbol="diamond",
+            color=poi_df["poi_underservice_score"],
+            colorscale="YlOrRd",
+            line=dict(width=1.2, color="#000000"),
+            showscale=False,
+        ),
+        text=hover_text,
+        hoverinfo="text",
+        name="Polos de interesse",
+        visible=False,
+    )
+
+    poi_trace_index = len(fig.data) - 1
+    existing_updatemenus = list(fig.layout.updatemenus) if fig.layout.updatemenus else []
+    fig.update_layout(
+        updatemenus=existing_updatemenus + [
+            dict(
+                type="buttons",
+                direction="right",
+                x=0.0,
+                y=1.08,
+                xanchor="left",
+                yanchor="top",
+                showactive=True,
+                buttons=[
+                    dict(label="Sem POI", method="restyle", args=[{"visible": False}, [poi_trace_index]]),
+                    dict(label="Com POI", method="restyle", args=[{"visible": True}, [poi_trace_index]]),
+                ],
+            )
+        ]
+    )
+
+
 def create_choropleth_map(
     merged: gpd.GeoDataFrame,
     day_str: str,
     color_scale: str = "RdYlGn",
+    poi_df: Optional[pd.DataFrame] = None,
 ) -> object:
     resolve_reference_day(day_str)
-    return _create_choropleth_generic(merged, None, color_scale)
+    fig = _create_choropleth_generic(merged, None, color_scale)
+    _add_poi_overlay(fig, poi_df)
+    return fig
 
 
 def create_2km_choropleth_map(
     merged_2km: gpd.GeoDataFrame,
     day_str: str,
     color_scale: str = "RdYlGn",
+    poi_df: Optional[pd.DataFrame] = None,
 ) -> object:
     resolve_reference_day(day_str)
-    return _create_choropleth_generic(
+    fig = _create_choropleth_generic(
         merged_2km,
         None,
         color_scale,
     )
+    _add_poi_overlay(fig, poi_df)
+    return fig
 
 def create_population_heatmap(
     merged: gpd.GeoDataFrame,
