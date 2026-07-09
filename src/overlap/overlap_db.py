@@ -124,7 +124,7 @@ def _route_direction_summaries(
     metro_lon = metro_stops["stop_lon"].astype(float).to_numpy()
     summaries: list[dict] = []
 
-    for route_lat, route_lon, route_stop_ids, total_stops in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
+    for route_lat, route_lon, route_stop_ids, _total_stops in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
 
         min_dist = _min_distance_to_points_m(route_lat, route_lon, metro_lat, metro_lon)
         is_overlap = min_dist <= walk_catchment_m
@@ -142,9 +142,8 @@ def _route_direction_summaries(
             {
                 "total_ext_m": total_ext_m,
                 "overlap_ext_m": overlap_ext_m,
-                "overlap_stops": int(is_overlap.sum()),
                 "overlap_stop_ids": set(route_stop_ids[is_overlap].tolist()),
-                "total_stops": total_stops,
+                "total_stop_ids": set(route_stop_ids.tolist()),
             }
         )
 
@@ -305,9 +304,15 @@ def _compute_line_metrics(
             continue
 
         overlap_ext_m = sum(s["overlap_ext_m"] for s in line_summaries)
+        # Uniões de stop_id (não somas por direção): uma paragem física partilhada entre os 2
+        # sentidos de uma linha só deve contar uma vez - somar contagens por direção inflava
+        # overlap_stops/total_stops até ~2-3x face ao nº real de paragens físicas (visível nas
+        # colunas "overlap_stops / total_stops" dos dashboards).
         overlap_stop_ids: set[str] = set()
+        total_stop_ids: set[str] = set()
         for s in line_summaries:
             overlap_stop_ids |= s.get("overlap_stop_ids", set())
+            total_stop_ids |= s.get("total_stop_ids", set())
 
         row = {
             "line": str(line),
@@ -315,9 +320,9 @@ def _compute_line_metrics(
             "overlap_extension_m": round(overlap_ext_m, 1),
             "line_extension_m": round(total_ext_m, 1),
             "overlap_pct": round((overlap_ext_m / total_ext_m) * 100.0, 2),
-            "overlap_stops": int(sum(s["overlap_stops"] for s in line_summaries)),
+            "overlap_stops": len(overlap_stop_ids),
             "overlap_stop_ids": ";".join(sorted(overlap_stop_ids)),
-            "total_stops": int(sum(s["total_stops"] for s in line_summaries)),
+            "total_stops": len(total_stop_ids),
             "directions_considered": len(line_summaries),
             "radius_extension_m": np.nan,
             "radius_extension_pct": np.nan,
@@ -403,9 +408,11 @@ def build_line_metrics_db(
             walk_speed_m_min=walk_speed_m_min,
             temporal_overlap_max_min=TEMPORAL_OVERLAP_MAX_MIN,
         )
-    except Exception:
-        # If temporal computation fails, proceed without it (CSV will have zeros)
-        pass
+    except Exception as exc:
+        # Se o cálculo temporal falhar, prossegue sem ele (o CSV fica com zeros nas colunas
+        # temporais) - mas avisa-se sempre, porque esse CSV é cacheado e fica "colado" com
+        # zeros até ao próximo force_refresh, sem qualquer outro sinal de que algo correu mal.
+        print(f"[WARNING] compute_temporal_overlaps_for_db falhou, a gravar line_metrics_db.csv sem colunas temporais (ficarão a 0): {exc}")
 
     fresh["__meta_smtuc_dataset"] = smtuc_dataset
     fresh["__meta_metro_dataset"] = metrobus_dataset

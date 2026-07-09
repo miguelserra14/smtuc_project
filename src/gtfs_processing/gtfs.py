@@ -37,6 +37,15 @@ def _read_csv(source: Path, stem: str) -> pd.DataFrame:
 
 
 def _to_seconds(hhmmss: str) -> int:
+    """Parse a GTFS HH:MM:SS string to seconds-from-midnight.
+
+    Deliberately lenient (returns 0 instead of raising) because this runs via
+    `.apply()` over the entire raw stop_times feed at load time: one malformed/blank row deep
+    in a third-party GTFS export must not abort ingestion of the whole dataset. Contrast with
+    `gtfs_processing.gtfs_probe._to_seconds`, which raises - that one parses user-supplied query
+    time strings, where failing fast on bad input is what you want. Do not merge these two
+    without also merging their different error-handling intents.
+    """
     if not isinstance(hhmmss, str) or ":" not in hhmmss:
         return 0
     parts = hhmmss.split(":")

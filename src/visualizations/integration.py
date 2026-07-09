@@ -7,6 +7,7 @@ import pandas as pd
 
 from config import OUTPUTS_INTEGRATION_DIR
 from overlap.transit import (
+    _hhmmss_to_seconds,
     build_line_stop_vs_metro_table,
     build_metro_bus_connection_metrics,
     resolve_reference_day,
@@ -36,11 +37,6 @@ def _safe_slug(value: str) -> str:
         out = out.replace("__", "_")
     out = out.strip("_")
     return out or "value"
-
-
-def _hhmmss_to_seconds(value: str) -> int:
-    h, m, s = (int(part) for part in str(value).split(":"))
-    return h * 3600 + m * 60 + s
 
 
 def _seconds_to_hhmmss(value: int) -> str:

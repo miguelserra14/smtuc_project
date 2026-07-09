@@ -184,7 +184,10 @@ def create_overlap_lines_map(
                 "overlap_m": row.get("overlap_extension_m", ""),
                 "extension_m": row.get("line_extension_m", ""),
             }
-    except Exception:
+    except Exception as exc:
+        # Sem isto a caixa "Mostrar linha" fica silenciosamente sempre a devolver "não
+        # encontrada" para qualquer linha, sem qualquer sinal de que a construção falhou.
+        print(f"[WARNING] Falha ao construir lines_data para a caixa de pesquisa do mapa de linhas: {exc}")
         lines_data = {}
 
     # embed a small control and the lines_data JSON into the page

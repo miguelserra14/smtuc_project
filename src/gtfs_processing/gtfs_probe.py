@@ -21,7 +21,17 @@ class NearestStopResult:
 # -----------------------------------------------------------------------------
 
 def _to_seconds(hhmmss: str) -> int:
-    h, m, s = map(int, hhmmss.split(":"))
+    """Parse a "HH:MM:SS" query time string to seconds-from-midnight.
+
+    Deliberately strict (raises on malformed input) - this parses user-supplied query time
+    strings, not raw feed rows, so failing fast on bad input is correct here. Contrast with
+    `gtfs_processing.gtfs._to_seconds`, which is lenient on purpose (parses the entire raw
+    stop_times feed at load time, where one bad row must not abort ingestion).
+    """
+    try:
+        h, m, s = map(int, str(hhmmss).split(":"))
+    except (ValueError, AttributeError) as exc:
+        raise ValueError(f"Hora inválida (esperado HH:MM:SS): {hhmmss!r}") from exc
     return h * 3600 + m * 60 + s
 
 

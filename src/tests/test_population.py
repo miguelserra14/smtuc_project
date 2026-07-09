@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import date
-
 import pandas as pd
 
 import pytest
 
+from overlap.transit import resolve_reference_day
 from population.data_processing import (
-    _next_monday,
     _project_root,
     _require_bgri_data,
     _require_geo_stack,
@@ -47,8 +45,7 @@ def bgri_underserved_context() -> dict[str, object]:
     _require_geo_stack()
     gpkg = _require_bgri_data()
 
-    monday = _next_monday(date.today())
-    day_str = monday.strftime("%Y-%m-%d")
+    day_str = resolve_reference_day().strftime("%Y-%m-%d")
 
     # Compute underserved zones
     merged = compute_underserved_zones(
@@ -93,7 +90,7 @@ def test_bgri_population_dashboard(bgri_underserved_context: dict[str, object]) 
     merged = bgri_underserved_context["merged"]
     day_str = bgri_underserved_context["day_str"]
     out_dir = bgri_underserved_context["out_dir"]
-    merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M*2)
+    merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M)
 
     dashboard_html = out_dir / "bgri.html"
     create_population_dashboard_html(

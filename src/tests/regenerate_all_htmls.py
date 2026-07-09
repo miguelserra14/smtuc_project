@@ -10,14 +10,12 @@ from __future__ import annotations
 
 import html
 import sys
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
 
 # Importar as funÃ§Ãµes de geraÃ§Ã£o
 from population.data_processing import (
-    _next_monday,
     _project_root,
     _require_bgri_data,
     _require_geo_stack,
@@ -80,9 +78,12 @@ def regenerate_population_htmls() -> None:
         return
     
     try:
-        monday = _next_monday(date.today())
-        day_str = monday.strftime("%Y-%m-%d")
-        
+        # Mesmo dia de referência ("nearest weekday") usado por overlap/integração, para que
+        # todos os dashboards gerados na mesma execução reflitam o mesmo dia de serviço GTFS -
+        # antes usava-se _next_monday (sempre a próxima segunda), divergindo silenciosamente do
+        # dia usado pelas restantes secções.
+        day_str = resolve_reference_day().strftime("%Y-%m-%d")
+
         print(f"[INFO] Usando data: {day_str}")
         
         # Computar zonas subservidas
@@ -100,8 +101,8 @@ def regenerate_population_htmls() -> None:
         out_dir = _project_root() / OUTPUTS_POPULATION_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         
-        # Filtrar zonas a 2km do estÃ¡dio
-        merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M * 2)
+        # Filtrar zonas a 2km do estÃ¡dio (STADIUM_RADIUS_M já é 2000.0m = 2km - não multiplicar)
+        merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M)
         
         # Criar dashboard de populaÃ§Ã£o
         print("[INFO] Gerando dashboard de populaÃ§Ã£o...")
