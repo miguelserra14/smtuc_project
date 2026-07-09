@@ -11,7 +11,7 @@ except Exception:  # pragma: no cover - optional dependency
 
 import pandas as pd
 
-from config import STADIUM_COORD, STADIUM_RADIUS_M, STADIUM_MIN_EXTENSION_PCT
+from config import STADIUM_COORD, STADIUM_RADIUS_M, STADIUM_MIN_EXTENSION_PCT, POINTS_OF_INTEREST_CSV
 from gtfs_processing.gtfs import load_gtfs
 from overlap.overlap_db import _line_to_route_ids, _iter_route_direction_stop_arrays
 from visualizations.io import _write_folium_html
@@ -34,6 +34,7 @@ def create_overlap_lines_map(
     stadium_n: int = 5,
     stadium_radius_m: float = STADIUM_RADIUS_M,
     stadium_min_extension_pct: float = STADIUM_MIN_EXTENSION_PCT,
+    points_of_interest_csv: str | Path = POINTS_OF_INTEREST_CSV,
 ) -> str:
     """Create a standalone HTML map showing Metrobus and selected SMTUC lines (top/bottom overlap).
 
@@ -126,6 +127,42 @@ def create_overlap_lines_map(
         popup="Estádio",
     ).add_to(stadium_fg)
     m.add_child(stadium_fg)
+
+    # Pontos de interesse (polos de emprego e outros locais concorridos - ver
+    # population/points_of_interest.py para a fonte/raciocínio de cada estimativa). Mesmo
+    # estilo de marcador que o Estádio acima, para ficarem visualmente consistentes como
+    # "pontos de referência" no mapa; agrupados por categoria (emprego / outro) em vez de um
+    # marcador por local, para não sobrecarregar o controlo de camadas com ~27 entradas.
+    try:
+        poi_path = Path(points_of_interest_csv)
+        if poi_path.exists():
+            poi_df = pd.read_csv(poi_path)
+            poi_groups = {
+                "emprego": FeatureGroup(name="Polos de emprego", show=False),
+                "outro": FeatureGroup(name="Outros locais concorridos", show=False),
+            }
+            for _, poi in poi_df.iterrows():
+                fg = poi_groups.get(str(poi.get("categoria")))
+                if fg is None:
+                    continue
+                pessoas = poi.get("pessoas_estimadas")
+                pessoas_str = "sem estimativa" if pd.isna(pessoas) else f"{int(pessoas):,}".replace(",", " ")
+                confianca = poi.get("confianca", "-")
+                popup = f"{poi['nome']}<br>Pessoas/dia estimadas: {pessoas_str} (confiança: {confianca})"
+                folium.CircleMarker(
+                    location=(float(poi["lat"]), float(poi["lon"])),
+                    radius=6,
+                    color="#000000",
+                    weight=1,
+                    fill=True,
+                    fill_color="#ffd600",
+                    fill_opacity=1.0,
+                    popup=folium.Popup(popup, max_width=320),
+                ).add_to(fg)
+            for fg in poi_groups.values():
+                m.add_child(fg)
+    except Exception as exc:
+        print(f"[WARNING] Não foi possível carregar pontos de interesse ({points_of_interest_csv}): {exc}")
 
     # Helper to add SMTUC line feature groups
     def _add_line_groups(lines: Iterable[str], color: str, prefix: str) -> None:

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import geopandas as gpd
+from config import POPULATION_STADIUM_MAP_RADIUS_M
 from overlap.transit import resolve_reference_day
 
 try:
@@ -33,8 +34,14 @@ def create_population_dashboard_html(
     merged_2km: gpd.GeoDataFrame,
     day_str: str,
     title: str = "Painel de População",
+    stadium_radius_m: float = POPULATION_STADIUM_MAP_RADIUS_M,
 ) -> str:
-    """Create a single HTML dashboard that embeds the three main population visualizations."""
+    """Create a single HTML dashboard that embeds the three main population visualizations.
+
+    `stadium_radius_m` deve corresponder ao `distance_m` já usado para filtrar `merged_2km`
+    (via `filter_zones_by_distance`) - só controla o texto do painel ("Estádio a X km"), não
+    volta a filtrar os dados.
+    """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -46,11 +53,15 @@ def create_population_dashboard_html(
     choropleth_srcdoc = _figure_to_srcdoc(choropleth_fig)
     stadium_srcdoc = _figure_to_srcdoc(stadium_fig)
 
+    radius_km = stadium_radius_m / 1000.0
+    radius_label = f"{radius_km:g} km"
+
     page = _read_template("population_dashboard.html")
     page = page.replace("__TITLE__", html.escape(title))
     page = page.replace("__HEATMAP_SRCDOC__", heatmap_srcdoc)
     page = page.replace("__CHOROPLETH_SRCDOC__", choropleth_srcdoc)
     page = page.replace("__STADIUM_SRCDOC__", stadium_srcdoc)
+    page = page.replace("__STADIUM_RADIUS_LABEL__", html.escape(radius_label))
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
 

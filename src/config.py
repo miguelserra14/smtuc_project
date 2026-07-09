@@ -37,6 +37,12 @@ STADIUM_RADIUS_M  = 2000.0
 CATCHMENT_M = 500.0
 STADIUM_MIN_EXTENSION_PCT = 50.0
 
+# Raio do painel "Estádio a X km" na dashboard de população (o mapa de subserviço mais
+# restrito, centrado no estádio). Propositadamente separado de STADIUM_RADIUS_M - esse é
+# partilhado por outras análises (overlap de linhas perto do estádio, círculo no mapa de
+# linhas) que não devem mudar só porque este painel específico muda de raio.
+POPULATION_STADIUM_MAP_RADIUS_M = 3000.0
+
 OUTPUTS_ROOT_DIR = "outputs"
 OUTPUTS_POPULATION_DIR = "outputs/population"
 OUTPUTS_OVERLAP_DIR = "outputs/overlap"
@@ -47,6 +53,10 @@ LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"
 DEFAULT_BGRI_LAYER = "BGRI2021_0603"
 DEFAULT_OUTPUT_GAP_CSV = "outputs/population/bgri_transport_gap.csv"
+
+# Catálogo de polos de emprego e outros locais concorridos (ver population/points_of_interest.py
+# para a fonte/raciocínio de cada estimativa - este CSV é gerado a partir desse ficheiro).
+POINTS_OF_INTEREST_CSV = "data/points_of_interest.csv"
 
 
 r"""

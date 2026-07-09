@@ -20,7 +20,7 @@ from population.data_processing import (
 from visualizations import (
     create_population_dashboard_html,
 )
-from src.config import CATCHMENT_M, STADIUM_RADIUS_M, OUTPUTS_POPULATION_DIR
+from src.config import CATCHMENT_M, STADIUM_RADIUS_M, POPULATION_STADIUM_MAP_RADIUS_M, OUTPUTS_POPULATION_DIR
 
 
 def _require_geo_stack_or_skip() -> None:
@@ -108,7 +108,7 @@ def test_bgri_population_dashboard(bgri_underserved_context: dict[str, object]) 
     merged = bgri_underserved_context["merged"]
     day_str = bgri_underserved_context["day_str"]
     out_dir = bgri_underserved_context["out_dir"]
-    merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M)
+    merged_2km = filter_zones_by_distance(merged, distance_m=POPULATION_STADIUM_MAP_RADIUS_M)
 
     dashboard_html = out_dir / "bgri.html"
     create_population_dashboard_html(
@@ -116,6 +116,7 @@ def test_bgri_population_dashboard(bgri_underserved_context: dict[str, object]) 
         merged=merged,
         merged_2km=merged_2km,
         day_str=day_str,
+        stadium_radius_m=POPULATION_STADIUM_MAP_RADIUS_M,
     )
 
     print(f"Dashboard de população gerado: {dashboard_html}")

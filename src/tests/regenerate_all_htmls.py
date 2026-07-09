@@ -39,7 +39,7 @@ from visualizations import (
 from visualizations.dashboard import _load_overlap_stats
 from src.config import (
     CATCHMENT_M,
-    STADIUM_RADIUS_M,
+    POPULATION_STADIUM_MAP_RADIUS_M,
     OUTPUTS_POPULATION_DIR,
     OUTPUTS_INTEGRATION_DIR,
     STADIUM_COORD,
@@ -103,9 +103,11 @@ def regenerate_population_htmls() -> None:
         out_dir = _project_root() / OUTPUTS_POPULATION_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         
-        # Filtrar zonas a 2km do estÃ¡dio (STADIUM_RADIUS_M já é 2000.0m = 2km - não multiplicar)
-        merged_2km = filter_zones_by_distance(merged, distance_m=STADIUM_RADIUS_M)
-        
+        # Filtrar zonas ao raio do painel "Estádio a X km" (POPULATION_STADIUM_MAP_RADIUS_M,
+        # já em metros - não multiplicar). Propositadamente separado de STADIUM_RADIUS_M, que
+        # é partilhado por outras análises (ver comentário em config.py).
+        merged_2km = filter_zones_by_distance(merged, distance_m=POPULATION_STADIUM_MAP_RADIUS_M)
+
         # Criar dashboard de populaÃ§Ã£o
         print("[INFO] Gerando dashboard de populaÃ§Ã£o...")
         dashboard_html = out_dir / "bgri.html"
@@ -114,6 +116,7 @@ def regenerate_population_htmls() -> None:
             merged,
             merged_2km,
             day_str,
+            stadium_radius_m=POPULATION_STADIUM_MAP_RADIUS_M,
         )
         print(f"[SUCCESS] Dashboard populaÃ§Ã£o: {dashboard_html}")
         
