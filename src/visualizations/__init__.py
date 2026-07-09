@@ -9,6 +9,7 @@ from .population_maps import (
 )
 from .reachability import create_overlap_reachability_map
 from .lines_map import create_overlap_lines_map
+from .temporal_breakdown import create_temporal_overlap_breakdown_html
 
 __all__ = [
     "_write_folium_html",
@@ -22,4 +23,5 @@ __all__ = [
     "create_population_heatmap",
     "create_overlap_reachability_map",
     "create_overlap_lines_map",
+    "create_temporal_overlap_breakdown_html",
 ]

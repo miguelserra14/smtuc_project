@@ -54,6 +54,7 @@ Nota: todas as datas mostradas nas visualizações são calculadas automaticamen
 
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
 http://localhost:8000/outputs/overlap/overlap_lines_map.html
+http://localhost:8000/outputs/overlap/overlap_temporal_breakdown.html
 http://localhost:8000/outputs/population/bgri.html
 
 http://localhost:8000/outputs/dashboard.html

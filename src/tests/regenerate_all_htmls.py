@@ -34,6 +34,7 @@ from visualizations import (
     create_population_dashboard_html,
     create_overlap_reachability_map,
         create_overlap_lines_map,
+    create_temporal_overlap_breakdown_html,
     generate_connection_visualizations,
     _write_folium_html,
 )
@@ -229,7 +230,14 @@ def regenerate_overlap_htmls() -> None:
             print(f"[SUCCESS] Mapa de linhas (overlap): {created}")
         except Exception as e:
             print(f"[WARNING] Não foi possível gerar mapa de linhas: {e}")
-        
+
+        try:
+            breakdown_html = out_dir / "overlap_temporal_breakdown.html"
+            created = create_temporal_overlap_breakdown_html(output_path=breakdown_html)
+            print(f"[SUCCESS] Breakdown overlap temporal: {created}")
+        except Exception as e:
+            print(f"[WARNING] Não foi possível gerar breakdown de overlap temporal: {e}")
+
     except Exception as e:
         print(f"[ERROR] Erro ao regenerar HTMLs de overlap: {e}")
         import traceback
