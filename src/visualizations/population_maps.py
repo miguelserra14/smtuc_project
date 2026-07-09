@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import html
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import geopandas as gpd
 import pandas as pd
@@ -17,10 +17,35 @@ except Exception:  # pragma: no cover - optional dependency guard
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
+# Casas decimais mantidas nas coordenadas do GeoJSON embutido no HTML. 6 casas decimais
+# equivalem a ~11cm de precisão em Coimbra - muito acima do que um mapa web consegue sequer
+# desenhar - mas os polígonos BGRI vêm de `geopandas` com precisão float64 completa (~15
+# dígitos), o que quase duplicava o tamanho do HTML gerado sem qualquer ganho visual.
+_GEOJSON_COORD_PRECISION = 6
+
 
 def _read_template(template_name: str) -> str:
     template_path = _TEMPLATE_DIR / template_name
     return template_path.read_text(encoding="utf-8")
+
+
+def _round_coordinates(coords: Any, ndigits: int = _GEOJSON_COORD_PRECISION) -> Any:
+    """Arredonda recursivamente coordenadas GeoJSON (listas/tuplos aninhados de [lon, lat])."""
+    if isinstance(coords, (int, float)):
+        return round(coords, ndigits)
+    if isinstance(coords, (list, tuple)):
+        return [_round_coordinates(c, ndigits) for c in coords]
+    return coords
+
+
+def _simplify_geojson_precision(geojson: Dict[str, Any]) -> Dict[str, Any]:
+    """Reduz a precisão das coordenadas de todas as features de um dict `__geo_interface__`,
+    sem alterar a estrutura - só corta dígitos irrelevantes para a renderização no browser."""
+    for feature in geojson.get("features", []):
+        geometry = feature.get("geometry")
+        if geometry and "coordinates" in geometry:
+            geometry["coordinates"] = _round_coordinates(geometry["coordinates"])
+    return geojson
 
 
 def _figure_to_srcdoc(fig: object) -> str:
@@ -104,7 +129,7 @@ def _create_choropleth_generic(
             score_p95 = score_p5 + 1.0
         range_color = (score_p5, score_p95)
 
-    geojson = gdf.to_crs("EPSG:4326").__geo_interface__
+    geojson = _simplify_geojson_precision(gdf.to_crs("EPSG:4326").__geo_interface__)
 
     # Build labels mapping so the colorbar and hover show human-friendly names
     labels: Dict[str, str] = {}
