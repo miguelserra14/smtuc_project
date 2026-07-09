@@ -276,12 +276,12 @@ def _default_presentation_tabs() -> list[dict[str, Any]]:
             "iframes": [
                 {
                     "title": "Heatmap de população",
-                    "src": "population/heatmap.html",
+                    "src": "population/bgri.html?show=heatmap",
                     "caption": "Distribuição da população por Coimbra.",
                 },
                 {
                     "title": "Índice de subserviço",
-                    "src": "population/choropleth.html",
+                    "src": "population/bgri.html?show=choropleth",
                     "caption": "Primeira leitura da pressão de serviço.",
                 },
             ],
@@ -295,12 +295,12 @@ def _default_presentation_tabs() -> list[dict[str, Any]]:
             "iframes": [
                 {
                     "title": "Mapa global de subserviço",
-                    "src": "population/choropleth.html",
+                    "src": "population/bgri.html?show=choropleth",
                     "caption": "Índice de subserviço em Coimbra.",
                 },
                 {
                     "title": "Subserviço a 2 km",
-                    "src": "population/stadium.html",
+                    "src": "population/bgri.html?show=stadium",
                     "caption": "Leitura de detalhe da pressão territorial.",
                 },
                 {
