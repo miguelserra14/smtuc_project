@@ -25,81 +25,12 @@ def _load_gtfs_cached(dataset: str):
     return load_gtfs(dataset=dataset)
 
 
-def _normalize_service_id(value: str) -> str:
-    return str(value).strip().upper().replace("_", " ")
-
-
-def _service_id_aliases_for_day(day: date) -> set[str]:
-    weekday = day.weekday()
-    if weekday <= 4:
-        aliases = {
-            "DIAS UTEIS",
-            "WEEKDAY",
-            "WEEKDAYS",
-            "WD",
-            "WKD",
-        }
-    elif weekday == 5:
-        aliases = {
-            "SABADOS",
-            "SABADO",
-            "SATURDAY",
-            "SAT",
-            "SAB",
-        }
-    else:
-        aliases = {
-            "DOMINGOS E FERIADOS",
-            "DOMINGO",
-            "SUNDAY",
-            "SUN",
-            "DOM",
-        }
-    return {_normalize_service_id(v) for v in aliases}
-
-
-def _select_service_ids_for_day(gtfs, day: date) -> set[str]:
-    trip_service_ids = set(gtfs.trips["service_id"].dropna().astype(str).unique())
-    if not trip_service_ids:
-        return set()
-
-    active_by_calendar = _active_service_ids(gtfs, day)
-    if not active_by_calendar:
-        return trip_service_ids
-
-    active_norm = {_normalize_service_id(v) for v in active_by_calendar}
-    selected = {sid for sid in trip_service_ids if _normalize_service_id(sid) in active_norm}
-    if selected:
-        return selected
-
-    aliases = _service_id_aliases_for_day(day)
-    fallback = {sid for sid in trip_service_ids if _normalize_service_id(sid) in aliases}
-
-    # calendar.txt/calendar_dates.txt podem usar um espaço de nomes de service_id (ex.: "Dias
-    # Uteis") completamente diferente do usado em trips.txt (ex.: "WD") - caso confirmado no
-    # dataset metrobus, onde nenhum service_id de trips.txt aparece em calendar.txt. Nesse caso
-    # o filtro direto acima nunca casa nada e cai-se sempre no fallback cego por dia-da-semana,
-    # que ignoraria silenciosamente uma exceção real em calendar_dates.txt (ex.: feriado a
-    # remover o serviço normal desse dia). Não há forma fiável de adivinhar que trips deveriam
-    # correr no lugar (a feed não liga o service_id "adicionado" da exceção a nenhuma trip), mas
-    # pelo menos avisa-se em vez de fingir silenciosamente que é um dia normal.
-    calendar_dates = getattr(gtfs, "calendar_dates", None)
-    if calendar_dates is not None and not calendar_dates.empty and {"service_id", "date", "exception_type"}.issubset(calendar_dates.columns):
-        ymd = int(day.strftime("%Y%m%d"))
-        day_exceptions = calendar_dates[calendar_dates["date"].astype(int) == ymd]
-        removed_norm = {
-            _normalize_service_id(v)
-            for v in day_exceptions.loc[day_exceptions["exception_type"].astype(int) == 2, "service_id"]
-        }
-        if removed_norm & aliases:
-            print(
-                f"[WARNING] calendar_dates.txt remove o serviço normal em {ymd}, mas os "
-                f"service_id de trips.txt ({sorted(trip_service_ids)}) não correspondem a "
-                f"nenhum service_id de calendar.txt/calendar_dates.txt - a exceção não pode ser "
-                f"aplicada com fiabilidade; a usar o horário normal do dia da semana."
-            )
-
-    return fallback
+# Nota: a resolução de service_id ativos para um dia (incluindo o fallback por alias de
+# dia-da-semana para feeds como o metrobus, onde trips.txt usa "WD"/"SAT"/"SUN" mas
+# calendar.txt usa "Dias Uteis"/"Sabados"/"Domingos e Feriados") vive agora em
+# `gtfs_processing.gtfs_probe._active_service_ids` - único sítio, usado por todos os
+# chamadores (antes só este módulo tinha o fallback, deixando reachability/isócronas,
+# sugestões de percurso e o score de população a excluir sempre o metrobus).
 
 
 def _matching_stop_ids(gtfs, stop_ref: str) -> list[str]:
@@ -377,7 +308,7 @@ def build_line_stop_vs_metro_table(
     else:
         routes["route_short_name"] = ""
 
-    bus_services = _select_service_ids_for_day(gtfs_bus, day)
+    bus_services = _active_service_ids(gtfs_bus, day)
     all_bus_trips = gtfs_bus.trips.copy()
     all_bus_trips["route_id"] = all_bus_trips["route_id"].astype(str)
     all_bus_trips["service_id"] = all_bus_trips["service_id"].astype(str)
@@ -394,7 +325,7 @@ def build_line_stop_vs_metro_table(
         )
 
     # Trips do metro
-    metro_services = _select_service_ids_for_day(gtfs_metro, day)
+    metro_services = _active_service_ids(gtfs_metro, day)
     metro_trips = gtfs_metro.trips.copy()
     metro_trips["service_id"] = metro_trips["service_id"].astype(str)
     if metro_services:

@@ -25,7 +25,7 @@ from overlap.overlap_db import (
     _line_to_route_ids,
     _line_numeric_prefix,
 )
-from gtfs_processing.gtfs_probe import _active_service_ids, _parse_day, _to_seconds
+from gtfs_processing.gtfs_probe import _active_service_ids, _alias_day_mask, _parse_day, _to_seconds
 
 
 def _filter_numeric_bus_lines(df: pd.DataFrame) -> pd.DataFrame:
@@ -126,14 +126,31 @@ def _service_day_masks(calendar_df: pd.DataFrame) -> dict[str, tuple[int, ...]]:
     return out
 
 
+def _resolve_service_day_mask(
+    service_id: str,
+    calendar_masks: dict[str, tuple[int, ...]],
+) -> tuple[int, ...] | None:
+    """Resolve a service_id to its (mon..sun) weekly mask.
+
+    Tries a direct calendar.txt lookup first, then falls back to alias-based resolution
+    (e.g. "WD"/"SAT"/"SUN") for feeds where trips.txt's service_id namespace doesn't match
+    calendar.txt's - same mismatch fixed in `_active_service_ids`, needed here too since this
+    compares service_id values taken straight from trips.txt/stop_times, not from calendar.txt.
+    """
+    mask = calendar_masks.get(str(service_id))
+    if mask is not None:
+        return mask
+    return _alias_day_mask(service_id)
+
+
 def _service_days_overlap(
     smtuc_service_id: str,
     metro_service_id: str,
     smtuc_masks: dict[str, tuple[int, ...]],
     metro_masks: dict[str, tuple[int, ...]],
 ) -> bool:
-    smtuc_mask = smtuc_masks.get(str(smtuc_service_id))
-    metro_mask = metro_masks.get(str(metro_service_id))
+    smtuc_mask = _resolve_service_day_mask(smtuc_service_id, smtuc_masks)
+    metro_mask = _resolve_service_day_mask(metro_service_id, metro_masks)
 
     if smtuc_mask is None or metro_mask is None:
         return True
@@ -829,16 +846,25 @@ def _reachable_stops_multimodal_now(
             on_board = False
             for i in range(len(trip_stops)):
                 sid = str(trip_stops[i])
-                earliest_at_stop_s = float(arrivals_prev_s.get(sid, inf_s))
-                dep_s = float(trip_dep_s[i])
                 arr_s = float(trip_arr_s[i])
 
-                if (not on_board) and np.isfinite(earliest_at_stop_s) and dep_s >= earliest_at_stop_s and dep_s >= float(t0):
-                    on_board = True
-
+                # Alight/relax using the trip boarded at a PREVIOUS stop (on_board carried over
+                # from the last iteration) - must run before the boarding check below, not
+                # after. Otherwise a trip that dwells at its own boarding stop (arr_s < dep_s
+                # there) would overwrite that stop's own arrival with the trip's scheduled
+                # arrival, which can be earlier than when the passenger actually got there -
+                # claiming a stop is reachable sooner than physically possible. Real GTFS feeds
+                # in this project currently have zero dwell everywhere so this was dormant, but
+                # is not guaranteed to stay that way (e.g. a modeled layover at a transfer hub).
                 if on_board and arr_s < float(arrivals_curr_s.get(sid, inf_s)):
                     arrivals_curr_s.loc[sid] = arr_s
                     changed_stop_ids.add(sid)
+
+                if not on_board:
+                    earliest_at_stop_s = float(arrivals_prev_s.get(sid, inf_s))
+                    dep_s = float(trip_dep_s[i])
+                    if np.isfinite(earliest_at_stop_s) and dep_s >= earliest_at_stop_s and dep_s >= float(t0):
+                        on_board = True
 
         # Transfer-walk relaxation from improved stops.
         # One relaxation wave per round keeps runtime bounded while enabling chained transfers across rounds.

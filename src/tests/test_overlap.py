@@ -18,6 +18,8 @@ from config import (
     STADIUM_RADIUS_M,
     OUTPUTS_OVERLAP_DIR,
     WORK_COORD,
+    REACHABILITY_REFERENCE_DAY,
+    REACHABILITY_REFERENCE_TIME,
 )
 
 from overlap.transit import (
@@ -235,7 +237,9 @@ def test_overlap_reachability_map_now() -> None:
     _require_dataset("smtuc")
     _require_dataset("metrobus")
 
-    day_str = datetime.now().strftime("%Y-%m-%d")
+    # Dia/hora de referência fixos em config.py (REACHABILITY_REFERENCE_DAY/_TIME), não
+    # "agora" - ver comentário em config.py. Com ambos a None, cai de volta em datetime.now().
+    day_str = REACHABILITY_REFERENCE_DAY or datetime.now().strftime("%Y-%m-%d")
 
     merged = compute_underserved_zones(
         day_str=day_str,
@@ -246,7 +250,7 @@ def test_overlap_reachability_map_now() -> None:
         origin_lat=STADIUM_COORD[0],
         origin_lon=STADIUM_COORD[1],
         day_str=day_str,
-        time_str=None,
+        time_str=REACHABILITY_REFERENCE_TIME,
     )
 
     selected_time = str(reach_gdf["reach_time"].iloc[0]) if not reach_gdf.empty else "00:00:00"

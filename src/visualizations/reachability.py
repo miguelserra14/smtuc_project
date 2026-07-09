@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import geopandas as gpd
-from overlap.transit import resolve_reference_day
 
 try:
     import folium
@@ -20,7 +19,12 @@ def create_overlap_reachability_map(
     if folium is None:
         raise ImportError("folium não está disponível para gerar visualizações de mapa")
 
-    ref_day_str = resolve_reference_day(day_str).strftime("%Y-%m-%d")
+    # Nota: NÃO usar resolve_reference_day(day_str) aqui - essa função ignora
+    # deliberadamente o argumento recebido e devolve sempre o dia útil mais próximo de hoje
+    # (ver docstring em overlap/transit.py), o que reescrevia silenciosamente qualquer dia de
+    # referência fixo escolhido pelo chamador (ex.: REACHABILITY_REFERENCE_DAY em config.py) de
+    # volta para "hoje" só na legenda, apesar dos dados terem sido calculados para o dia certo.
+    ref_day_str = day_str
 
     def _add_mouse_origin_marker(map_obj: object) -> None:
         map_name = map_obj.get_name()

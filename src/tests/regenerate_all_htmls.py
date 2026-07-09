@@ -44,6 +44,8 @@ from src.config import (
     OUTPUTS_INTEGRATION_DIR,
     STADIUM_COORD,
     REACHABILITY_MAX_TRANSFERS,
+    REACHABILITY_REFERENCE_DAY,
+    REACHABILITY_REFERENCE_TIME,
 )
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
 
@@ -141,29 +143,36 @@ def regenerate_overlap_htmls() -> None:
         day_str = resolve_reference_day().strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
 
+        # Dia/hora de referência do mapa de isócronas: fixos em config.py
+        # (REACHABILITY_REFERENCE_DAY/_TIME) em vez de "agora", para o mapa não depender de
+        # quando o script corre. Com ambos a None, cai de volta no comportamento dinâmico.
+        reach_day_str = REACHABILITY_REFERENCE_DAY or day_str
+        reach_time_str = REACHABILITY_REFERENCE_TIME
+        print(f"[INFO] Isócronas: usando data/hora de referência {reach_day_str} {reach_time_str or '(agora)'}")
+
         # Computar zonas subservidas como base
         print("[INFO] Computando reachability...")
-        merged = compute_underserved_zones(day_str=day_str)
-        
+        merged = compute_underserved_zones(day_str=reach_day_str)
+
         # Computar reachability a partir do estÃ¡dio
         reach_gdf = compute_bgri_reachability_now(
             merged_bgri=merged,
             origin_lat=STADIUM_COORD[0],
             origin_lon=STADIUM_COORD[1],
-            day_str=day_str,
-            time_str=None,
+            day_str=reach_day_str,
+            time_str=reach_time_str,
             max_transfers=REACHABILITY_MAX_TRANSFERS,
         )
-        
+
         selected_time = str(reach_gdf["reach_time"].iloc[0]) if not reach_gdf.empty else "00:00:00"
-        
+
         # Criar mapa de reachability
         print("[INFO] Gerando mapa de reachability...")
         fig_map = create_overlap_reachability_map(
             reach_gdf=reach_gdf,
             origin_lat=STADIUM_COORD[0],
             origin_lon=STADIUM_COORD[1],
-            day_str=day_str,
+            day_str=reach_day_str,
             time_str=selected_time,
         )
         

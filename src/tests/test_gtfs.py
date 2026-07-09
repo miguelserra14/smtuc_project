@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from gtfs_processing.gtfs import extract_or_copy_gtfs, load_gtfs
+from gtfs_processing.gtfs_probe import _active_service_ids
 DATASETS = ["smtuc", "metrobus"]
 
 def _dataset_dir(dataset: str) -> Path:
@@ -50,19 +51,9 @@ def _pick_valid_day(gtfs) -> date:
     return date.today()
 
 
-def _active_services(gtfs, day: date) -> set[str]:
-    if gtfs.calendar.empty or "service_id" not in gtfs.calendar.columns:
-        return set(gtfs.trips["service_id"].dropna().astype(str).unique())
-    cal = gtfs.calendar.copy()
-    ymd = int(day.strftime("%Y%m%d"))
-    wd = day.strftime("%A").lower()
-    base = cal[(cal.get(wd, 0) == 1) & (cal["start_date"] <= ymd) & (cal["end_date"] >= ymd)]["service_id"]
-    return set(base.astype(str).tolist())
-
-
 def _direct_options(gtfs, origin: str, dest: str, day: date, after: str) -> pd.DataFrame:
     trips = gtfs.trips.copy()
-    sids = _active_services(gtfs, day)
+    sids = _active_service_ids(gtfs, day)
     if sids and "service_id" in trips.columns:
         trips = trips[trips["service_id"].astype(str).isin(sids)]
 
@@ -123,7 +114,7 @@ def _find_case_with_direct_options(gtfs, after: str = "00:00:00") -> tuple[date,
     candidate_days = _candidate_days(gtfs)
 
     for day in candidate_days:
-        active_sids = _active_services(gtfs, day)
+        active_sids = _active_service_ids(gtfs, day)
         trips = gtfs.trips.copy()
         if active_sids and "service_id" in trips.columns:
             trips = trips[trips["service_id"].astype(str).isin(active_sids)]

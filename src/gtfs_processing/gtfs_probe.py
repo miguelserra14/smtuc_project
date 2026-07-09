@@ -66,7 +66,49 @@ def _haversine_m(lat1: float, lon1: float, lat2: Iterable[float], lon2: Iterable
 # 2) Helpers GTFS intermédios (filtragem e resolução de entidades)
 # -----------------------------------------------------------------------------
 
-def _active_service_ids(gtfs, d: date) -> set[str]:
+def _normalize_service_id(value: str) -> str:
+    return str(value).strip().upper().replace("_", " ")
+
+
+# calendar.txt/calendar_dates.txt em alguns feeds usam um espaço de nomes de service_id (ex.:
+# "Dias Uteis") completamente diferente do usado em trips.txt (ex.: "WD") - confirmado no
+# dataset metrobus, onde nenhum service_id de trips.txt aparece em calendar.txt. Estes grupos
+# cobrem as variantes conhecidas de cada um dos 3 padrões semanais, para resolver esse caso.
+_WEEKDAY_ALIASES = {_normalize_service_id(v) for v in ("DIAS UTEIS", "WEEKDAY", "WEEKDAYS", "WD", "WKD")}
+_SATURDAY_ALIASES = {_normalize_service_id(v) for v in ("SABADOS", "SABADO", "SATURDAY", "SAT", "SAB")}
+_SUNDAY_ALIASES = {_normalize_service_id(v) for v in ("DOMINGOS E FERIADOS", "DOMINGO", "SUNDAY", "SUN", "DOM")}
+
+_ALIAS_WEEKDAY_MASK = (1, 1, 1, 1, 1, 0, 0)
+_ALIAS_SATURDAY_MASK = (0, 0, 0, 0, 0, 1, 0)
+_ALIAS_SUNDAY_MASK = (0, 0, 0, 0, 0, 0, 1)
+
+
+def _service_id_aliases_for_day(day: date) -> set[str]:
+    weekday = day.weekday()
+    if weekday <= 4:
+        return set(_WEEKDAY_ALIASES)
+    if weekday == 5:
+        return set(_SATURDAY_ALIASES)
+    return set(_SUNDAY_ALIASES)
+
+
+def _alias_day_mask(service_id: str) -> tuple[int, ...] | None:
+    """Resolve a service_id like "WD"/"SAT"/"SUN" straight to a (mon..sun) weekly mask,
+    without needing a calendar.txt row - used as a fallback when a service_id's own
+    calendar.txt entry can't be found under a matching key (see _active_service_ids)."""
+    norm = _normalize_service_id(service_id)
+    if norm in _WEEKDAY_ALIASES:
+        return _ALIAS_WEEKDAY_MASK
+    if norm in _SATURDAY_ALIASES:
+        return _ALIAS_SATURDAY_MASK
+    if norm in _SUNDAY_ALIASES:
+        return _ALIAS_SUNDAY_MASK
+    return None
+
+
+def _calendar_active_service_ids(gtfs, d: date) -> set[str]:
+    """Service ids ativos em `d` segundo calendar.txt/calendar_dates.txt, no espaço de nomes
+    próprio de calendar.txt (pode não bater certo com o de trips.txt - ver _active_service_ids)."""
     # fallback: sem calendar -> usa todos os services dos trips
     if gtfs.calendar.empty or "service_id" not in gtfs.calendar.columns:
         return set(gtfs.trips["service_id"].dropna().astype(str).unique())
@@ -96,6 +138,57 @@ def _active_service_ids(gtfs, d: date) -> set[str]:
                 active.discard(sid)
 
     return active
+
+
+def _active_service_ids(gtfs, d: date) -> set[str]:
+    """Service ids ativos em `d`, garantidamente no espaço de nomes de trips.txt (para que os
+    chamadores possam filtrar `trips` com segurança via `.isin(...)`).
+
+    calendar.txt/calendar_dates.txt por vezes usam um espaço de nomes de service_id
+    completamente diferente do de trips.txt (confirmado no feed metrobus: calendar.txt usa
+    "Dias Uteis"/"Sabados"/"Domingos e Feriados", trips.txt usa "WD"/"SAT"/"SUN" - nunca se
+    cruzam). Quando isso acontece, uma correspondência direta não encontra nada e todas as
+    trips desse dataset seriam silenciosamente excluídas de qualquer cálculo dependente do
+    dia (reachability, sugestões de percurso, contagem de partidas). Nesse caso cai-se para
+    uma correspondência por alias de dia-da-semana contra os próprios service_id de trips.txt.
+    """
+    trip_service_ids = set(gtfs.trips["service_id"].dropna().astype(str).unique())
+    if not trip_service_ids:
+        return set()
+
+    active_by_calendar = _calendar_active_service_ids(gtfs, d)
+    if not active_by_calendar:
+        return trip_service_ids
+
+    active_norm = {_normalize_service_id(v) for v in active_by_calendar}
+    selected = {sid for sid in trip_service_ids if _normalize_service_id(sid) in active_norm}
+    if selected:
+        return selected
+
+    aliases = _service_id_aliases_for_day(d)
+    fallback = {sid for sid in trip_service_ids if _normalize_service_id(sid) in aliases}
+
+    # Se calendar_dates.txt tiver uma exceção para este dia mas os service_id de trips.txt não
+    # baterem certo com calendar.txt/calendar_dates.txt de todo, não há forma fiável de aplicar
+    # essa exceção (a feed não liga o service_id "adicionado" a nenhuma trip) - avisa em vez de
+    # fingir silenciosamente que é um dia normal.
+    calendar_dates = getattr(gtfs, "calendar_dates", None)
+    if calendar_dates is not None and not calendar_dates.empty and {"service_id", "date", "exception_type"}.issubset(calendar_dates.columns):
+        ymd = int(d.strftime("%Y%m%d"))
+        day_exceptions = calendar_dates[calendar_dates["date"].astype(int) == ymd]
+        removed_norm = {
+            _normalize_service_id(v)
+            for v in day_exceptions.loc[day_exceptions["exception_type"].astype(int) == 2, "service_id"]
+        }
+        if removed_norm & aliases:
+            print(
+                f"[WARNING] calendar_dates.txt remove o serviço normal em {ymd}, mas os "
+                f"service_id de trips.txt ({sorted(trip_service_ids)}) não correspondem a "
+                f"nenhum service_id de calendar.txt/calendar_dates.txt - a exceção não pode ser "
+                f"aplicada com fiabilidade; a usar o horário normal do dia da semana."
+            )
+
+    return fallback
 
 
 def _resolve_stop_id(gtfs, ref: str) -> str:

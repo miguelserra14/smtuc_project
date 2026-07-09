@@ -9,6 +9,14 @@ REACHABILITY_MAX_BOARDING_WALK_MIN = 10.0
 REACHABILITY_MAX_TRANSFER_WALK_MIN = 5.0
 REACHABILITY_MAX_TRANSFERS = 2
 
+# Dia/hora de referência do mapa de isócronas (overlap_reachability_now.html). Fixos em vez
+# de "agora" para o mapa não depender de quando o script é corrido (ex.: horário de verão
+# muda os horários de serviço em vigor). 2026-05-11 08:20 é uma manhã de dia útil em horário
+# de verão. Para voltar ao comportamento dinâmico ("agora", como o nome do ficheiro sugere),
+# basta pôr as duas constantes a None - único sítio a mudar, não é preciso tocar no frontend.
+REACHABILITY_REFERENCE_DAY: str | None = "2026-05-11"
+REACHABILITY_REFERENCE_TIME: str | None = "08:20:00"
+
 # Spatial overlap: how many minutes of walking to consider when testing whether a SMTUC
 # stop/segment is "near" a Metrobus stop. Single source of truth for every spatial-overlap
 # radius in the codebase (line overlap_pct, temporal overlap candidates, overlap events) -
