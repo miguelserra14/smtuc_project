@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import html
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from config import POPULATION_STADIUM_MAP_RADIUS_M
 from overlap.transit import resolve_reference_day
@@ -99,6 +100,41 @@ def create_population_dashboard_html(
     return str(output_path)
 
 
+# Percentil real usado como teto da escala de cor em `log_color=True` - NÃO o máximo. Testado
+# empiricamente: mesmo em log, usar o máximo (253 em Coimbra) como teto deixa quase toda a
+# cidade (68% das zonas têm score log < 10% do máximo) comprimida no mesmo tom pálido, porque
+# 1-2 zonas atípicas esticam a escala inteira. Bins por quantil (`pd.qcut`) também não resolvem
+# isto: testado com 10 grupos de igual contagem, o grupo mais alto continua a juntar 182 zonas
+# (9.8%) com scores de 30 a 253 na mesma cor - o problema original não desaparece, só muda de
+# forma. Um teto em P98 deixa só ~2% das zonas (as genuinamente mais extremas) saturadas na cor
+# máxima, e dá à escala log espaço para diferenciar bem o resto (ver `_log_color_ticks`).
+_LOG_COLOR_CEIL_PERCENTILE = 0.98
+
+
+def _log_color_ticks(real_values: pd.Series, ceiling: float) -> Tuple[List[float], List[str]]:
+    """Marcas do colorbar (em espaço log1p, rotuladas com o valor real) para um mapa com
+    `log_color=True`. `ceiling` é o valor real onde a escala satura (`_LOG_COLOR_CEIL_PERCENTILE`)
+    - acima disso todas as zonas mostram a cor mais intensa, por isso a última marca leva "≥"."""
+    candidates = sorted({
+        round(v)
+        for v in [
+            0.0,
+            float(real_values.quantile(0.5)),
+            float(real_values.quantile(0.9)),
+            ceiling,
+        ]
+        if pd.notna(v)
+    })
+    tickvals = [float(np.log1p(v)) for v in candidates]
+    # A última marca (sempre o teto, por `candidates` estar ordenado) leva "≥": arredondar o
+    # teto para inteiro podia empatar/ficar abaixo do valor de `ceiling` usado no filtro acima,
+    # por isso marcamos por posição em vez de comparar valores.
+    ticktext = [f"{v:,.0f}" for v in candidates]
+    if ticktext:
+        ticktext[-1] = f"≥{ticktext[-1]}"
+    return tickvals, ticktext
+
+
 def _create_choropleth_generic(
     gdf: gpd.GeoDataFrame,
     title: str | None = None,
@@ -106,8 +142,19 @@ def _create_choropleth_generic(
     color_col: str = "underservice_score",
     range_color: Optional[Tuple[float, float]] = None,
     hover_data: Optional[Dict] = None,
+    log_color: bool = False,
 ) -> object:
-    """Create generic choropleth map."""
+    """Create generic choropleth map.
+
+    `log_color=True` colore pelo logaritmo (`log1p`) de `color_col`, com o teto da escala
+    fixado em `_LOG_COLOR_CEIL_PERCENTILE` (não no máximo real) - mantendo o hover e a legenda
+    do colorbar com os valores reais (via `_log_color_ticks`). O índice de subserviço é uma
+    cauda longa (mediana ~0.3, P90 ~29, máximo ~250 em Coimbra): em escala linear com teto no
+    P90, todo o "pior" decil (scores 29 a 253, gravidades bem diferentes entre si) fica pintado
+    da mesma cor máxima. Em log mas com teto no máximo real, o problema inverte-se - 1-2 zonas
+    atípicas esticam a escala e quase todo o resto (68% das zonas) fica comprimido no mesmo tom
+    pálido. Combinar log + teto em P98 evita as duas distorções: só as zonas genuinamente mais
+    extremas (~2%) saturam, e o resto da escala fica com espaço para diferenciar."""
     if px is None:
         raise ImportError("plotly não está disponível para gerar visualizações")
 
@@ -118,16 +165,34 @@ def _create_choropleth_generic(
             "dep_per_1000_pop": ":.2f",
             "BGRI2021": True,
         }
+    else:
+        hover_data = dict(hover_data)
 
+    plot_col = color_col
+    if log_color:
+        plot_col = f"__{color_col}_log"
+        gdf = gdf.assign(**{plot_col: np.log1p(gdf[color_col].clip(lower=0))})
+        # Sem isto, o Plotly mostraria o valor transformado (log) no hover em vez do índice
+        # real - escondemos a coluna log e mostramos explicitamente a coluna original.
+        hover_data[plot_col] = False
+        hover_data.setdefault(color_col, ":.1f")
+
+    log_ceiling_real: float | None = None
+    if log_color:
+        log_ceiling_real = float(gdf[color_col].quantile(_LOG_COLOR_CEIL_PERCENTILE))
     if range_color is None:
-        score_p5 = float(gdf[color_col].quantile(0.05))
-        score_p95 = float(gdf[color_col].quantile(0.90))
-        if score_p95 <= score_p5:
-            score_p5 = float(gdf[color_col].min())
-            score_p95 = float(gdf[color_col].max())
-        if score_p95 <= score_p5:
-            score_p95 = score_p5 + 1.0
-        range_color = (score_p5, score_p95)
+        if log_color:
+            lo = float(gdf[plot_col].min())
+            hi = float(np.log1p(max(log_ceiling_real, 0.0)))
+        else:
+            lo = float(gdf[color_col].quantile(0.05))
+            hi = float(gdf[color_col].quantile(0.90))
+            if hi <= lo:
+                lo = float(gdf[color_col].min())
+                hi = float(gdf[color_col].max())
+        if hi <= lo:
+            hi = lo + 1.0
+        range_color = (lo, hi)
 
     geojson = _simplify_geojson_precision(gdf.to_crs("EPSG:4326").__geo_interface__)
 
@@ -138,6 +203,11 @@ def _create_choropleth_generic(
         labels[color_col] = "Índice de Subserviço"
     else:
         labels[color_col] = str(color_col)
+    if plot_col != color_col:
+        # Tem de ser um texto DIFERENTE do label de `color_col`: o Plotly Express deduplica
+        # linhas do hover por texto de label, e como `plot_col` está escondido (hover_data
+        # ...=False), um label igual faz com que a linha do valor real também desapareça.
+        labels[plot_col] = f"{labels[color_col]} (log, uso interno)"
 
     # Common readable labels for other known columns
     labels.update({
@@ -152,7 +222,7 @@ def _create_choropleth_generic(
         geojson=geojson,
         locations="BGRI2021",
         featureidkey="properties.BGRI2021",
-        color=color_col,
+        color=plot_col,
         hover_data=hover_data,
         color_continuous_scale=color_scale,
         range_color=range_color,
@@ -164,6 +234,16 @@ def _create_choropleth_generic(
         fig.update_layout(title={"text": ""})
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})
+
+    if log_color:
+        tickvals, ticktext = _log_color_ticks(gdf[color_col], log_ceiling_real)
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title=labels.get(color_col, color_col),
+                tickvals=tickvals,
+                ticktext=ticktext,
+            )
+        )
 
     return fig
 
@@ -236,7 +316,7 @@ def create_choropleth_map(
     poi_df: Optional[pd.DataFrame] = None,
 ) -> object:
     resolve_reference_day(day_str)
-    fig = _create_choropleth_generic(merged, None, color_scale)
+    fig = _create_choropleth_generic(merged, None, color_scale, log_color=True)
     _add_poi_overlay(fig, poi_df)
     return fig
 
@@ -252,6 +332,7 @@ def create_2km_choropleth_map(
         merged_2km,
         None,
         color_scale,
+        log_color=True,
     )
     _add_poi_overlay(fig, poi_df)
     return fig

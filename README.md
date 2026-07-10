@@ -8,9 +8,6 @@ Há também uma janela de oportunidade muito concreta: a entrada de caloiros em 
 
 Neste momento, a base técnica do trabalho já permite gerar várias visualizações e dashboards, mas o desenvolvimento continua focado em fechar as peças que ainda faltam para a narrativa final. Entre os pontos em aberto estão a visualização do overlap entre linhas SMTUC e Metrobus, a melhoria das isócronas para incluir também locais de trabalho e de convívio, a revisão da integração Portela/Portagem com uma versão mais sólida da linha 54, e a preparação dos mockups e da apresentação em FeednPlay. Em paralelo, o relatório final terá de consolidar esta história de forma clara: o Metrobus mudou a lógica da mobilidade em Coimbra e o SMTUC precisa de se adaptar a essa nova realidade.
 
-## Mockups da apresentação
-
-Os mockups da apresentação foram movidos para [mockups_apresentacao.md](mockups_apresentacao.md).
 
 ## O que falta fechar
 
@@ -21,3 +18,15 @@ Os mockups da apresentação foram movidos para [mockups_apresentacao.md](mockup
 - Testar a interatividade no FeednPlay e definir onde, quando e em que formato ela entra na apresentação.
 - Fechar as transições da apresentação para garantir um ritmo claro e consistente.
 - Escrever e finalizar o relatório com a narrativa centrada no impacto do Metrobus e na adaptação do SMTUC.
+
+
+to do:
+
+- na visualizacao da taxa de subservico brincar mais com trnasparencia, dropshadow, etc
+- saber finalmente ( ou tentar ter uma boa estimativa) de quantos autocarros,  minutos, co2 desperdicamos com este tipo de overlap e propor uma 2 ou 3 versoes otimizadas que nos permita resolver pelo  menos os casos mais graves
+
+-resolver a visualizacao do 54. meter visualizacoes c versao otimizzada e versoa duplicada (saber +- quantos autocarros custa , a que horas, etc)
+
+- no frontend: pensar de um modo mais estruturado a arquiteutra do webdesign para lidar bem com o feednplay
+
+- montar narrativa, pedir aopoio ao evgheni, florido, tiago martins
