@@ -199,6 +199,15 @@
             display: block;
             background: #ffffff;
         }
+        .extra-frame {
+            border-top: 1px solid var(--border);
+        }
+        .extra-frame .panel-head {
+            padding: 16px 20px 8px;
+        }
+        .extra-frame .frame-wrap {
+            height: min(70vh, 780px);
+        }
         .stats-wrap {
             padding: 16px 20px 20px;
             border-top: 1px solid var(--border);
@@ -422,6 +431,26 @@
             `;
         }
 
+        function renderExtraFrames(item) {
+            const frames = Array.isArray(item.extra_frames) ? item.extra_frames : [];
+            return frames.map((frame) => `
+                <div class="extra-frame">
+                    <div class="panel-head">
+                        <h3 class="panel-title" style="font-size: 0.98rem;">${frame.title || ''}</h3>
+                        ${frame.caption ? `<p class="panel-desc">${frame.caption}</p>` : ''}
+                    </div>
+                    <div class="frame-wrap">
+                        <iframe
+                            title="${frame.title || item.label}"
+                            loading="lazy"
+                            data-src="${frame.src || ''}"
+                            referrerpolicy="no-referrer"
+                        ></iframe>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         function renderTabs() {
             const interactiveTabs = tabs.filter((item) => item.kind !== 'summary');
 
@@ -469,6 +498,7 @@
                                 referrerpolicy="no-referrer"
                             ></iframe>
                         </div>
+                        ${renderExtraFrames(item)}
                         ${item.id === 'overlap' ? renderOverlapStats(item) : ''}
                     </article>
                 `;

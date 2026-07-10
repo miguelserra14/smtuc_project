@@ -210,6 +210,18 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
             "kind": "iframe",
             "src": "overlap/overlap_reachability_now.html",
             "overlap_stats": overlap_stats,
+            "extra_frames": [
+                {
+                    "title": "Mapa de linhas sobrepostas (overlap espacial)",
+                    "src": "overlap/overlap_lines_map.html",
+                    "caption": "Linhas SMTUC com maior e menor overlap espacial face ao Metrobus, com os polos de emprego e locais concorridos sobrepostos.",
+                },
+                {
+                    "title": "Breakdown do overlap temporal",
+                    "src": "overlap/overlap_temporal_breakdown.html",
+                    "caption": "Detalhe do overlap temporal (<=5 min) entre passagens SMTUC e Metrobus, por linha e paragem.",
+                },
+            ],
         },
         {
             "id": "integration-portagem",
