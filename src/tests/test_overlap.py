@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -18,8 +18,8 @@ from config import (
     STADIUM_RADIUS_M,
     OUTPUTS_OVERLAP_DIR,
     WORK_COORD,
-    REACHABILITY_REFERENCE_DAY,
     REACHABILITY_REFERENCE_TIME,
+    USE_FIXED_REFERENCE_DAY,
 )
 
 from overlap.transit import (
@@ -27,6 +27,7 @@ from overlap.transit import (
     compare_nearest_network,
     nearest_stop_for_dataset,
     next_monday,
+    resolve_reference_day,
     suggest_current_commute_options,
     suggest_random_commute_options,
 )
@@ -237,9 +238,11 @@ def test_overlap_reachability_map_now() -> None:
     _require_dataset("smtuc")
     _require_dataset("metrobus")
 
-    # Dia/hora de referência fixos em config.py (REACHABILITY_REFERENCE_DAY/_TIME), não
-    # "agora" - ver comentário em config.py. Com ambos a None, cai de volta em datetime.now().
-    day_str = REACHABILITY_REFERENCE_DAY or datetime.now().strftime("%Y-%m-%d")
+    # Dia partilhado por toda a app via a variável global USE_FIXED_REFERENCE_DAY
+    # (config.py) - ver docstring de resolve_reference_day(). A hora só se fixa junto com o
+    # dia; com a flag desligada usa-se "agora" (time_str=None), tal como o dia fica dinâmico.
+    day_str = resolve_reference_day().strftime("%Y-%m-%d")
+    time_str = REACHABILITY_REFERENCE_TIME if USE_FIXED_REFERENCE_DAY else None
 
     merged = compute_underserved_zones(
         day_str=day_str,
@@ -250,7 +253,7 @@ def test_overlap_reachability_map_now() -> None:
         origin_lat=STADIUM_COORD[0],
         origin_lon=STADIUM_COORD[1],
         day_str=day_str,
-        time_str=REACHABILITY_REFERENCE_TIME,
+        time_str=time_str,
     )
 
     selected_time = str(reach_gdf["reach_time"].iloc[0]) if not reach_gdf.empty else "00:00:00"

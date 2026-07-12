@@ -8,7 +8,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import OUTPUTS_INTEGRATION_DIR, WALK_SPEED_M_MIN
+from config import (
+    OUTPUTS_INTEGRATION_DIR,
+    REACHABILITY_REFERENCE_DAY,
+    USE_FIXED_REFERENCE_DAY,
+    WALK_SPEED_M_MIN,
+)
 from gtfs_processing.gtfs import load_gtfs
 from gtfs_processing.gtfs_probe import (
     NearestStopResult,
@@ -249,12 +254,18 @@ def nearest_business_day(from_day: date | None = None) -> date:
 
 def resolve_reference_day(day_str: str | None = None) -> date:
     """
-    Resolve the reference day for integration analyses.
+    Resolve the reference day used by every GTFS-dependent visualization (integration,
+    reachability/isochrones, population).
 
-    Any explicit day provided by callers is intentionally ignored so execution stays
-    anchored to the current business day policy.
+    Any explicit day provided by callers is intentionally ignored - the shared reference day is
+    controlled by config.USE_FIXED_REFERENCE_DAY (single global switch), not by individual call
+    sites. When True, returns the fixed config.REACHABILITY_REFERENCE_DAY (reproducible, doesn't
+    depend on when the code runs). When False, returns the nearest business day to today
+    (dynamic).
     """
     _ = day_str  # kept for API compatibility and explicit intent
+    if USE_FIXED_REFERENCE_DAY and REACHABILITY_REFERENCE_DAY:
+        return date.fromisoformat(REACHABILITY_REFERENCE_DAY)
     return nearest_business_day(date.today())
 
 

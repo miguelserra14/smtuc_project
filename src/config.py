@@ -9,11 +9,17 @@ REACHABILITY_MAX_BOARDING_WALK_MIN = 10.0
 REACHABILITY_MAX_TRANSFER_WALK_MIN = 5.0
 REACHABILITY_MAX_TRANSFERS = 2
 
-# Dia/hora de referência do mapa de isócronas (overlap_reachability_now.html). Fixos em vez
-# de "agora" para o mapa não depender de quando o script é corrido (ex.: horário de verão
-# muda os horários de serviço em vigor). 2026-05-11 08:20 é uma manhã de dia útil em horário
-# de verão. Para voltar ao comportamento dinâmico ("agora", como o nome do ficheiro sugere),
-# basta pôr as duas constantes a None - único sítio a mudar, não é preciso tocar no frontend.
+# Dia/hora de referência partilhados por TODAS as visualizações que dependem de horários GTFS
+# (integração linha 54↔metro, mapa de isócronas, população/BGRI) - resolvidos através de
+# resolve_reference_day() em overlap/transit.py, a única implementação usada por todos os
+# módulos (ver docstring dessa função). USE_FIXED_REFERENCE_DAY é a variável global que escolhe
+# entre os dois modos, sem tocar em resolve_reference_day() nem em nenhum chamador individual:
+#   True  -> todas usam o dia (e, no caso do mapa de isócronas, a hora) fixos abaixo -
+#            reprodutível, não depende de quando o script é corrido nem do horário de verão em
+#            vigor nesse dia. 2026-05-11 08:20 é uma manhã de dia útil em horário de verão.
+#   False -> todas usam o dia útil mais próximo de "hoje" (comportamento dinâmico); o mapa de
+#            isócronas usa a hora atual em vez de REACHABILITY_REFERENCE_TIME.
+USE_FIXED_REFERENCE_DAY: bool = True
 REACHABILITY_REFERENCE_DAY: str | None = "2026-05-11"
 REACHABILITY_REFERENCE_TIME: str | None = "08:20:00"
 
@@ -104,7 +110,9 @@ C:/Users/migue/miniconda3/envs/smtuc312/python.exe -m http.server 8000
 
 Links visualizações:
 
-Nota: todas as datas mostradas nas visualizações são calculadas automaticamente pela função de dia útil mais próximo (resolve_reference_day).
+Nota: todas as datas mostradas nas visualizações vêm de resolve_reference_day(), controlada pela
+variável global USE_FIXED_REFERENCE_DAY acima - por omissão (True) usam todas o dia fixo
+REACHABILITY_REFERENCE_DAY; com a flag a False usam o dia útil mais próximo de "hoje".
 
 http://localhost:8000/outputs/overlap/overlap_reachability_now.html
 http://localhost:8000/outputs/overlap/overlap_lines_map.html
@@ -113,7 +121,7 @@ http://localhost:8000/outputs/population/bgri.html
 
 http://localhost:8000/outputs/dashboard.html
 
-Views integração (linha 54, data útil automática):
+Views integração (linha 54, dia de referência controlado por USE_FIXED_REFERENCE_DAY):
 
 Portela (Portagem -> Portela do Mondego/Portela):
 http://localhost:8000/outputs/integration/portela/l54_all.html

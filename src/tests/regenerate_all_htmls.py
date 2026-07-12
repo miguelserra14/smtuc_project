@@ -45,8 +45,8 @@ from src.config import (
     OUTPUTS_INTEGRATION_DIR,
     STADIUM_COORD,
     REACHABILITY_MAX_TRANSFERS,
-    REACHABILITY_REFERENCE_DAY,
     REACHABILITY_REFERENCE_TIME,
+    USE_FIXED_REFERENCE_DAY,
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
     LINE_54_MELHORADO_PHASE_SHIFT_MIN,
 )
@@ -159,11 +159,13 @@ def regenerate_overlap_htmls() -> None:
         day_str = resolve_reference_day().strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
 
-        # Dia/hora de referência do mapa de isócronas: fixos em config.py
-        # (REACHABILITY_REFERENCE_DAY/_TIME) em vez de "agora", para o mapa não depender de
-        # quando o script corre. Com ambos a None, cai de volta no comportamento dinâmico.
-        reach_day_str = REACHABILITY_REFERENCE_DAY or day_str
-        reach_time_str = REACHABILITY_REFERENCE_TIME
+        # Dia do mapa de isócronas: day_str já reflete a variável global USE_FIXED_REFERENCE_DAY
+        # (via resolve_reference_day()), a mesma usada pela integração e pela população - não
+        # reintroduzir aqui um fallback próprio, senão o mapa deixa de acompanhar a flag global.
+        # A hora só faz sentido fixá-la junto com o dia (REACHABILITY_REFERENCE_TIME): com a
+        # flag desligada usa-se "agora", tal como o dia passa a ser dinâmico.
+        reach_day_str = day_str
+        reach_time_str = REACHABILITY_REFERENCE_TIME if USE_FIXED_REFERENCE_DAY else None
         print(f"[INFO] Isócronas: usando data/hora de referência {reach_day_str} {reach_time_str or '(agora)'}")
 
         # Computar zonas subservidas como base
