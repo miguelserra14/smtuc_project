@@ -58,6 +58,26 @@ DEFAULT_OUTPUT_GAP_CSV = "outputs/population/bgri_transport_gap.csv"
 # para a fonte/raciocínio de cada estimativa - este CSV é gerado a partir desse ficheiro).
 POINTS_OF_INTEREST_CSV = "data/points_of_interest.csv"
 
+# Desvio de fase (minutos) da proposta de horário otimizado da linha 54 em Portela/Portagem.
+# Mantém o mesmo número de viagens/dia e o mesmo ciclo de 40 min (zero autocarros/motoristas
+# extra) - só desloca a hora de partida. Escolhido por pesquisa exaustiva de fase (-20 a +20
+# min, passo de 1 min) sobre os horários reais GTFS, validada nos 4 sentidos de transbordo
+# possíveis (metro->bus e bus->metro, em Portela E em Portagem - duas escolhas anteriores, -6 e
+# depois -10, só tinham sido validadas em 1-2 desses 4 sentidos e continham regressões que só
+# apareceram ao verificar os 4 ao mesmo tempo). Testei exaustivamente (busca completa de -20 a
+# +19 min) se existe algum desvio que melhore os 4 sentidos SEM NENHUMA regressão - não existe
+# nenhum: é uma restrição real do ciclo de 40 min de um único autocarro, não uma falha de busca.
+# -16 min é o melhor compromisso encontrado: só regride ligeiramente 1 dos 4 sentidos, e por uma
+# margem mínima, enquanto melhora bastante os outros 3:
+#   Portela  metro->bus: 16.0 -> 10.0 min (melhor, -6.0)   bus->metro: 14.0 -> 10.0 min (melhor, -4.0)
+#   Portagem metro->bus: 19.5 -> 20.0 min (pior, +0.5)     bus->metro: 12.0 ->  8.0 min (melhor, -4.0)
+# Portela e Portagem são servidos pelo MESMO autocarro em ciclo fechado (Portagem->Portela->
+# Portagem sem folga), por isso partilham uma única variável de fase - não podem ser otimizados
+# de forma totalmente independente com a frota atual. Horário noturno (após a última viagem
+# atual) deliberadamente fora desta proposta por agora - fica para uma iteração futura que
+# envolva expandir o período de serviço.
+LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -16.0
+
 
 r"""
 

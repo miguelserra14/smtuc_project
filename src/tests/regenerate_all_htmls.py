@@ -47,6 +47,7 @@ from src.config import (
     REACHABILITY_MAX_TRANSFERS,
     REACHABILITY_REFERENCE_DAY,
     REACHABILITY_REFERENCE_TIME,
+    LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
 )
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
 
@@ -297,6 +298,8 @@ def regenerate_integration_htmls() -> None:
                 output_prefix="l54_38",  # Explicitly use prefix for lines 54+38
                 output_subdir="portagem",
                 fixed_html_name="l54_38_all.html",
+                phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
+                reverse_metro_direction_id=1,  # Metrobus sentido Serpins, a partir de Portagem
             )
             print(f"[SUCCESS] IntegraÃ§Ã£o Portagem (54+38): {results.get('html_path', 'N/A')}")
         except Exception as e:
@@ -316,6 +319,8 @@ def regenerate_integration_htmls() -> None:
                 output_prefix="l54",  # Explicitly use prefix for line 54 only
                 output_subdir="portela",
                 fixed_html_name="l54_all.html",
+                phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
+                reverse_metro_direction_id=0,  # Metrobus sentido Portagem, a passar por Portela
             )
             print(f"[SUCCESS] IntegraÃ§Ã£o Portela (54): {results.get('html_path', 'N/A')}")
         except Exception as e:

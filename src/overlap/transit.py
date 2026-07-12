@@ -258,43 +258,48 @@ def resolve_reference_day(day_str: str | None = None) -> date:
     return nearest_business_day(date.today())
 
 
-def build_line_stop_vs_metro_table(
-    metro_stop_ref: str,
-    bus_stop_ref: str,
+def _direction_arrival_times_for_stop(gtfs, trips: pd.DataFrame, target_stop_id: str, direction_id: int) -> list[str]:
+    """Como `_arrival_times_for_stop`, mas filtra por `trips.direction_id` em vez de exigir uma
+    paragem de origem anterior ao alvo. Necessário quando o alvo É a própria origem da viagem
+    nesse sentido (ex.: "Portagem" é stop_sequence=1 do Metrobus sentido Serpins - não há
+    nenhuma paragem "antes" na mesma viagem para filtrar por origem, ao contrário do caso
+    normal onde a paragem de origem faz sempre parte do trajeto antes do alvo)."""
+    if trips.empty or "direction_id" not in trips.columns:
+        return []
+    dir_trips = trips[trips["direction_id"].astype(str) == str(direction_id)]
+    if dir_trips.empty:
+        return []
+
+    st = gtfs.stop_times.copy()
+    st["trip_id"] = st["trip_id"].astype(str)
+    st["stop_id"] = st["stop_id"].astype(str)
+    st = st[st["trip_id"].isin(dir_trips["trip_id"].astype(str))]
+    if st.empty:
+        return []
+
+    rows = st[st["stop_id"] == str(target_stop_id)]
+    return sorted(set(rows["arrival_time"].astype(str).tolist()))
+
+
+def _resolve_bus_arrival_events(
+    gtfs_bus,
+    day: date,
+    bus_target_candidates: list[str],
+    bus_origin_candidates: list[str],
     line_number: str | int | list[str | int] | tuple[str | int, ...],
-    day_str: str | None = None,
-    metro_origin_ref: str = "Portagem",
-    bus_origin_ref: str = "Portagem",
-    output_csv_name: str | None = None,
-    output_dir: str | Path | None = None,
-) -> pd.DataFrame:
+) -> tuple[list[dict[str, str]], str, str]:
+    """Resolve os eventos de chegada de autocarro (uma ou mais linhas) a uma paragem, filtrados
+    por sentido (`bus_origin_candidates`). Partilhado por `build_line_stop_vs_metro_table` e
+    `build_reverse_stop_vs_metro_table` - a mesma resolução de linha->paragem->sentido serve os
+    dois sentidos da comparação com o metro, só muda o que se faz com o resultado depois.
+
+    Devolve `(bus_events, line_label, line_slug)`. Cada linha é resolvida de forma totalmente
+    independente das outras: ao combinar várias linhas (ex. 54+38) NÃO se pode desligar o filtro
+    de origem/sentido globalmente, senão uma linha cujo percurso nem passa pela origem pedida
+    (ex. a 38 não passa em "Portela do Mondego") contaminaria a seleção da paragem física
+    correta e o sentido das restantes linhas. Uma linha sem trips no sentido pedido contribui
+    corretamente 0 eventos, em vez de eventos de sentido errado.
     """
-    Gera uma tabela comparando horários de autocarro e metro numa paragem de destino.
-
-    Requer apenas: nome/id da paragem de metro, nome/id da paragem de autocarro e número da linha.
-    O dia de referência é sempre o dia útil atual (ou o dia útil mais próximo).
-
-    Por omissão escreve o CSV em `OUTPUTS_INTEGRATION_DIR` (o mesmo diretório partilhado usado
-    pelo dashboard). Passa `output_dir` (ex.: `tmp_path` de um teste) para escrever noutro sítio
-    sem afetar os ficheiros publicados.
-    """
-    day = resolve_reference_day(day_str)
-
-    gtfs_bus = _load_gtfs_cached("smtuc")
-    gtfs_metro = _load_gtfs_cached("metrobus")
-
-    # Candidate ids para filtrar sentido (ex.: Portagem -> Portela)
-    bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
-    metro_origin_candidates = _matching_stop_ids(gtfs_metro, str(metro_origin_ref))
-    bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
-    metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
-
-    if not bus_target_candidates:
-        raise ValueError(f"Paragem de autocarro não encontrada: {bus_stop_ref}")
-    if not metro_target_candidates:
-        raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
-
-    # Trips da(s) linha(s) de autocarro
     line_values = _normalize_line_numbers(line_number)
     if not line_values:
         raise ValueError("Linha(s) não indicada(s).")
@@ -324,26 +329,6 @@ def build_line_stop_vs_metro_table(
             )
         )
 
-    # Trips do metro
-    metro_services = _active_service_ids(gtfs_metro, day)
-    metro_trips = gtfs_metro.trips.copy()
-    metro_trips["service_id"] = metro_trips["service_id"].astype(str)
-    if metro_services:
-        metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
-
-    metro_stop_id = _pick_best_target_stop_id(
-        gtfs=gtfs_metro,
-        trips=metro_trips,
-        target_candidates=metro_target_candidates,
-        origin_candidates=metro_origin_candidates,
-    )
-
-    # Cada linha é resolvida (route_ids -> paragem-alvo -> eventos filtrados por sentido) de
-    # forma totalmente independente das outras. Ao combinar várias linhas (ex. 54+38) NÃO se
-    # pode desligar o filtro de origem/sentido globalmente: uma linha cujo percurso nem passa
-    # pela origem pedida (ex. a 38 não passa em "Portela do Mondego") contaminaria a seleção da
-    # paragem física correta e o sentido das restantes linhas. Uma linha sem trips no sentido
-    # pedido contribui corretamente 0 eventos, em vez de eventos de sentido errado.
     bus_events: list[dict[str, str]] = []
     matched_any_line = False
     for line_val in line_values:
@@ -382,6 +367,62 @@ def build_line_stop_vs_metro_table(
         raise ValueError(f"Linha(s) não encontrada(s): {line_label}")
 
     bus_events = sorted(bus_events, key=lambda ev: (_hhmmss_to_seconds(str(ev["time"])), str(ev["line"])))
+    return bus_events, line_label, line_slug
+
+
+def build_line_stop_vs_metro_table(
+    metro_stop_ref: str,
+    bus_stop_ref: str,
+    line_number: str | int | list[str | int] | tuple[str | int, ...],
+    day_str: str | None = None,
+    metro_origin_ref: str = "Portagem",
+    bus_origin_ref: str = "Portagem",
+    output_csv_name: str | None = None,
+    output_dir: str | Path | None = None,
+) -> pd.DataFrame:
+    """
+    Gera uma tabela comparando horários de autocarro e metro numa paragem de destino.
+
+    Requer apenas: nome/id da paragem de metro, nome/id da paragem de autocarro e número da linha.
+    O dia de referência é sempre o dia útil atual (ou o dia útil mais próximo).
+
+    Por omissão escreve o CSV em `OUTPUTS_INTEGRATION_DIR` (o mesmo diretório partilhado usado
+    pelo dashboard). Passa `output_dir` (ex.: `tmp_path` de um teste) para escrever noutro sítio
+    sem afetar os ficheiros publicados.
+    """
+    day = resolve_reference_day(day_str)
+
+    gtfs_bus = _load_gtfs_cached("smtuc")
+    gtfs_metro = _load_gtfs_cached("metrobus")
+
+    # Candidate ids para filtrar sentido (ex.: Portagem -> Portela)
+    bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
+    metro_origin_candidates = _matching_stop_ids(gtfs_metro, str(metro_origin_ref))
+    bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
+    metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
+
+    if not bus_target_candidates:
+        raise ValueError(f"Paragem de autocarro não encontrada: {bus_stop_ref}")
+    if not metro_target_candidates:
+        raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
+
+    # Trips do metro
+    metro_services = _active_service_ids(gtfs_metro, day)
+    metro_trips = gtfs_metro.trips.copy()
+    metro_trips["service_id"] = metro_trips["service_id"].astype(str)
+    if metro_services:
+        metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
+
+    metro_stop_id = _pick_best_target_stop_id(
+        gtfs=gtfs_metro,
+        trips=metro_trips,
+        target_candidates=metro_target_candidates,
+        origin_candidates=metro_origin_candidates,
+    )
+
+    bus_events, line_label, line_slug = _resolve_bus_arrival_events(
+        gtfs_bus, day, bus_target_candidates, bus_origin_candidates, line_number
+    )
     bus_times = [ev["time"] for ev in bus_events]
     bus_lines = [ev["line"] for ev in bus_events]
     metro_times = _arrival_times_for_stop(
@@ -442,6 +483,120 @@ def build_line_stop_vs_metro_table(
         f"line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
         f"_metro_{_safe_slug(metro_stop_ref)}.csv"
     )
+    out_df.to_csv(out_dir / csv_name, index=False)
+
+    return out_df
+
+
+def build_reverse_stop_vs_metro_table(
+    bus_stop_ref: str,
+    metro_stop_ref: str,
+    line_number: str | int | list[str | int] | tuple[str | int, ...],
+    metro_direction_id: int,
+    day_str: str | None = None,
+    bus_origin_ref: str = "Portagem",
+    output_csv_name: str | None = None,
+    output_dir: str | Path | None = None,
+) -> pd.DataFrame:
+    """
+    Gera a tabela do sentido INVERSO de `build_line_stop_vs_metro_table`: em vez de "quanto
+    tempo espera quem chega de metro pelo próximo autocarro", mede "quanto tempo espera quem
+    chega de autocarro pela próxima partida de metro".
+
+    `metro_direction_id` identifica o sentido do Metrobus que continua a viagem a partir de
+    `metro_stop_ref` (0 ou 1, conforme `trips.direction_id`) - usa-se o sentido da viagem em vez
+    de uma paragem de origem porque nalguns casos a paragem-alvo é a própria origem da viagem
+    nesse sentido (ex.: em Portagem, sentido Serpins, não há nenhuma paragem "antes" na mesma
+    viagem para filtrar por origem - ver `_direction_arrival_times_for_stop`).
+
+    Devolve o MESMO esquema de colunas que `build_line_stop_vs_metro_table`
+    (`bus_time`/`bus_line_passage`, `metro_time_from_origin`) mas com o conteúdo trocado, DE
+    PROPÓSITO: `bus_time`/`bus_line_passage` passam a conter as PARTIDAS de metro (rotuladas
+    "Metro" - é o que se quer apanhar) e `metro_time_from_origin` passa a conter as CHEGADAS de
+    autocarro (é o que desencadeia a espera). Isto mantém o contrato de colunas que
+    `_build_waits_table` e as funções de visualização em `visualizations/integration.py` já
+    esperam, para as reutilizar sem alterações nos dois sentidos.
+    """
+    day = resolve_reference_day(day_str)
+
+    gtfs_bus = _load_gtfs_cached("smtuc")
+    gtfs_metro = _load_gtfs_cached("metrobus")
+
+    bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
+    bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
+    metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
+
+    if not bus_target_candidates:
+        raise ValueError(f"Paragem de autocarro não encontrada: {bus_stop_ref}")
+    if not metro_target_candidates:
+        raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
+
+    metro_services = _active_service_ids(gtfs_metro, day)
+    metro_trips = gtfs_metro.trips.copy()
+    metro_trips["service_id"] = metro_trips["service_id"].astype(str)
+    if metro_services:
+        metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
+
+    metro_stop_id = _pick_best_target_stop_id(
+        gtfs=gtfs_metro,
+        trips=metro_trips,
+        target_candidates=metro_target_candidates,
+    )
+    metro_departure_times = _direction_arrival_times_for_stop(
+        gtfs=gtfs_metro,
+        trips=metro_trips,
+        target_stop_id=metro_stop_id,
+        direction_id=metro_direction_id,
+    )
+
+    bus_events, line_label, line_slug = _resolve_bus_arrival_events(
+        gtfs_bus, day, bus_target_candidates, bus_origin_candidates, line_number
+    )
+    bus_arrival_times = sorted({str(ev["time"]) for ev in bus_events})
+
+    n = max(len(bus_arrival_times), len(metro_departure_times))
+    columns = [
+        "idx",
+        "bus_line",
+        "bus_line_passage",
+        "bus_stop",
+        "bus_time",
+        "metro_stop",
+        "metro_time_from_origin",
+        "origin_ref",
+        "date",
+    ]
+    out_dir = Path(output_dir) if output_dir is not None else (
+        Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_name = output_csv_name or (
+        f"reverse_line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
+        f"_metro_{_safe_slug(metro_stop_ref)}.csv"
+    )
+
+    if n == 0:
+        out_df = pd.DataFrame(columns=columns)
+        out_df.to_csv(out_dir / csv_name, index=False)
+        return out_df
+
+    rows = []
+    for i in range(n):
+        rows.append(
+            {
+                "idx": i + 1,
+                "bus_line": "Metro",
+                "bus_line_passage": "Metro",
+                "bus_stop": str(metro_stop_ref),
+                "bus_time": metro_departure_times[i] if i < len(metro_departure_times) else "",
+                "metro_stop": str(bus_stop_ref),
+                "metro_time_from_origin": bus_arrival_times[i] if i < len(bus_arrival_times) else "",
+                "origin_ref": str(bus_origin_ref),
+                "date": day.strftime("%Y-%m-%d"),
+            }
+        )
+
+    out_df = pd.DataFrame(rows, columns=columns)
     out_df.to_csv(out_dir / csv_name, index=False)
 
     return out_df

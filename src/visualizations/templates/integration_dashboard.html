@@ -20,9 +20,49 @@
         h1 { margin: 0 0 8px; color: var(--accent); font-size: 1.55rem; }
         p { margin: 0 0 20px; color: var(--muted); }
         .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
-        .panel h2 { margin: 0; padding: 12px 14px; font-size: 1rem; border-bottom: 1px solid var(--border); }
+        .panel h2 { margin: 0; padding: 12px 14px; font-size: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
         .plot { width: 100%; height: 560px; }
         .plot, .plot * { forced-color-adjust: none !important; }
+        .opt-note-bar {
+            background: linear-gradient(180deg, #ffffff, #f3f7fb);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+        .opt-note {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+        .opt-toggle {
+            display: inline-flex;
+            border: 1px solid var(--accent);
+            border-radius: 999px;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+        .opt-toggle button {
+            border: 0;
+            background: #ffffff;
+            color: var(--accent);
+            padding: 6px 14px;
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .opt-toggle button.is-active {
+            background: var(--accent);
+            color: #ffffff;
+        }
+        .direction-heading {
+            margin: 28px 0 12px;
+            font-size: 1.1rem;
+            color: var(--accent);
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
         @media (max-width: 860px) {
             .plot { height: 460px; }
             h1 { font-size: 1.25rem; }
@@ -31,35 +71,114 @@
 </head>
 <body>
     <main class="container">
-        <section class="panel">
-            <h2>Timeline de passagens</h2>
-            <div id="plot_timeline" class="plot"></div>
-        </section>
-        <section class="panel">
-            <h2>Espera de transbordo</h2>
-            <div id="plot_waits" class="plot"></div>
-        </section>
-        <section class="panel">
-            <h2>Equidade temporal</h2>
-            <div id="plot_equity" class="plot"></div>
-        </section>
+        <div id="fwd-group">
+            <section class="opt-note-bar" id="opt-note-bar" hidden>
+                <p class="opt-note" id="opt-note"></p>
+            </section>
+            <section class="panel">
+                <h2>
+                    <span>Timeline de passagens</span>
+                    <span class="opt-toggle" data-figure="timeline" role="group" aria-label="Timeline: horário atual ou otimizado" hidden>
+                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
+                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
+                    </span>
+                </h2>
+                <div id="plot_timeline" class="plot"></div>
+            </section>
+            <section class="panel">
+                <h2>
+                    <span>Espera de transbordo (metro -&gt; autocarro)</span>
+                    <span class="opt-toggle" data-figure="waits" role="group" aria-label="Espera de transbordo: horário atual ou otimizado" hidden>
+                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
+                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
+                    </span>
+                </h2>
+                <div id="plot_waits" class="plot"></div>
+            </section>
+            <section class="panel">
+                <h2>
+                    <span>Equidade temporal (metro -&gt; autocarro)</span>
+                    <span class="opt-toggle" data-figure="equity" role="group" aria-label="Equidade temporal: horário atual ou otimizado" hidden>
+                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
+                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
+                    </span>
+                </h2>
+                <div id="plot_equity" class="plot"></div>
+            </section>
+        </div>
+
+        <div id="rev-group" hidden>
+            <h2 class="direction-heading">Sentido inverso: autocarro -&gt; metro</h2>
+            <section class="opt-note-bar" id="opt-note-bar-rev" hidden>
+                <p class="opt-note" id="opt-note-rev"></p>
+            </section>
+            <section class="panel">
+                <h2>
+                    <span>Timeline de passagens (sentido inverso)</span>
+                    <span class="opt-toggle" data-figure="timeline_rev" role="group" aria-label="Timeline (sentido inverso): horário atual ou otimizado" hidden>
+                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
+                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
+                    </span>
+                </h2>
+                <div id="plot_timeline_rev" class="plot"></div>
+            </section>
+            <section class="panel">
+                <h2>
+                    <span>Espera de transbordo (autocarro -&gt; metro)</span>
+                    <span class="opt-toggle" data-figure="waits_rev" role="group" aria-label="Espera de transbordo (sentido inverso): horário atual ou otimizado" hidden>
+                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
+                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
+                    </span>
+                </h2>
+                <div id="plot_waits_rev" class="plot"></div>
+            </section>
+            <section class="panel">
+                <h2>
+                    <span>Equidade temporal (autocarro -&gt; metro)</span>
+                    <span class="opt-toggle" data-figure="equity_rev" role="group" aria-label="Equidade temporal (sentido inverso): horário atual ou otimizado" hidden>
+                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
+                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
+                    </span>
+                </h2>
+                <div id="plot_equity_rev" class="plot"></div>
+            </section>
+        </div>
     </main>
     <script>
         const figTimeline = __TIMELINE_JSON__;
         const figWaits = __WAITS_JSON__;
         const figEquity = __EQUITY_JSON__;
+        const hasReverse = __HAS_REVERSE__;
+        const figTimelineRev = __TIMELINE_REV_JSON__;
+        const figWaitsRev = __WAITS_REV_JSON__;
+        const figEquityRev = __EQUITY_REV_JSON__;
         const cfg = { responsive: true };
 
-        // Support ?show=heatmaps query parameter to hide timeline
+        // Support ?show=heatmaps query parameter to hide the (forward-direction) timeline
         const urlParams = new URLSearchParams(window.location.search);
         const showMode = urlParams.get('show');
-        
+
         if (showMode === 'heatmaps') {
-            // Hide the timeline section (first panel)
             const panels = document.querySelectorAll('section.panel');
             if (panels.length > 0) {
                 panels[0].style.display = 'none';
             }
+        }
+
+        if (hasReverse) {
+            document.getElementById('rev-group').hidden = false;
+        }
+
+        // [plotId, figure, podeFicarEscondidoEm-?show=heatmaps]
+        const allFigs = [
+            ['plot_timeline', figTimeline, true],
+            ['plot_waits', figWaits, false],
+            ['plot_equity', figEquity, false],
+        ];
+        if (hasReverse) {
+            allFigs.push(['plot_timeline_rev', figTimelineRev, false]);
+            allFigs.push(['plot_waits_rev', figWaitsRev, false]);
+            allFigs.push(['plot_equity_rev', figEquityRev, false]);
         }
 
         function pad2(v) {
@@ -81,54 +200,89 @@
             return `${text} (${dayStr})`;
         }
 
+        function updateFigTitle(fig, dayStr) {
+            fig.layout = fig.layout || {};
+            fig.layout.title = fig.layout.title || {};
+            if (typeof fig.layout.title === 'string') {
+                fig.layout.title = replaceDateSuffix(fig.layout.title, dayStr);
+            } else {
+                fig.layout.title.text = replaceDateSuffix(fig.layout.title.text || '', dayStr);
+            }
+        }
+
         function applyAutoBusinessDay() {
             const dayStr = nearestBusinessDayStr(new Date());
             const titleEl = document.getElementById('dashboard-title');
             if (titleEl) titleEl.textContent = replaceDateSuffix(titleEl.textContent, dayStr);
             document.title = replaceDateSuffix(document.title, dayStr);
-
-            figTimeline.layout = figTimeline.layout || {};
-            figWaits.layout = figWaits.layout || {};
-            figEquity.layout = figEquity.layout || {};
-
-            figTimeline.layout.title = figTimeline.layout.title || {};
-            figWaits.layout.title = figWaits.layout.title || {};
-            figEquity.layout.title = figEquity.layout.title || {};
-
-            if (typeof figTimeline.layout.title === 'string') {
-                figTimeline.layout.title = replaceDateSuffix(figTimeline.layout.title, dayStr);
-            } else {
-                figTimeline.layout.title.text = replaceDateSuffix(figTimeline.layout.title.text || '', dayStr);
-            }
-
-            if (typeof figWaits.layout.title === 'string') {
-                figWaits.layout.title = replaceDateSuffix(figWaits.layout.title, dayStr);
-            } else {
-                figWaits.layout.title.text = replaceDateSuffix(figWaits.layout.title.text || '', dayStr);
-            }
-
-            if (typeof figEquity.layout.title === 'string') {
-                figEquity.layout.title = replaceDateSuffix(figEquity.layout.title, dayStr);
-            } else {
-                figEquity.layout.title.text = replaceDateSuffix(figEquity.layout.title.text || '', dayStr);
-            }
+            allFigs.forEach(([, fig]) => updateFigTitle(fig, dayStr));
         }
 
         applyAutoBusinessDay();
-        if (showMode !== 'heatmaps') {
-            Plotly.newPlot('plot_timeline', figTimeline.data, figTimeline.layout, cfg);
-        }
-        Plotly.newPlot('plot_waits', figWaits.data, figWaits.layout, cfg);
-        Plotly.newPlot('plot_equity', figEquity.data, figEquity.layout, cfg);
+        allFigs.forEach(([plotId, fig, mayHide]) => {
+            if (mayHide && showMode === 'heatmaps') return;
+            Plotly.newPlot(plotId, fig.data, fig.layout, cfg);
+        });
 
         setInterval(() => {
             applyAutoBusinessDay();
-            if (showMode !== 'heatmaps') {
-                Plotly.relayout('plot_timeline', figTimeline.layout);
-            }
-            Plotly.relayout('plot_waits', figWaits.layout);
-            Plotly.relayout('plot_equity', figEquity.layout);
+            allFigs.forEach(([plotId, fig, mayHide]) => {
+                if (mayHide && showMode === 'heatmaps') return;
+                Plotly.relayout(plotId, fig.layout);
+            });
         }, 60000);
+
+        // Comparação "horário atual vs. proposta otimizada" - as figuras já trazem as duas
+        // versões embutidas como traces extra (visible=false por omissão). Cada visualização
+        // tem o seu próprio botão Atual/Otimizado, independente das outras - assim dá para,
+        // por exemplo, comparar a timeline atual lado a lado com a equidade já otimizada.
+        // Partilhado pelos dois sentidos (metro->bus e bus->metro), chamado uma vez por cada.
+        function wireOptimizationToggles(scopeEl, hasOpt, note, noteBarId, noteId, indices) {
+            if (!hasOpt) return;
+            document.getElementById(noteBarId).hidden = false;
+            document.getElementById(noteId).textContent = note;
+
+            function setVisibility(plotId, idx, mode) {
+                const cur = idx.current || [];
+                const opt = idx.optimized || [];
+                if (cur.length) Plotly.restyle(plotId, { visible: mode === 'current' }, cur);
+                if (opt.length) Plotly.restyle(plotId, { visible: mode === 'optimized' }, opt);
+            }
+
+            scopeEl.querySelectorAll('.opt-toggle[data-figure]').forEach((toggle) => {
+                const figureKey = toggle.dataset.figure;
+                const idx = indices[figureKey] || {};
+                if (!(idx.optimized && idx.optimized.length)) return; // sem versão otimizada para esta figura - mantém escondido
+                toggle.hidden = false;
+
+                const buttons = toggle.querySelectorAll('.opt-toggle-btn');
+                buttons.forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        setVisibility('plot_' + figureKey, idx, btn.dataset.mode);
+                        buttons.forEach((b) => b.classList.toggle('is-active', b === btn));
+                    });
+                });
+            });
+        }
+
+        wireOptimizationToggles(
+            document.getElementById('fwd-group'),
+            __HAS_OPTIMIZATION__,
+            __OPTIMIZATION_NOTE__,
+            'opt-note-bar',
+            'opt-note',
+            __OPTIMIZATION_INDICES__,
+        );
+        if (hasReverse) {
+            wireOptimizationToggles(
+                document.getElementById('rev-group'),
+                __HAS_OPTIMIZATION_REV__,
+                __OPTIMIZATION_NOTE_REV__,
+                'opt-note-bar-rev',
+                'opt-note-rev',
+                __OPTIMIZATION_INDICES_REV__,
+            );
+        }
     </script>
 </body>
 </html>
