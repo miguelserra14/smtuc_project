@@ -78,6 +78,22 @@ POINTS_OF_INTEREST_CSV = "data/points_of_interest.csv"
 # envolva expandir o período de serviço.
 LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -16.0
 
+# Desvio de fase (minutos) da proposta "melhorado" da linha 54 em Portela/Portagem: em vez de só
+# reajustar o horário de UM autocarro no ciclo de 40 min (LINE_54_OPTIMIZED_PHASE_SHIFT_MIN),
+# esta proposta assume um SEGUNDO autocarro no mesmo ciclo (Portagem->Portela->Portagem),
+# desfasado 20 min do primeiro - dobra a frequência de 40 para 20 min. Implica +1 autocarro/
+# motorista face ao atual, ao contrário da proposta "otimizado". Como a frequência duplicada tem
+# período de 20 min (não 40), o desvio de fase só tem 20 valores possíveis (não 40) - testei os
+# 20 exaustivamente sobre os horários reais GTFS, nos mesmos 4 sentidos de transbordo. Ao
+# contrário do caso de um único autocarro, aqui EXISTE um desvio que melhora os 4 sentidos em
+# simultâneo, sem nenhuma exceção - a folga extra do 2º autocarro é suficiente para desfazer o
+# acoplamento rígido entre Portela e Portagem que impede uma vitória pura na proposta "otimizado":
+#   Portela  metro->bus: 16.0 -> 13.0 min (-3.0)    bus->metro: 14.0 -> 12.0 min (-2.0)
+#   Portagem metro->bus: 19.5 ->  9.0 min (-10.5)   bus->metro: 12.0 -> 10.0 min (-2.0)
+# Horário noturno (após a última viagem atual) deliberadamente fora desta proposta por agora,
+# tal como na "otimizado".
+LINE_54_MELHORADO_PHASE_SHIFT_MIN = -8.0
+
 
 r"""
 

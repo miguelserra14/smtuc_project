@@ -159,6 +159,55 @@ def _shift_reverse_schedule_bus_arrivals(schedule_df: pd.DataFrame, shift_minute
     return out
 
 
+def _double_and_shift_schedule_bus_times(
+    schedule_df: pd.DataFrame, line_value: str, shift_minutes: float
+) -> pd.DataFrame:
+    """Constrói a proposta "melhorado": simula um 2º autocarro na linha `line_value`, desfasado
+    20 min do 1º (dobra a frequência de 40 para 20 min - o ciclo físico do autocarro não muda,
+    só passa a ter 2 veículos a percorrê-lo em simultâneo em vez de 1), e desloca o conjunto
+    (original + duplicado) por `shift_minutes` - ver `config.LINE_54_MELHORADO_PHASE_SHIFT_MIN`
+    para o valor e o raciocínio por trás dele. As restantes linhas (ex.: a 38 em Portagem) ficam
+    exatamente como estavam - a proposta só mexe na linha 54."""
+    out = schedule_df.copy()
+    line_col = out["bus_line_passage"] if "bus_line_passage" in out.columns else out["bus_line"]
+    mask = (line_col.astype(str).str.strip() == str(line_value)) & (out["bus_time"].astype(str).str.strip() != "")
+    base_rows = out.loc[mask]
+    dup_rows = base_rows.copy()
+    dup_rows["bus_time"] = dup_rows["bus_time"].astype(str).map(
+        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + 20 * 60)) % 86400)
+    )
+    doubled = pd.concat([base_rows, dup_rows], ignore_index=True)
+    doubled["bus_time"] = doubled["bus_time"].astype(str).map(
+        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + shift_minutes * 60)) % 86400)
+    )
+    if "idx" in doubled.columns:
+        doubled["idx"] = range(1, len(doubled) + 1)
+    other = out.loc[~mask]
+    return pd.concat([other, doubled], ignore_index=True)
+
+
+def _double_and_shift_reverse_schedule_bus_arrivals(schedule_df: pd.DataFrame, shift_minutes: float) -> pd.DataFrame:
+    """Equivalente a `_double_and_shift_schedule_bus_times`, mas para tabelas de
+    `build_reverse_stop_vs_metro_table` - tal como em `_shift_reverse_schedule_bus_arrivals`, é a
+    coluna `metro_time_from_origin` (as chegadas de autocarro, nesta tabela invertida) que se
+    duplica e desloca, sem filtrar por linha."""
+    out = schedule_df.copy()
+    mask = out["metro_time_from_origin"].astype(str).str.strip() != ""
+    base_rows = out.loc[mask]
+    dup_rows = base_rows.copy()
+    dup_rows["metro_time_from_origin"] = dup_rows["metro_time_from_origin"].astype(str).map(
+        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + 20 * 60)) % 86400)
+    )
+    doubled = pd.concat([base_rows, dup_rows], ignore_index=True)
+    doubled["metro_time_from_origin"] = doubled["metro_time_from_origin"].astype(str).map(
+        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + shift_minutes * 60)) % 86400)
+    )
+    if "idx" in doubled.columns:
+        doubled["idx"] = range(1, len(doubled) + 1)
+    other = out.loc[~mask]
+    return pd.concat([other, doubled], ignore_index=True)
+
+
 def _wait_summary(waits_df: pd.DataFrame) -> dict[str, float]:
     if waits_df.empty:
         return {"median": float("nan"), "coverage10": float("nan")}
@@ -366,47 +415,39 @@ def _equity_heat_pivot(waits_df: pd.DataFrame) -> pd.DataFrame:
 
 def _build_direction_figures(
     schedule_df: pd.DataFrame,
-    schedule_df_opt: pd.DataFrame | None,
+    variants: list[tuple[str, str, pd.DataFrame | None, str | None]],
     metro_row_label: str,
     bus_lines_unique: list[str],
     sample_date: str,
     timeline_title: str,
     wait_title: str,
     equity_title: str,
-    optimization_desc: str | None,
     bus_row_label_prefix: str = "Autocarro",
     wait_trigger_label: str = "Hora de chegada do metro",
     wait_target_label: str = "Próximo autocarro",
     wait_target_line_label: str = "Linha",
 ) -> tuple[object, object, object, dict | None, pd.DataFrame]:
-    """Constrói as 3 figuras (timeline, espera, equidade) + payload de otimização para UM
-    sentido de transbordo. Partilhado pelo sentido metro->bus e bus->metro (ver
-    `build_reverse_stop_vs_metro_table`) - só muda o `schedule_df` de entrada e os rótulos.
-    `schedule_df_opt` (opcional) é a versão com o horário otimizado já aplicado; se None, as
-    figuras saem sem a comparação Atual/Otimizado. Devolve também `waits_df` (não otimizado),
-    útil para o chamador gravar em CSV."""
+    """Constrói as 3 figuras (timeline, espera, equidade) para UM sentido de transbordo, com o
+    horário "atual" sempre visível mais uma trace extra (visible=False) por cada variante de
+    `variants` - ex.: "otimizado" (ver `config.LINE_54_OPTIMIZED_PHASE_SHIFT_MIN`) e "melhorado"
+    (ver `config.LINE_54_MELHORADO_PHASE_SHIFT_MIN`) - selecionável por um botão Atual/Otimizado/
+    Melhorado. Partilhado pelo sentido metro->bus e bus->metro (ver
+    `build_reverse_stop_vs_metro_table`) - só mudam `schedule_df`/`variants` e os rótulos.
+
+    Cada item de `variants` é `(key, label, schedule_df_variante, descricao)`; entradas com
+    `schedule_df_variante=None` são ignoradas - permite ao chamador passar sempre a mesma lista
+    de variantes possíveis e desligar uma condicionalmente sem a filtrar primeiro. Devolve também
+    `waits_df` (atual), útil para o chamador gravar em CSV."""
+    active_variants = [(key, label, df, desc) for key, label, df, desc in variants if df is not None]
+
     waits_df = _build_waits_table(schedule_df)
-    apply_optimization = schedule_df_opt is not None
-    waits_df_opt = _build_waits_table(schedule_df_opt) if apply_optimization else None
 
     # 1) Timeline heatmap: frequency of passages per hour and transport type
     timeline_trace_current = _timeline_heatmap_trace(
         schedule_df, metro_row_label, bus_lines_unique, visible=True, bus_row_label_prefix=bus_row_label_prefix
     )
     fig_timeline = go.Figure(data=[timeline_trace_current])
-    timeline_indices = {"current": [0], "optimized": []}
-    if apply_optimization:
-        timeline_trace_opt = _timeline_heatmap_trace(
-            schedule_df_opt, metro_row_label, bus_lines_unique, visible=False, bus_row_label_prefix=bus_row_label_prefix
-        )
-        fig_timeline.add_trace(timeline_trace_opt)
-        timeline_indices = {"current": [0], "optimized": [1]}
-    fig_timeline.update_layout(
-        title=timeline_title,
-        xaxis_title="Hora",
-        yaxis_title="Rede",
-        plot_bgcolor="white",
-    )
+    timeline_indices: dict[str, list[int]] = {"atual": [0]}
 
     # 2) Wait-time bar plot with point overlays for special cases
     waits_traces_current, waits_df_sorted = _wait_chart_traces(
@@ -414,17 +455,83 @@ def _build_direction_figures(
         target_label=wait_target_label, target_line_label=wait_target_line_label,
     )
     fig_wait = go.Figure(data=waits_traces_current)
-    waits_indices = {"current": list(range(len(waits_traces_current))), "optimized": []}
-    if apply_optimization:
-        waits_traces_opt, _ = _wait_chart_traces(
-            waits_df_opt, visible=False, trigger_label=wait_trigger_label,
+    waits_indices: dict[str, list[int]] = {"atual": list(range(len(waits_traces_current)))}
+
+    # 3) Period equity heatmap (cobertura <=10, perdas >15, espera média)
+    heat_pivot = _equity_heat_pivot(waits_df)
+    equity_trace_current = go.Heatmap(
+        z=heat_pivot.to_numpy(),
+        x=list(heat_pivot.columns),
+        y=list(heat_pivot.index),
+        colorscale="YlOrRd",
+        texttemplate="%{z}",
+        colorbar={"title": "Valor"},
+        visible=True,
+    )
+    fig_heat = go.Figure(data=[equity_trace_current])
+    equity_indices: dict[str, list[int]] = {"atual": [0]}
+
+    cur_summary = _wait_summary(waits_df)
+    labels_by_mode = {"atual": "Atual"}
+    notes_by_mode: dict[str, str] = {}
+
+    for key, label, var_df, desc in active_variants:
+        labels_by_mode[key] = label
+
+        timeline_trace_var = _timeline_heatmap_trace(
+            var_df, metro_row_label, bus_lines_unique, visible=False, bus_row_label_prefix=bus_row_label_prefix
+        )
+        start = len(fig_timeline.data)
+        fig_timeline.add_trace(timeline_trace_var)
+        timeline_indices[key] = [start]
+
+        waits_df_var = _build_waits_table(var_df)
+        waits_traces_var, _ = _wait_chart_traces(
+            waits_df_var, visible=False, trigger_label=wait_trigger_label,
             target_label=wait_target_label, target_line_label=wait_target_line_label,
         )
         start = len(fig_wait.data)
-        for trace in waits_traces_opt:
+        for trace in waits_traces_var:
             fig_wait.add_trace(trace)
-        waits_indices["optimized"] = list(range(start, start + len(waits_traces_opt)))
+        waits_indices[key] = list(range(start, start + len(waits_traces_var)))
 
+        heat_pivot_var = _equity_heat_pivot(waits_df_var)
+        start = len(fig_heat.data)
+        fig_heat.add_trace(
+            go.Heatmap(
+                z=heat_pivot_var.to_numpy(),
+                x=list(heat_pivot_var.columns),
+                y=list(heat_pivot_var.index),
+                colorscale="YlOrRd",
+                texttemplate="%{z}",
+                colorbar={"title": "Valor"},
+                visible=False,
+            )
+        )
+        equity_indices[key] = [start]
+
+        var_summary = _wait_summary(waits_df_var)
+        regresses = var_summary["median"] > cur_summary["median"]
+        caveat = (
+            " Este sentido/paragem piora ligeiramente face ao atual em troca de ganhos maiores "
+            "nos outros sentidos/paragens, que esta visualização não mostra sozinha - o desvio "
+            "foi escolhido a olhar para os 4 sentidos possíveis ao mesmo tempo (metro->bus e "
+            "bus->metro, em Portela e em Portagem), não só para este."
+            if regresses
+            else ""
+        )
+        notes_by_mode[key] = (
+            f"{label} ({desc}): espera mediana {cur_summary['median']:.1f} -> "
+            f"{var_summary['median']:.1f} min, cobertura <=10min {cur_summary['coverage10']:.1f}% -> "
+            f"{var_summary['coverage10']:.1f}%.{caveat}"
+        )
+
+    fig_timeline.update_layout(
+        title=timeline_title,
+        xaxis_title="Hora",
+        yaxis_title="Rede",
+        plot_bgcolor="white",
+    )
     fig_wait.update_layout(
         title=wait_title,
         plot_bgcolor="white",
@@ -439,33 +546,6 @@ def _build_direction_figures(
         yaxis={"title": "Espera (min)", "showgrid": True, "gridcolor": "#d9d9d9", "rangemode": "tozero"},
         legend_title_text="",
     )
-
-    # 3) Period equity heatmap (cobertura <=10, perdas >15, espera média)
-    heat_pivot = _equity_heat_pivot(waits_df)
-    equity_trace_current = go.Heatmap(
-        z=heat_pivot.to_numpy(),
-        x=list(heat_pivot.columns),
-        y=list(heat_pivot.index),
-        colorscale="YlOrRd",
-        texttemplate="%{z}",
-        colorbar={"title": "Valor"},
-        visible=True,
-    )
-    fig_heat = go.Figure(data=[equity_trace_current])
-    equity_indices = {"current": [0], "optimized": []}
-    if apply_optimization:
-        heat_pivot_opt = _equity_heat_pivot(waits_df_opt)
-        equity_trace_opt = go.Heatmap(
-            z=heat_pivot_opt.to_numpy(),
-            x=list(heat_pivot_opt.columns),
-            y=list(heat_pivot_opt.index),
-            colorscale="YlOrRd",
-            texttemplate="%{z}",
-            colorbar={"title": "Valor"},
-            visible=False,
-        )
-        fig_heat.add_trace(equity_trace_opt)
-        equity_indices = {"current": [0], "optimized": [1]}
     fig_heat.update_layout(
         title=equity_title,
         xaxis_title="Período",
@@ -473,33 +553,18 @@ def _build_direction_figures(
         plot_bgcolor="white",
     )
 
-    optimization_payload = None
-    if apply_optimization:
-        cur_summary = _wait_summary(waits_df)
-        opt_summary = _wait_summary(waits_df_opt)
-        regresses = opt_summary["median"] > cur_summary["median"]
-        caveat = (
-            " Este sentido/paragem piora ligeiramente em troca de ganhos maiores nos outros "
-            "sentidos/paragens, que esta visualização não mostra sozinha - o desvio foi "
-            "escolhido a olhar para os 4 sentidos possíveis ao mesmo tempo (metro->bus e bus-"
-            ">metro, em Portela e em Portagem), não só para este; não existe nenhum desvio que "
-            "melhore os 4 sem exceção (ciclo de um só autocarro)."
-            if regresses
-            else ""
-        )
-        note = (
-            f"Proposta de horário otimizado ({optimization_desc}): espera mediana "
-            f"{cur_summary['median']:.1f} -> {opt_summary['median']:.1f} min, cobertura <=10min "
-            f"{cur_summary['coverage10']:.1f}% -> {opt_summary['coverage10']:.1f}%.{caveat}"
-        )
-        optimization_payload = {
-            "note": note,
+    variants_payload = None
+    if active_variants:
+        variants_payload = {
+            "modes": ["atual"] + [key for key, _, _, _ in active_variants],
+            "labels": labels_by_mode,
+            "notes": notes_by_mode,
             "timeline": timeline_indices,
             "waits": waits_indices,
             "equity": equity_indices,
         }
 
-    return fig_timeline, fig_wait, fig_heat, optimization_payload, waits_df
+    return fig_timeline, fig_wait, fig_heat, variants_payload, waits_df
 
 
 def create_combined_integration_dashboard(
@@ -507,19 +572,19 @@ def create_combined_integration_dashboard(
     timeline_fig: object,
     waits_fig: object,
     equity_fig: object,
-    optimization: dict | None = None,
+    variants: dict | None = None,
     reverse: dict | None = None,
 ) -> str:
     """Create a single HTML page with timeline, waits and equity in one document.
 
-    `optimization` (opcional) descreve a comparação "horário atual vs. otimizado" já embutida
-    nas figuras (como traces extra com `visible=False`) - deve ter as chaves `note` (texto),
-    `current_indices`/`optimized_indices` por figura (`timeline`, `waits`, `equity`), cada uma
-    uma lista de índices de traces. Sem isto, o botão de alternância não é mostrado.
+    `variants` (opcional) descreve as variantes de horário ("otimizado", "melhorado", ...) já
+    embutidas nas figuras (como traces extra com `visible=False`) - ver o payload devolvido por
+    `_build_direction_figures` (chaves `modes`, `labels`, `notes`, `timeline`, `waits`,
+    `equity`). Sem isto, o grupo de botões Atual/Otimizado/Melhorado não é mostrado.
 
     `reverse` (opcional) descreve o sentido inverso (bus->metro, ver
     `build_reverse_stop_vs_metro_table`) a mostrar como 3 painéis extra na mesma página - deve
-    ter as chaves `timeline_fig`/`waits_fig`/`equity_fig` e opcionalmente `optimization` (mesmo
+    ter as chaves `timeline_fig`/`waits_fig`/`equity_fig` e opcionalmente `variants` (mesmo
     formato do parâmetro acima). Sem isto, a página só mostra o sentido metro->bus.
     """
     if pio is None:
@@ -530,48 +595,31 @@ def create_combined_integration_dashboard(
 
     import json
 
-    def _js_string_literal(text: str) -> str:
-        # json.dumps produces a valid, fully-escaped JS string literal (quotes, backslashes,
-        # newlines...); only "</" still needs manual escaping so the note can never prematurely
-        # close the surrounding <script> tag if it ever contained that substring.
-        return json.dumps(text, ensure_ascii=False).replace("</", "<\\/")
-
-    def _optimization_indices_json(opt: dict | None) -> str:
-        if not opt:
-            return "{}"
-        return json.dumps(
-            {
-                "timeline": opt.get("timeline", {}),
-                "waits": opt.get("waits", {}),
-                "equity": opt.get("equity", {}),
-            },
-            ensure_ascii=False,
-        )
+    def _variants_json(payload: dict | None) -> str:
+        # json.dumps produces valid, fully-escaped JS (quotes, backslashes, newlines...); only
+        # "</" still needs manual escaping so an embedded note can never prematurely close the
+        # surrounding <script> tag if it ever contained that substring.
+        if not payload:
+            return "null"
+        return json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
 
     page = _read_template("integration_dashboard.html")
     page = page.replace("__TIMELINE_JSON__", pio.to_json(timeline_fig))
     page = page.replace("__WAITS_JSON__", pio.to_json(waits_fig))
     page = page.replace("__EQUITY_JSON__", pio.to_json(equity_fig))
-    page = page.replace("__HAS_OPTIMIZATION__", "true" if optimization else "false")
-    page = page.replace("__OPTIMIZATION_NOTE__", _js_string_literal(str(optimization.get("note", "")) if optimization else ""))
-    page = page.replace("__OPTIMIZATION_INDICES__", _optimization_indices_json(optimization))
+    page = page.replace("__VARIANTS_JSON__", _variants_json(variants))
 
     page = page.replace("__HAS_REVERSE__", "true" if reverse else "false")
     if reverse:
         page = page.replace("__TIMELINE_REV_JSON__", pio.to_json(reverse["timeline_fig"]))
         page = page.replace("__WAITS_REV_JSON__", pio.to_json(reverse["waits_fig"]))
         page = page.replace("__EQUITY_REV_JSON__", pio.to_json(reverse["equity_fig"]))
-        rev_opt = reverse.get("optimization")
-        page = page.replace("__HAS_OPTIMIZATION_REV__", "true" if rev_opt else "false")
-        page = page.replace("__OPTIMIZATION_NOTE_REV__", _js_string_literal(str(rev_opt.get("note", "")) if rev_opt else ""))
-        page = page.replace("__OPTIMIZATION_INDICES_REV__", _optimization_indices_json(rev_opt))
+        page = page.replace("__VARIANTS_REV_JSON__", _variants_json(reverse.get("variants")))
     else:
         page = page.replace("__TIMELINE_REV_JSON__", "null")
         page = page.replace("__WAITS_REV_JSON__", "null")
         page = page.replace("__EQUITY_REV_JSON__", "null")
-        page = page.replace("__HAS_OPTIMIZATION_REV__", "false")
-        page = page.replace("__OPTIMIZATION_NOTE_REV__", '""')
-        page = page.replace("__OPTIMIZATION_INDICES_REV__", "{}")
+        page = page.replace("__VARIANTS_REV_JSON__", "null")
 
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
@@ -589,6 +637,7 @@ def generate_connection_visualizations(
     fixed_html_name: str | None = None,
     phase_shift_min: float | None = None,
     phase_shift_line: str = "54",
+    melhorado_phase_shift_min: float | None = None,
     reverse_metro_direction_id: int | None = None,
 ) -> dict[str, str]:
     """
@@ -596,13 +645,19 @@ def generate_connection_visualizations(
 
     `phase_shift_min` (opcional): se indicado, gera também uma proposta de horário otimizado -
     desloca só os horários de `phase_shift_line` por `phase_shift_min` minutos (mesmo número de
-    viagens, mesmo ciclo) e embute um botão "Atual/Otimizado" em cada visualização.
+    viagens, mesmo ciclo) e embute um botão "Atual/Otimizado/Melhorado" em cada visualização.
     Ver `config.LINE_54_OPTIMIZED_PHASE_SHIFT_MIN` para o valor e o raciocínio por trás dele.
+
+    `melhorado_phase_shift_min` (opcional): se indicado, gera também uma proposta "melhorado" -
+    simula um 2º autocarro no ciclo de `phase_shift_line` (dobra a frequência de 40 para 20 min -
+    implica +1 autocarro/motorista, ao contrário da proposta "otimizado") e desloca o conjunto
+    por este valor. Ver `config.LINE_54_MELHORADO_PHASE_SHIFT_MIN`.
 
     `reverse_metro_direction_id` (opcional): se indicado (0 ou 1, conforme `trips.direction_id`
     do Metrobus), gera TAMBÉM o sentido inverso (bus->metro - ver
     `build_reverse_stop_vs_metro_table`) como 3 painéis extra na mesma página, cada um com o seu
-    próprio botão Atual/Otimizado. Sem isto, só sai o sentido metro->bus (comportamento anterior).
+    próprio botão Atual/Otimizado/Melhorado. Sem isto, só sai o sentido metro->bus (comportamento
+    anterior).
 
     Retorna um dicionario com os caminhos dos ficheiros gerados.
     """
@@ -665,7 +720,7 @@ def generate_connection_visualizations(
         if apply_optimization
         else None
     )
-    n_trips = int((bus_line_col == phase_shift_line).sum()) if apply_optimization else 0
+    n_trips = int((bus_line_col == phase_shift_line).sum())
     optimization_desc = (
         f"linha {phase_shift_line}, desvio de {phase_shift_min:+.0f} min face ao horário atual, "
         f"mesmas {n_trips} viagens/dia e mesmo ciclo de 40 min - sem autocarros ou motoristas "
@@ -674,16 +729,33 @@ def generate_connection_visualizations(
         else None
     )
 
-    fig_timeline, fig_wait, fig_heat, optimization_payload, waits_df = _build_direction_figures(
+    apply_melhorado = melhorado_phase_shift_min is not None and phase_shift_line in bus_lines_unique
+    schedule_df_melhorado = (
+        _double_and_shift_schedule_bus_times(schedule_df, phase_shift_line, melhorado_phase_shift_min)
+        if apply_melhorado
+        else None
+    )
+    melhorado_desc = (
+        f"linha {phase_shift_line} com 2 autocarros no mesmo ciclo de 40 min (desfasados 20 min "
+        f"- frequência 40->20 min), desvio de {melhorado_phase_shift_min:+.0f} min, "
+        f"{n_trips} -> {2 * n_trips} viagens/dia - implica +1 autocarro/motorista face ao atual; "
+        f"horário noturno fora de âmbito por agora"
+        if apply_melhorado
+        else None
+    )
+
+    fig_timeline, fig_wait, fig_heat, variants_payload, waits_df = _build_direction_figures(
         schedule_df,
-        schedule_df_opt,
+        [
+            ("otimizado", "Otimizado", schedule_df_opt, optimization_desc),
+            ("melhorado", "Melhorado", schedule_df_melhorado, melhorado_desc),
+        ],
         metro_row_label=f"Metro ({metro_origin_ref} -> {metro_stop_ref})",
         bus_lines_unique=bus_lines_unique,
         sample_date=sample_date,
         timeline_title=f"Frequência de Passagens ({sample_date})",
         wait_title=f"Espera até ao Próximo Autocarro ({sample_date})",
         equity_title=f"Equidade Temporal de Ligações ({sample_date})",
-        optimization_desc=optimization_desc,
         wait_trigger_label="Hora de chegada do metro",
         wait_target_label="Próximo autocarro",
         wait_target_line_label="Linha",
@@ -714,16 +786,35 @@ def generate_connection_visualizations(
             if apply_optimization_rev
             else None
         )
-        fig_timeline_rev, fig_wait_rev, fig_heat_rev, optimization_payload_rev, waits_df_rev = _build_direction_figures(
+
+        apply_melhorado_rev = melhorado_phase_shift_min is not None
+        schedule_df_rev_melhorado = (
+            _double_and_shift_reverse_schedule_bus_arrivals(schedule_df_rev, melhorado_phase_shift_min)
+            if apply_melhorado_rev
+            else None
+        )
+        n_trips_rev = n_trips or len(schedule_df_rev)
+        melhorado_desc_rev = (
+            f"linha {phase_shift_line} com 2 autocarros no mesmo ciclo de 40 min (desfasados 20 "
+            f"min - frequência 40->20 min), desvio de {melhorado_phase_shift_min:+.0f} min, "
+            f"{n_trips_rev} -> {2 * n_trips_rev} viagens/dia - implica +1 autocarro/motorista "
+            f"face ao atual; horário noturno fora de âmbito por agora"
+            if apply_melhorado_rev
+            else None
+        )
+
+        fig_timeline_rev, fig_wait_rev, fig_heat_rev, variants_payload_rev, waits_df_rev = _build_direction_figures(
             schedule_df_rev,
-            schedule_df_rev_opt,
+            [
+                ("otimizado", "Otimizado", schedule_df_rev_opt, optimization_desc_rev),
+                ("melhorado", "Melhorado", schedule_df_rev_melhorado, melhorado_desc_rev),
+            ],
             metro_row_label=f"Autocarro {line_display} (chegada a {bus_stop_ref})",
             bus_lines_unique=["Metro"],
             sample_date=sample_date,
             timeline_title=f"Frequência de Passagens - sentido inverso ({sample_date})",
             wait_title=f"Espera até à Próxima Partida de Metro ({sample_date})",
             equity_title=f"Equidade Temporal de Ligações - sentido inverso ({sample_date})",
-            optimization_desc=optimization_desc_rev,
             bus_row_label_prefix="",
             wait_trigger_label="Hora de chegada do autocarro",
             wait_target_label="Próxima partida de metro",
@@ -733,7 +824,7 @@ def generate_connection_visualizations(
             "timeline_fig": fig_timeline_rev,
             "waits_fig": fig_wait_rev,
             "equity_fig": fig_heat_rev,
-            "optimization": optimization_payload_rev,
+            "variants": variants_payload_rev,
         }
 
     waits_csv_path = atual_dir / f"{prefix}_wt.csv"
@@ -756,6 +847,33 @@ def generate_connection_visualizations(
     if waits_df_rev is not None:
         waits_df_rev.to_csv(atual_dir / f"{prefix}_wt_reverso.csv", index=False)
 
+    if apply_melhorado:
+        melhorado_dir = out_root / "melhorado"
+        melhorado_dir.mkdir(parents=True, exist_ok=True)
+        schedule_df_melhorado.to_csv(
+            melhorado_dir / (
+                f"line_{_safe_slug(line_number)}_bus_{_safe_slug(bus_stop_ref)}"
+                f"_metro_{_safe_slug(metro_stop_ref)}_melhorado.csv"
+            ),
+            index=False,
+        )
+        (melhorado_dir / f"{prefix}_wt_melhorado.csv").write_text(
+            _build_waits_table(schedule_df_melhorado).to_csv(index=False), encoding="utf-8"
+        )
+    if reverse_metro_direction_id is not None and apply_melhorado_rev:
+        melhorado_dir = out_root / "melhorado"
+        melhorado_dir.mkdir(parents=True, exist_ok=True)
+        schedule_df_rev_melhorado.to_csv(
+            melhorado_dir / (
+                f"reverse_line_{_safe_slug(line_number)}_bus_{_safe_slug(bus_stop_ref)}"
+                f"_metro_{_safe_slug(metro_stop_ref)}_melhorado.csv"
+            ),
+            index=False,
+        )
+        (melhorado_dir / f"{prefix}_wt_reverso_melhorado.csv").write_text(
+            _build_waits_table(schedule_df_rev_melhorado).to_csv(index=False), encoding="utf-8"
+        )
+
     combined_name = fixed_html_name or f"{prefix}_all.html"
     combined_path = out_root / combined_name
     create_combined_integration_dashboard(
@@ -763,7 +881,7 @@ def generate_connection_visualizations(
         timeline_fig=fig_timeline,
         waits_fig=fig_wait,
         equity_fig=fig_heat,
-        optimization=optimization_payload,
+        variants=variants_payload,
         reverse=reverse_payload,
     )
 

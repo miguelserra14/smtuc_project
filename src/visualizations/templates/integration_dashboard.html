@@ -78,30 +78,21 @@
             <section class="panel">
                 <h2>
                     <span>Timeline de passagens</span>
-                    <span class="opt-toggle" data-figure="timeline" role="group" aria-label="Timeline: horário atual ou otimizado" hidden>
-                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
-                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
-                    </span>
+                    <span class="opt-toggle" data-figure="timeline" data-plot="plot_timeline" role="group" aria-label="Timeline: horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
                 <div id="plot_timeline" class="plot"></div>
             </section>
             <section class="panel">
                 <h2>
                     <span>Espera de transbordo (metro -&gt; autocarro)</span>
-                    <span class="opt-toggle" data-figure="waits" role="group" aria-label="Espera de transbordo: horário atual ou otimizado" hidden>
-                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
-                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
-                    </span>
+                    <span class="opt-toggle" data-figure="waits" data-plot="plot_waits" role="group" aria-label="Espera de transbordo: horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
                 <div id="plot_waits" class="plot"></div>
             </section>
             <section class="panel">
                 <h2>
                     <span>Equidade temporal (metro -&gt; autocarro)</span>
-                    <span class="opt-toggle" data-figure="equity" role="group" aria-label="Equidade temporal: horário atual ou otimizado" hidden>
-                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
-                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
-                    </span>
+                    <span class="opt-toggle" data-figure="equity" data-plot="plot_equity" role="group" aria-label="Equidade temporal: horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
                 <div id="plot_equity" class="plot"></div>
             </section>
@@ -115,30 +106,21 @@
             <section class="panel">
                 <h2>
                     <span>Timeline de passagens (sentido inverso)</span>
-                    <span class="opt-toggle" data-figure="timeline_rev" role="group" aria-label="Timeline (sentido inverso): horário atual ou otimizado" hidden>
-                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
-                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
-                    </span>
+                    <span class="opt-toggle" data-figure="timeline" data-plot="plot_timeline_rev" role="group" aria-label="Timeline (sentido inverso): horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
                 <div id="plot_timeline_rev" class="plot"></div>
             </section>
             <section class="panel">
                 <h2>
                     <span>Espera de transbordo (autocarro -&gt; metro)</span>
-                    <span class="opt-toggle" data-figure="waits_rev" role="group" aria-label="Espera de transbordo (sentido inverso): horário atual ou otimizado" hidden>
-                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
-                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
-                    </span>
+                    <span class="opt-toggle" data-figure="waits" data-plot="plot_waits_rev" role="group" aria-label="Espera de transbordo (sentido inverso): horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
                 <div id="plot_waits_rev" class="plot"></div>
             </section>
             <section class="panel">
                 <h2>
                     <span>Equidade temporal (autocarro -&gt; metro)</span>
-                    <span class="opt-toggle" data-figure="equity_rev" role="group" aria-label="Equidade temporal (sentido inverso): horário atual ou otimizado" hidden>
-                        <button type="button" class="opt-toggle-btn is-active" data-mode="current">Atual</button>
-                        <button type="button" class="opt-toggle-btn" data-mode="optimized">Otimizado</button>
-                    </span>
+                    <span class="opt-toggle" data-figure="equity" data-plot="plot_equity_rev" role="group" aria-label="Equidade temporal (sentido inverso): horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
                 <div id="plot_equity_rev" class="plot"></div>
             </section>
@@ -152,6 +134,8 @@
         const figTimelineRev = __TIMELINE_REV_JSON__;
         const figWaitsRev = __WAITS_REV_JSON__;
         const figEquityRev = __EQUITY_REV_JSON__;
+        const variantsFwd = __VARIANTS_JSON__;
+        const variantsRev = __VARIANTS_REV_JSON__;
         const cfg = { responsive: true };
 
         // Support ?show=heatmaps query parameter to hide the (forward-direction) timeline
@@ -232,56 +216,72 @@
             });
         }, 60000);
 
-        // Comparação "horário atual vs. proposta otimizada" - as figuras já trazem as duas
-        // versões embutidas como traces extra (visible=false por omissão). Cada visualização
-        // tem o seu próprio botão Atual/Otimizado, independente das outras - assim dá para,
-        // por exemplo, comparar a timeline atual lado a lado com a equidade já otimizada.
-        // Partilhado pelos dois sentidos (metro->bus e bus->metro), chamado uma vez por cada.
-        function wireOptimizationToggles(scopeEl, hasOpt, note, noteBarId, noteId, indices) {
-            if (!hasOpt) return;
-            document.getElementById(noteBarId).hidden = false;
-            document.getElementById(noteId).textContent = note;
+        // Comparação "horário atual vs. propostas otimizada/melhorada" - as figuras já trazem
+        // todas as versões embutidas como traces extra (visible=false por omissão). Cada
+        // visualização tem o seu próprio grupo de botões (Atual/Otimizado/Melhorado),
+        // independente das outras - assim dá para, por exemplo, comparar a timeline atual lado a
+        // lado com a equidade já melhorada. `payload` vem de `_build_direction_figures`
+        // (`variants` em integration.py): chaves `modes` (ordem dos botões), `labels` (texto de
+        // cada botão), `notes` (texto da barra de nota por modo, opcional) e `timeline`/`waits`/
+        // `equity` (índices de traces por modo, por figura). Partilhado pelos dois sentidos
+        // (metro->bus e bus->metro), chamado uma vez por cada.
+        function wireVariantToggles(scopeEl, payload, noteBarId, noteId) {
+            if (!payload) return;
+            const modes = payload.modes || ['atual'];
+            const labels = payload.labels || {};
+            const notes = payload.notes || {};
+            const indicesByFigure = {
+                timeline: payload.timeline || {},
+                waits: payload.waits || {},
+                equity: payload.equity || {},
+            };
 
-            function setVisibility(plotId, idx, mode) {
-                const cur = idx.current || [];
-                const opt = idx.optimized || [];
-                if (cur.length) Plotly.restyle(plotId, { visible: mode === 'current' }, cur);
-                if (opt.length) Plotly.restyle(plotId, { visible: mode === 'optimized' }, opt);
+            function updateNote(mode) {
+                const bar = document.getElementById(noteBarId);
+                const noteEl = document.getElementById(noteId);
+                if (!bar || !noteEl) return;
+                const text = notes[mode];
+                if (text) {
+                    noteEl.textContent = text;
+                    bar.hidden = false;
+                } else {
+                    bar.hidden = true;
+                }
             }
 
             scopeEl.querySelectorAll('.opt-toggle[data-figure]').forEach((toggle) => {
                 const figureKey = toggle.dataset.figure;
-                const idx = indices[figureKey] || {};
-                if (!(idx.optimized && idx.optimized.length)) return; // sem versão otimizada para esta figura - mantém escondido
-                toggle.hidden = false;
+                const plotId = toggle.dataset.plot;
+                const idxByMode = indicesByFigure[figureKey] || {};
+                const availableModes = modes.filter((m) => (idxByMode[m] || []).length);
+                if (availableModes.length < 2) return; // só "atual" tem traces - nada para alternar
 
-                const buttons = toggle.querySelectorAll('.opt-toggle-btn');
-                buttons.forEach((btn) => {
+                toggle.hidden = false;
+                toggle.innerHTML = '';
+                availableModes.forEach((mode, i) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'opt-toggle-btn' + (i === 0 ? ' is-active' : '');
+                    btn.dataset.mode = mode;
+                    btn.textContent = labels[mode] || mode;
                     btn.addEventListener('click', () => {
-                        setVisibility('plot_' + figureKey, idx, btn.dataset.mode);
-                        buttons.forEach((b) => b.classList.toggle('is-active', b === btn));
+                        availableModes.forEach((m) => {
+                            const idxs = idxByMode[m] || [];
+                            if (idxs.length) Plotly.restyle(plotId, { visible: m === mode }, idxs);
+                        });
+                        toggle.querySelectorAll('.opt-toggle-btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+                        updateNote(mode);
                     });
+                    toggle.appendChild(btn);
                 });
             });
+
+            updateNote('atual');
         }
 
-        wireOptimizationToggles(
-            document.getElementById('fwd-group'),
-            __HAS_OPTIMIZATION__,
-            __OPTIMIZATION_NOTE__,
-            'opt-note-bar',
-            'opt-note',
-            __OPTIMIZATION_INDICES__,
-        );
+        wireVariantToggles(document.getElementById('fwd-group'), variantsFwd, 'opt-note-bar', 'opt-note');
         if (hasReverse) {
-            wireOptimizationToggles(
-                document.getElementById('rev-group'),
-                __HAS_OPTIMIZATION_REV__,
-                __OPTIMIZATION_NOTE_REV__,
-                'opt-note-bar-rev',
-                'opt-note-rev',
-                __OPTIMIZATION_INDICES_REV__,
-            );
+            wireVariantToggles(document.getElementById('rev-group'), variantsRev, 'opt-note-bar-rev', 'opt-note-rev');
         }
     </script>
 </body>
