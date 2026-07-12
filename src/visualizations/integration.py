@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from config import OUTPUTS_INTEGRATION_DIR
@@ -223,22 +224,35 @@ def _wait_summary(waits_df: pd.DataFrame) -> dict[str, float]:
 def _wait_chart_traces(
     waits_df: pd.DataFrame,
     visible: bool,
+    x_categories: list[str] | None = None,
     trigger_label: str = "Hora de chegada do metro",
     target_label: str = "Próximo autocarro",
     target_line_label: str = "Linha",
 ) -> tuple[list, pd.DataFrame]:
     """Constrói as barras de espera + sobreposições (0 min, sem ligação) para `waits_df`, com
-    `visible` aplicado a todas as traces - usado para gerar o mesmo conjunto de traces duas
-    vezes (horário atual e horário otimizado) e trocar entre elas com um botão.
+    `visible` aplicado a todas as traces - usado para gerar o mesmo conjunto de traces várias
+    vezes (horário atual, otimizado, melhorado) e trocar entre elas com um botão.
 
     `waits_df` guarda sempre as mesmas colunas (`metro_time`, `next_bus_time`,
     `next_bus_line`), mas o SIGNIFICADO troca consoante o sentido (ver
     `build_reverse_stop_vs_metro_table`): `trigger_label`/`target_label`/`target_line_label`
-    deixam o chamador rotular o hover/eixo com o texto certo em vez de "metro"/"autocarro" fixos."""
+    deixam o chamador rotular o hover/eixo com o texto certo em vez de "metro"/"autocarro" fixos.
+
+    `x_categories` (opcional): lista ordenada de horários (strings HH:MM:SS) partilhada por
+    TODAS as variantes de uma mesma figura - cada linha de `waits_df` fica posicionada na sua
+    posição real dentro desta lista, em vez de um índice 0..N-1 próprio a este `waits_df`. Sem
+    isto, "otimizado" (chegadas desviadas no tempo) e sobretudo "melhorado" (o dobro das
+    chegadas, no sentido inverso) ficavam com o eixo X desalinhado ou a transbordar para além dos
+    rótulos do "atual" - ver `config.LINE_54_MELHORADO_PHASE_SHIFT_MIN`. Se omitido, usa-se a
+    ordem posicional própria deste `waits_df` (comportamento antigo)."""
     waits_df_sorted = waits_df.copy()
     waits_df_sorted["metro_time_s"] = waits_df_sorted["metro_time"].apply(_hhmmss_to_seconds)
     waits_df_sorted = waits_df_sorted.sort_values("metro_time_s").reset_index(drop=True)
-    waits_df_sorted["index_label"] = range(len(waits_df_sorted))
+    if x_categories:
+        position_by_time = {t: i for i, t in enumerate(x_categories)}
+        waits_df_sorted["index_label"] = waits_df_sorted["metro_time"].astype(str).map(position_by_time)
+    else:
+        waits_df_sorted["index_label"] = range(len(waits_df_sorted))
 
     zero_waits = waits_df_sorted[pd.to_numeric(waits_df_sorted["wait_min"], errors="coerce") == 0]
     no_link_waits = waits_df_sorted[waits_df_sorted["wait_class"] == "sem_ligacao"]
@@ -326,16 +340,27 @@ def _timeline_heatmap_trace(
     bus_row_label_prefix: str = "Autocarro",
 ):
     """Constrói uma única trace go.Heatmap com a frequência de passagens (linha "metro" +
-    cada linha "bus") em bins de 20 min, 06h-24h. Reutilizado para o horário atual e otimizado,
-    e para os dois sentidos (metro->bus e bus->metro - ver `build_reverse_stop_vs_metro_table`,
-    onde o conteúdo das colunas `metro_time_from_origin`/`bus_time` é trocado de propósito, por
-    isso os rótulos das linhas não podem ser fixos "Metro"/"Autocarro X": `metro_row_label` e
-    `bus_row_label_prefix` deixam o chamador escolher o texto certo para cada sentido)."""
-    metro_times_s = [
-        _hhmmss_to_seconds(v)
-        for v in schedule_df["metro_time_from_origin"].astype(str).tolist()
-        if str(v).strip()
-    ]
+    cada linha "bus") em bins de 20 min, 06h-24h. Reutilizado para o horário atual, otimizado e
+    melhorado, e para os dois sentidos (metro->bus e bus->metro - ver
+    `build_reverse_stop_vs_metro_table`, onde o conteúdo das colunas
+    `metro_time_from_origin`/`bus_time` é trocado de propósito, por isso os rótulos das linhas
+    não podem ser fixos "Metro"/"Autocarro X": `metro_row_label` e `bus_row_label_prefix` deixam
+    o chamador escolher o texto certo para cada sentido).
+
+    Conta horários ÚNICOS (`set`), não linhas de `schedule_df` - necessário porque
+    `_double_and_shift_schedule_bus_times`/`_double_and_shift_reverse_schedule_bus_arrivals`
+    (proposta "melhorado" - ver `config.LINE_54_MELHORADO_PHASE_SHIFT_MIN`) duplicam a linha
+    inteira para dobrar a frequência de UM lado (autocarro, ou chegadas no sentido inverso), o
+    que arrasta consigo uma cópia do valor do OUTRO lado (ex.: a mesma chegada de metro passa a
+    aparecer em 2 linhas) - sem o `set`, essa duplicação incidental inflacionava para o dobro a
+    frequência aparente do lado que NÃO mudou."""
+    metro_times_s = sorted(
+        {
+            _hhmmss_to_seconds(v)
+            for v in schedule_df["metro_time_from_origin"].astype(str).tolist()
+            if str(v).strip()
+        }
+    )
     if "bus_line_passage" in schedule_df.columns:
         bus_line_col = schedule_df["bus_line_passage"].astype(str).str.strip()
     else:
@@ -344,11 +369,13 @@ def _timeline_heatmap_trace(
     bus_times_by_line: dict[str, list[int]] = {}
     for line_val in bus_lines_unique:
         mask = (schedule_df["bus_time"].astype(str).str.strip() != "") & (bus_line_col == line_val)
-        bus_times_by_line[line_val] = [
-            _hhmmss_to_seconds(v)
-            for v in schedule_df.loc[mask, "bus_time"].astype(str).tolist()
-            if str(v).strip()
-        ]
+        bus_times_by_line[line_val] = sorted(
+            {
+                _hhmmss_to_seconds(v)
+                for v in schedule_df.loc[mask, "bus_time"].astype(str).tolist()
+                if str(v).strip()
+            }
+        )
 
     bin_minutes = 20
     start_h, end_h = 6, 24
@@ -437,10 +464,26 @@ def _build_direction_figures(
     Cada item de `variants` é `(key, label, schedule_df_variante, descricao)`; entradas com
     `schedule_df_variante=None` são ignoradas - permite ao chamador passar sempre a mesma lista
     de variantes possíveis e desligar uma condicionalmente sem a filtrar primeiro. Devolve também
-    `waits_df` (atual), útil para o chamador gravar em CSV."""
+    `waits_df` (atual), útil para o chamador gravar em CSV.
+
+    As 3 figuras usam SEMPRE a mesma escala (eixo Y da espera, cor da timeline, cor da
+    equidade) nas variantes atual/otimizado/melhorado - sem isto o autorange do Plotly recalcula
+    a escala consoante a variante visível e mascara a melhoria real (o eixo encolhe junto com os
+    valores e as barras parecem na mesma). O gráfico de espera usa ainda um eixo X partilhado
+    (união cronológica de todos os horários-gatilho de todas as variantes), necessário porque
+    "melhorado" tem o dobro das chegadas no sentido inverso - um índice posicional próprio a cada
+    variante desalinhava ou transbordava os rótulos do eixo."""
     active_variants = [(key, label, df, desc) for key, label, df, desc in variants if df is not None]
 
     waits_df = _build_waits_table(schedule_df)
+    waits_df_by_key = {"atual": waits_df}
+    for key, _label, var_df, _desc in active_variants:
+        waits_df_by_key[key] = _build_waits_table(var_df)
+
+    all_times: set[str] = set()
+    for wdf in waits_df_by_key.values():
+        all_times.update(str(v) for v in wdf["metro_time"].tolist() if str(v).strip())
+    x_categories = sorted(all_times, key=_hhmmss_to_seconds)
 
     # 1) Timeline heatmap: frequency of passages per hour and transport type
     timeline_trace_current = _timeline_heatmap_trace(
@@ -450,19 +493,19 @@ def _build_direction_figures(
     timeline_indices: dict[str, list[int]] = {"atual": [0]}
 
     # 2) Wait-time bar plot with point overlays for special cases
-    waits_traces_current, waits_df_sorted = _wait_chart_traces(
-        waits_df, visible=True, trigger_label=wait_trigger_label,
+    waits_traces_current, _ = _wait_chart_traces(
+        waits_df, visible=True, x_categories=x_categories, trigger_label=wait_trigger_label,
         target_label=wait_target_label, target_line_label=wait_target_line_label,
     )
     fig_wait = go.Figure(data=waits_traces_current)
     waits_indices: dict[str, list[int]] = {"atual": list(range(len(waits_traces_current)))}
 
     # 3) Period equity heatmap (cobertura <=10, perdas >15, espera média)
-    heat_pivot = _equity_heat_pivot(waits_df)
+    heat_pivots = [_equity_heat_pivot(waits_df)]
     equity_trace_current = go.Heatmap(
-        z=heat_pivot.to_numpy(),
-        x=list(heat_pivot.columns),
-        y=list(heat_pivot.index),
+        z=heat_pivots[0].to_numpy(),
+        x=list(heat_pivots[0].columns),
+        y=list(heat_pivots[0].index),
         colorscale="YlOrRd",
         texttemplate="%{z}",
         colorbar={"title": "Valor"},
@@ -477,6 +520,7 @@ def _build_direction_figures(
 
     for key, label, var_df, desc in active_variants:
         labels_by_mode[key] = label
+        waits_df_var = waits_df_by_key[key]
 
         timeline_trace_var = _timeline_heatmap_trace(
             var_df, metro_row_label, bus_lines_unique, visible=False, bus_row_label_prefix=bus_row_label_prefix
@@ -485,9 +529,8 @@ def _build_direction_figures(
         fig_timeline.add_trace(timeline_trace_var)
         timeline_indices[key] = [start]
 
-        waits_df_var = _build_waits_table(var_df)
         waits_traces_var, _ = _wait_chart_traces(
-            waits_df_var, visible=False, trigger_label=wait_trigger_label,
+            waits_df_var, visible=False, x_categories=x_categories, trigger_label=wait_trigger_label,
             target_label=wait_target_label, target_line_label=wait_target_line_label,
         )
         start = len(fig_wait.data)
@@ -496,6 +539,7 @@ def _build_direction_figures(
         waits_indices[key] = list(range(start, start + len(waits_traces_var)))
 
         heat_pivot_var = _equity_heat_pivot(waits_df_var)
+        heat_pivots.append(heat_pivot_var)
         start = len(fig_heat.data)
         fig_heat.add_trace(
             go.Heatmap(
@@ -526,6 +570,36 @@ def _build_direction_figures(
             f"{var_summary['coverage10']:.1f}%.{caveat}"
         )
 
+    # Escala partilhada entre atual/otimizado/melhorado (ver docstring) - aplicada só agora que
+    # todas as traces de cada figura já existem. Mutação feita sobre `fig_timeline.data` (não
+    # sobre os objetos `go.Heatmap` originais) porque `Figure.add_trace` guarda cópias internas -
+    # mutar o objeto que foi passado para `add_trace` não afeta o que fica na figura.
+    timeline_z_values = [np.asarray(t.z, dtype=float) for t in fig_timeline.data]
+    timeline_z_max = max((float(np.nanmax(z)) for z in timeline_z_values if z.size), default=1.0)
+    timeline_ticks = list(range(0, int(timeline_z_max) + 1))
+    for t in fig_timeline.data:
+        t.zmin = 0
+        t.zmax = timeline_z_max
+        t.colorbar = {
+            "title": "Freq.",
+            "tickvals": timeline_ticks,
+            "ticktext": [str(v) for v in timeline_ticks],
+            "len": 0.3,
+        }
+
+    wait_maxes = [
+        float(pd.to_numeric(wdf["wait_min"], errors="coerce").max())
+        for wdf in waits_df_by_key.values()
+        if pd.to_numeric(wdf["wait_min"], errors="coerce").notna().any()
+    ]
+    wait_y_max = (max(wait_maxes) * 1.05) if wait_maxes else 1.0
+
+    equity_z_values = [hp.to_numpy(dtype=float) for hp in heat_pivots]
+    equity_z_max = max((float(np.nanmax(z)) for z in equity_z_values if z.size), default=1.0)
+    for tr in fig_heat.data:
+        tr.zmin = 0
+        tr.zmax = equity_z_max
+
     fig_timeline.update_layout(
         title=timeline_title,
         xaxis_title="Hora",
@@ -538,12 +612,12 @@ def _build_direction_figures(
         xaxis={
             "title": wait_trigger_label,
             "tickmode": "array",
-            "tickvals": list(range(len(waits_df_sorted))),
-            "ticktext": waits_df_sorted["metro_time"].tolist(),
+            "tickvals": list(range(len(x_categories))),
+            "ticktext": x_categories,
             "showgrid": False,
             "tickangle": -45,
         },
-        yaxis={"title": "Espera (min)", "showgrid": True, "gridcolor": "#d9d9d9", "rangemode": "tozero"},
+        yaxis={"title": "Espera (min)", "showgrid": True, "gridcolor": "#d9d9d9", "range": [0, wait_y_max]},
         legend_title_text="",
     )
     fig_heat.update_layout(
