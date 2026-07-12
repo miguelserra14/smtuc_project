@@ -77,13 +77,6 @@
             </section>
             <section class="panel">
                 <h2>
-                    <span>Timeline de passagens</span>
-                    <span class="opt-toggle" data-figure="timeline" data-plot="plot_timeline" role="group" aria-label="Timeline: horário atual, otimizado ou melhorado" hidden></span>
-                </h2>
-                <div id="plot_timeline" class="plot"></div>
-            </section>
-            <section class="panel">
-                <h2>
                     <span>Espera de transbordo (metro -&gt; autocarro)</span>
                     <span class="opt-toggle" data-figure="waits" data-plot="plot_waits" role="group" aria-label="Espera de transbordo: horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
@@ -105,13 +98,6 @@
             </section>
             <section class="panel">
                 <h2>
-                    <span>Timeline de passagens (sentido inverso)</span>
-                    <span class="opt-toggle" data-figure="timeline" data-plot="plot_timeline_rev" role="group" aria-label="Timeline (sentido inverso): horário atual, otimizado ou melhorado" hidden></span>
-                </h2>
-                <div id="plot_timeline_rev" class="plot"></div>
-            </section>
-            <section class="panel">
-                <h2>
                     <span>Espera de transbordo (autocarro -&gt; metro)</span>
                     <span class="opt-toggle" data-figure="waits" data-plot="plot_waits_rev" role="group" aria-label="Espera de transbordo (sentido inverso): horário atual, otimizado ou melhorado" hidden></span>
                 </h2>
@@ -127,42 +113,26 @@
         </div>
     </main>
     <script>
-        const figTimeline = __TIMELINE_JSON__;
         const figWaits = __WAITS_JSON__;
         const figEquity = __EQUITY_JSON__;
         const hasReverse = __HAS_REVERSE__;
-        const figTimelineRev = __TIMELINE_REV_JSON__;
         const figWaitsRev = __WAITS_REV_JSON__;
         const figEquityRev = __EQUITY_REV_JSON__;
         const variantsFwd = __VARIANTS_JSON__;
         const variantsRev = __VARIANTS_REV_JSON__;
         const cfg = { responsive: true };
 
-        // Support ?show=heatmaps query parameter to hide the (forward-direction) timeline
-        const urlParams = new URLSearchParams(window.location.search);
-        const showMode = urlParams.get('show');
-
-        if (showMode === 'heatmaps') {
-            const panels = document.querySelectorAll('section.panel');
-            if (panels.length > 0) {
-                panels[0].style.display = 'none';
-            }
-        }
-
         if (hasReverse) {
             document.getElementById('rev-group').hidden = false;
         }
 
-        // [plotId, figure, podeFicarEscondidoEm-?show=heatmaps]
         const allFigs = [
-            ['plot_timeline', figTimeline, true],
-            ['plot_waits', figWaits, false],
-            ['plot_equity', figEquity, false],
+            ['plot_waits', figWaits],
+            ['plot_equity', figEquity],
         ];
         if (hasReverse) {
-            allFigs.push(['plot_timeline_rev', figTimelineRev, false]);
-            allFigs.push(['plot_waits_rev', figWaitsRev, false]);
-            allFigs.push(['plot_equity_rev', figEquityRev, false]);
+            allFigs.push(['plot_waits_rev', figWaitsRev]);
+            allFigs.push(['plot_equity_rev', figEquityRev]);
         }
 
         function pad2(v) {
@@ -203,15 +173,13 @@
         }
 
         applyAutoBusinessDay();
-        allFigs.forEach(([plotId, fig, mayHide]) => {
-            if (mayHide && showMode === 'heatmaps') return;
+        allFigs.forEach(([plotId, fig]) => {
             Plotly.newPlot(plotId, fig.data, fig.layout, cfg);
         });
 
         setInterval(() => {
             applyAutoBusinessDay();
-            allFigs.forEach(([plotId, fig, mayHide]) => {
-                if (mayHide && showMode === 'heatmaps') return;
+            allFigs.forEach(([plotId, fig]) => {
                 Plotly.relayout(plotId, fig.layout);
             });
         }, 60000);
@@ -219,19 +187,18 @@
         // Comparação "horário atual vs. propostas otimizada/melhorada" - as figuras já trazem
         // todas as versões embutidas como traces extra (visible=false por omissão). Cada
         // visualização tem o seu próprio grupo de botões (Atual/Otimizado/Melhorado),
-        // independente das outras - assim dá para, por exemplo, comparar a timeline atual lado a
+        // independente das outras - assim dá para, por exemplo, comparar a espera atual lado a
         // lado com a equidade já melhorada. `payload` vem de `_build_direction_figures`
         // (`variants` em integration.py): chaves `modes` (ordem dos botões), `labels` (texto de
-        // cada botão), `notes` (texto da barra de nota por modo, opcional) e `timeline`/`waits`/
-        // `equity` (índices de traces por modo, por figura). Partilhado pelos dois sentidos
-        // (metro->bus e bus->metro), chamado uma vez por cada.
+        // cada botão), `notes` (texto da barra de nota por modo, opcional) e `waits`/`equity`
+        // (índices de traces por modo, por figura). Partilhado pelos dois sentidos (metro->bus e
+        // bus->metro), chamado uma vez por cada.
         function wireVariantToggles(scopeEl, payload, noteBarId, noteId) {
             if (!payload) return;
             const modes = payload.modes || ['atual'];
             const labels = payload.labels || {};
             const notes = payload.notes || {};
             const indicesByFigure = {
-                timeline: payload.timeline || {},
                 waits: payload.waits || {},
                 equity: payload.equity || {},
             };

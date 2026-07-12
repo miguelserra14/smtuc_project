@@ -120,8 +120,7 @@ http://localhost:8000/outputs/integration/portela/l54_all.html
 Portagem (Portela do Mondego/Portela -> Portagem):
 http://localhost:8000/outputs/integration/portagem/l54_portagem_all.html
 
-Cada página agrega as 3 análises no mesmo HTML:
- - Timeline
+Cada página agrega as 2 análises no mesmo HTML, para os sentidos metro->bus e bus->metro:
  - Espera de transbordo
  - Equidade temporal
 """
