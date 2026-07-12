@@ -612,9 +612,13 @@ def build_metro_bus_connection_metrics(
     coverage_thresholds_min: tuple[int, ...] = (5, 10, 15),
     lost_connection_threshold_min: int = 15,
     output_csv_name: str | None = None,
+    output_dir: str | Path | None = None,
 ) -> pd.DataFrame:
     """
     Calcula métricas de coordenação metro -> autocarro e grava um CSV em outputs/integration.
+
+    Por omissão escreve em `OUTPUTS_INTEGRATION_DIR` (tal como `build_line_stop_vs_metro_table`) -
+    passa `output_dir` para escrever noutro sítio (ex.: subpasta `atual/` do dashboard).
     """
     schedule_df = build_line_stop_vs_metro_table(
         metro_stop_ref=metro_stop_ref,
@@ -623,6 +627,7 @@ def build_metro_bus_connection_metrics(
         day_str=day_str,
         metro_origin_ref=metro_origin_ref,
         bus_origin_ref=bus_origin_ref,
+        output_dir=output_dir,
     )
 
     if schedule_df.empty:
@@ -844,8 +849,9 @@ def build_metro_bus_connection_metrics(
         f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}.csv"
     )
 
-    root = Path(__file__).resolve().parents[2]
-    out_dir = root / OUTPUTS_INTEGRATION_DIR
+    out_dir = Path(output_dir) if output_dir is not None else (
+        Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
     metrics_df.to_csv(out_dir / csv_name, index=False)
 

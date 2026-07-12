@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -610,23 +609,6 @@ def generate_connection_visualizations(
     if px is None or go is None or pio is None:
         raise ImportError("plotly nao esta disponivel para gerar visualizacoes")
 
-    schedule_df = build_line_stop_vs_metro_table(
-        metro_stop_ref=metro_stop_ref,
-        bus_stop_ref=bus_stop_ref,
-        line_number=line_number,
-        day_str=day_str,
-        metro_origin_ref=metro_origin_ref,
-        bus_origin_ref=bus_origin_ref,
-    )
-    metrics_df = build_metro_bus_connection_metrics(
-        metro_stop_ref=metro_stop_ref,
-        bus_stop_ref=bus_stop_ref,
-        line_number=line_number,
-        day_str=day_str,
-        metro_origin_ref=metro_origin_ref,
-        bus_origin_ref=bus_origin_ref,
-    )
-
     out_root_base = Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
     if output_subdir:
         out_root = out_root_base / str(output_subdir)
@@ -639,6 +621,29 @@ def generate_connection_visualizations(
         else:
             out_root = out_root_base
     out_root.mkdir(parents=True, exist_ok=True)
+    # CSVs ficam separados por subpasta consoante representem o horário atual ou a proposta
+    # otimizada - "otimizado" só é criada se `phase_shift_min` vier a produzir algum ficheiro.
+    atual_dir = out_root / "atual"
+    atual_dir.mkdir(parents=True, exist_ok=True)
+
+    schedule_df = build_line_stop_vs_metro_table(
+        metro_stop_ref=metro_stop_ref,
+        bus_stop_ref=bus_stop_ref,
+        line_number=line_number,
+        day_str=day_str,
+        metro_origin_ref=metro_origin_ref,
+        bus_origin_ref=bus_origin_ref,
+        output_dir=atual_dir,
+    )
+    metrics_df = build_metro_bus_connection_metrics(
+        metro_stop_ref=metro_stop_ref,
+        bus_stop_ref=bus_stop_ref,
+        line_number=line_number,
+        day_str=day_str,
+        metro_origin_ref=metro_origin_ref,
+        bus_origin_ref=bus_origin_ref,
+        output_dir=atual_dir,
+    )
 
     # Always bind displayed date to the shared nearest-business-day policy.
     sample_date = resolve_reference_day().strftime("%Y-%m-%d")
@@ -694,6 +699,7 @@ def generate_connection_visualizations(
             metro_direction_id=reverse_metro_direction_id,
             day_str=day_str,
             bus_origin_ref=bus_origin_ref,
+            output_dir=atual_dir,
         )
         apply_optimization_rev = phase_shift_min is not None
         schedule_df_rev_opt = (
@@ -730,35 +736,25 @@ def generate_connection_visualizations(
             "optimization": optimization_payload_rev,
         }
 
-    waits_csv_path = out_root / f"{prefix}_wt.csv"
-    schedule_csv_path = out_root / (
+    waits_csv_path = atual_dir / f"{prefix}_wt.csv"
+    schedule_csv_path = atual_dir / (
         f"line_{_safe_slug(line_number)}_bus_{_safe_slug(bus_stop_ref)}"
         f"_metro_{_safe_slug(metro_stop_ref)}.csv"
     )
-    metrics_csv_path = out_root / (
+    metrics_csv_path = atual_dir / (
         f"line_{_safe_slug(line_number)}_connection_metrics_"
         f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}.csv"
     )
 
     waits_df.to_csv(waits_csv_path, index=False)
     if apply_optimization:
-        (out_root / f"{prefix}_wt_otimizado.csv").write_text(
+        otimizado_dir = out_root / "otimizado"
+        otimizado_dir.mkdir(parents=True, exist_ok=True)
+        (otimizado_dir / f"{prefix}_wt_otimizado.csv").write_text(
             _build_waits_table(schedule_df_opt).to_csv(index=False), encoding="utf-8"
         )
     if waits_df_rev is not None:
-        waits_df_rev.to_csv(out_root / f"{prefix}_wt_reverso.csv", index=False)
-
-    root_schedule_path = out_root_base / schedule_csv_path.name
-    if root_schedule_path.exists() and root_schedule_path.resolve() != schedule_csv_path.resolve():
-        if schedule_csv_path.exists():
-            schedule_csv_path.unlink()
-        shutil.move(str(root_schedule_path), str(schedule_csv_path))
-
-    root_metrics_path = out_root_base / metrics_csv_path.name
-    if root_metrics_path.exists() and root_metrics_path.resolve() != metrics_csv_path.resolve():
-        if metrics_csv_path.exists():
-            metrics_csv_path.unlink()
-        shutil.move(str(root_metrics_path), str(metrics_csv_path))
+        waits_df_rev.to_csv(atual_dir / f"{prefix}_wt_reverso.csv", index=False)
 
     combined_name = fixed_html_name or f"{prefix}_all.html"
     combined_path = out_root / combined_name
