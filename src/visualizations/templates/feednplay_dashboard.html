@@ -407,11 +407,18 @@
         }
         .fnp-dwell-zone {
             position: relative;
-            width: 190px;
-            height: 40px;
+            width: 52px;
+            height: 44px;
             border-radius: 999px;
             background: rgba(22, 32, 44, 0.35);
             overflow: hidden;
+            transition: opacity 160ms ease;
+        }
+        /* Primeiro/último slide: a zona correspondente não leva a lado nenhum (sem wrap-around -
+           ver goToRelativeSlide) - fica visualmente apagada e para de acumular dwell, em vez de
+           continuar a encher e nunca disparar (ver _fnpZoneAvailable). */
+        .fnp-dwell-zone.is-disabled {
+            opacity: 0.25;
         }
         .fnp-dwell-fill {
             position: absolute;
@@ -428,8 +435,8 @@
             justify-content: center;
             height: 100%;
             color: #ffffff;
-            font-size: 0.82rem;
-            font-weight: 600;
+            font-size: 1.15rem;
+            font-weight: 700;
         }
     </style>
 </head>
@@ -451,13 +458,13 @@
     <!-- Navegação por dwell: permanecer numa das duas zonas (~1.5s) avança/recua um slide - ver
          a função _fnpHandlePosition no bloco de script. -->
     <div class="fnp-dwell-bar">
-        <div id="fnp-dwell-back" class="fnp-dwell-zone">
+        <div id="fnp-dwell-back" class="fnp-dwell-zone" aria-label="Anterior">
             <div class="fnp-dwell-fill"></div>
-            <span class="fnp-dwell-label">◀ Anterior</span>
+            <span class="fnp-dwell-label" aria-hidden="true">◀</span>
         </div>
-        <div id="fnp-dwell-fwd" class="fnp-dwell-zone">
+        <div id="fnp-dwell-fwd" class="fnp-dwell-zone" aria-label="Seguinte">
             <div class="fnp-dwell-fill"></div>
-            <span class="fnp-dwell-label">Seguinte ▶</span>
+            <span class="fnp-dwell-label" aria-hidden="true">▶</span>
         </div>
     </div>
 
@@ -483,6 +490,14 @@
         const FNP_ZONE_BACK = [0.38, 0.48];
         const FNP_ZONE_FWD = [0.52, 0.62];
         const FNP_DWELL_MS = 1500;
+        // As zonas antes só filtravam por x - qualquer y dentro dessa faixa horizontal enchia a
+        // barra, mesmo com o cursor bem abaixo do botão (ex.: a testar com o rato no meio do
+        // ecrã). y=0-1 tem significados diferentes consoante a fonte: no fallback de rato é a
+        // fração vertical da janela (0=topo, onde os botões estão); na câmara real é
+        // perto/longe da parede - nos dois casos, um valor baixo significa "suficientemente
+        // perto dos botões/da parede para ser intencional". Por afinar depois de calibrar a
+        // câmara real no local.
+        const FNP_ZONE_MAX_Y = 0.5;
 
         const fnpDwellState = {
             back: { start: null, triggered: false },
@@ -492,27 +507,57 @@
             back: document.getElementById('fnp-dwell-back'),
             fwd: document.getElementById('fnp-dwell-fwd'),
         };
+        // Referências às barras de preenchimento resolvidas uma única vez - antes eram
+        // procuradas com querySelector a cada posição recebida (dezenas/s), o que somava
+        // trabalho de DOM desnecessário a cada frame e contribuía para o lag a meio do
+        // preenchimento reportado pelo utilizador.
+        const fnpDwellFillEls = {
+            back: fnpDwellEls.back ? fnpDwellEls.back.querySelector('.fnp-dwell-fill') : null,
+            fwd: fnpDwellEls.fwd ? fnpDwellEls.fwd.querySelector('.fnp-dwell-fill') : null,
+        };
 
-        function goToRelativeSlide(delta) {
+        function _fnpCurrentIndex() {
             const currentButton = tabsEl.querySelector('[aria-selected="true"]');
             const currentId = currentButton ? currentButton.dataset.tabId : tabs[0].id;
-            const currentIndex = Math.max(0, tabs.findIndex((item) => item.id === currentId));
-            const nextIndex = (currentIndex + delta + tabs.length) % tabs.length;
+            return Math.max(0, tabs.findIndex((item) => item.id === currentId));
+        }
+
+        // Sem wrap-around: no primeiro slide não há "Anterior", no último não há "Seguinte".
+        function _fnpZoneAvailable(zoneKey) {
+            const currentIndex = _fnpCurrentIndex();
+            if (zoneKey === 'back') return currentIndex > 0;
+            if (zoneKey === 'fwd') return currentIndex < tabs.length - 1;
+            return true;
+        }
+
+        // Chamado sempre que o slide ativo muda (setActiveTab) - apaga visualmente e impede de
+        // acumular dwell a zona que não leva a lado nenhum a partir do slide atual.
+        function _fnpRefreshDwellAvailability() {
+            if (fnpDwellEls.back) fnpDwellEls.back.classList.toggle('is-disabled', !_fnpZoneAvailable('back'));
+            if (fnpDwellEls.fwd) fnpDwellEls.fwd.classList.toggle('is-disabled', !_fnpZoneAvailable('fwd'));
+        }
+
+        function goToRelativeSlide(delta) {
+            const currentIndex = _fnpCurrentIndex();
+            const nextIndex = currentIndex + delta;
+            if (nextIndex < 0 || nextIndex >= tabs.length) return;
             setActiveTab(tabs[nextIndex].id, false);
         }
 
         // Atualiza o progresso de UMA zona de dwell e devolve true no exato instante em que
         // completa (não em cada tick seguinte enquanto lá se continua) - dispara uma só vez por
         // permanência; é preciso sair da zona para poder disparar outra vez.
-        function _fnpUpdateDwellZone(zoneKey, range, x, active, now) {
+        function _fnpUpdateDwellZone(zoneKey, range, x, y, active, now) {
             const state = fnpDwellState[zoneKey];
-            const el = fnpDwellEls[zoneKey];
-            const inZone = active && x !== null && x >= range[0] && x < range[1];
+            const fillEl = fnpDwellFillEls[zoneKey];
+            const available = _fnpZoneAvailable(zoneKey);
+            const nearEnough = y !== null && y <= FNP_ZONE_MAX_Y;
+            const inZone = available && active && nearEnough && x !== null && x >= range[0] && x < range[1];
 
             if (!inZone) {
                 state.start = null;
                 state.triggered = false;
-                if (el) el.querySelector('.fnp-dwell-fill').style.width = '0%';
+                if (fillEl) fillEl.style.width = '0%';
                 return false;
             }
 
@@ -521,13 +566,25 @@
             }
 
             const progress = state.triggered ? 1 : Math.min(1, (now - state.start) / FNP_DWELL_MS);
-            if (el) el.querySelector('.fnp-dwell-fill').style.width = `${(progress * 100).toFixed(1)}%`;
+            if (fillEl) fillEl.style.width = `${(progress * 100).toFixed(1)}%`;
 
             if (progress >= 1 && !state.triggered) {
                 state.triggered = true;
                 return true;
             }
             return false;
+        }
+
+        // Iframes do slide ATUALMENTE visível apenas (não todos os já carregados) - resolvido
+        // uma vez por troca de slide em setActiveTab, não a cada posição recebida. Antes o relay
+        // ia para TODOS os iframes com data-loaded (todos os slides já visitados), o que fazia
+        // slides como o "Overlap" recalcularem a isócrona invisível em cada tick de posição
+        // mesmo estando escondidos - trabalho de fundo concorrente com a animação de
+        // preenchimento das zonas de dwell, e a causa mais provável do lag reportado.
+        let fnpActiveIframes = [];
+        function _fnpRefreshActiveIframes() {
+            const activePanel = panelsEl.querySelector('.tab-panel.is-active');
+            fnpActiveIframes = activePanel ? Array.from(activePanel.querySelectorAll('iframe[data-loaded]')) : [];
         }
 
         // Ponte central de posição: chamada tanto pela câmara real (window.__fnpOnPresence,
@@ -539,23 +596,23 @@
             const now = performance.now();
             const active = !!(data && data.active);
             const x = active ? Number(data.x) : null;
+            const y = active ? Number(data.y) : null;
 
             if (fnpDebugEl) {
                 fnpDebugEl.textContent = active
-                    ? `câmara: x=${x.toFixed(2)} y=${Number(data.y).toFixed(2)}${data.id ? ' id=' + data.id : ''}`
+                    ? `câmara: x=${x.toFixed(2)} y=${y.toFixed(2)}${data.id ? ' id=' + data.id : ''}`
                     : 'câmara: sem presença (estado ambiente)';
             }
 
-            const backTriggered = _fnpUpdateDwellZone('back', FNP_ZONE_BACK, x, active, now);
-            const fwdTriggered = _fnpUpdateDwellZone('fwd', FNP_ZONE_FWD, x, active, now);
+            const backTriggered = _fnpUpdateDwellZone('back', FNP_ZONE_BACK, x, y, active, now);
+            const fwdTriggered = _fnpUpdateDwellZone('fwd', FNP_ZONE_FWD, x, y, active, now);
             if (backTriggered) goToRelativeSlide(-1);
             if (fwdTriggered) goToRelativeSlide(1);
 
-            // Position-bus para o iframe atualmente carregado (ver visualizations/
+            // Position-bus só para o(s) iframe(s) do slide visível (ver visualizations/
             // reachability.py) - evaluate_js só chega a este documento de topo, nunca
-            // diretamente ao documento de um <iframe>, daí o postMessage. Reenvia-se a TODOS
-            // os iframes já carregados (no máximo ~7 tabs, barato) em vez de só ao visível.
-            panelsEl.querySelectorAll('iframe[data-loaded]').forEach((iframe) => {
+            // diretamente ao documento de um <iframe>, daí o postMessage.
+            fnpActiveIframes.forEach((iframe) => {
                 try {
                     iframe.contentWindow.postMessage({ __fnpPosition: data }, '*');
                 } catch (e) {
@@ -564,15 +621,36 @@
             });
         }
 
+        // As duas fontes de posição (câmara real via evaluate_js, mousemove nativo) podem
+        // disparar mais rápido do que o ecrã pinta (mousemove num browser normal chega a
+        // 100-240Hz). Processar cada evento de imediato empilhava trabalho de DOM/postMessage
+        // acima do que um frame consegue escoar, sentido como engasgo a meio do preenchimento
+        // roxo. Em vez disso, só a posição mais recente de cada frame é processada, via
+        // requestAnimationFrame - o essencial (fluidez visual) não perde nada, já que posições
+        // intermédias dentro do mesmo frame nunca chegavam a ser pintadas de qualquer forma.
+        let fnpPendingPosition = null;
+        let fnpRafScheduled = false;
+        function _fnpQueuePosition(data) {
+            fnpPendingPosition = data;
+            if (fnpRafScheduled) return;
+            fnpRafScheduled = true;
+            window.requestAnimationFrame(function () {
+                fnpRafScheduled = false;
+                const pending = fnpPendingPosition;
+                fnpPendingPosition = null;
+                if (pending) _fnpHandlePosition(pending);
+            });
+        }
+
         window.__fnpOnPresence = function (data) {
-            _fnpHandlePosition(data);
+            _fnpQueuePosition(data);
         };
 
         // Fallback de desenvolvimento sem câmara/Kafka: o rato sobre a própria página gera o
         // mesmo formato de dados que o bridge Python enviaria, para testar o dwell num browser
         // normal (ver plano em curso).
         document.addEventListener('mousemove', function (e) {
-            _fnpHandlePosition({
+            _fnpQueuePosition({
                 active: true,
                 x: e.clientX / window.innerWidth,
                 y: e.clientY / window.innerHeight,
@@ -866,6 +944,9 @@
                     });
                 }
             });
+
+            _fnpRefreshDwellAvailability();
+            _fnpRefreshActiveIframes();
         }
 
         function renderTabs() {
