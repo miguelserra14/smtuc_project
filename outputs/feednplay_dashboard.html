@@ -1,10 +1,14 @@
 <!DOCTYPE html>
+<!-- Esqueleto do build FeedNPlay (parede 9720x1920px). Layout full-bleed só o suficiente para
+     correr no canvas certo - grid de bezels, tipografia à distância e position-bus da câmara
+     ainda não implementados aqui, ver plano em curso. Motor de tabs/navegação por teclado
+     copiado tal e qual de presentation_dashboard.html (não duplicar lógica, só o CSS mudou). -->
 <html lang="pt">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light only" />
-    <title>SMTUC: Mockups da apresentação</title>
+    <title>SMTUC: FeedNPlay</title>
     <style>
         :root {
             --bg: #f7f4ff;
@@ -23,6 +27,9 @@
         html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             background:
                 radial-gradient(circle at top left, rgba(15, 91, 156, 0.12), transparent 30%),
                 radial-gradient(circle at top right, rgba(45, 143, 133, 0.10), transparent 26%),
@@ -31,18 +38,18 @@
             font-family: Segoe UI, Tahoma, sans-serif;
         }
         .shell {
-            max-width: 1520px;
-            margin: 0 auto;
-            padding: 22px 16px 40px;
-        }
-        .hero {
-            background: linear-gradient(135deg, rgba(106, 13, 173, 0.98), rgba(15, 91, 156, 0.96));
-            color: #ffffff;
-            border-radius: 24px;
-            padding: 22px 24px 20px;
-            box-shadow: var(--shadow);
-            position: relative;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
             overflow: hidden;
+        }
+        /* Sem título/tabs visíveis - navegação passa a ser por dwell (ver .fnp-dwell-*) ou,
+           como reserva do apresentador, pelas setas do teclado nos botões de tab (mantidos no
+           DOM via .visually-hidden, não display:none, para continuarem focáveis). */
+        .hero {
+            display: none;
         }
         .hero::after {
             content: "";
@@ -107,22 +114,25 @@
             border-color: var(--ink);
         }
         .tab-panels {
-            margin-top: 10px;
+            position: fixed;
+            inset: 0;
         }
         .tab-panel {
             display: none;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
             background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         .tab-panel.is-active {
             display: block;
             animation: fadeIn 160ms ease-out;
         }
         .panel-head {
-            padding: 18px 20px 12px;
+            padding: 60px 40px 16px;
             border-bottom: 1px solid var(--border);
             background: linear-gradient(180deg, rgba(248, 251, 255, 0.96), #ffffff);
         }
@@ -136,7 +146,7 @@
             line-height: 1.45;
         }
         .panel-body {
-            padding: 18px 20px 20px;
+            padding: 24px 40px 32px;
         }
         .panel-note {
             border: 1px solid var(--border);
@@ -381,68 +391,272 @@
             from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        @media (max-width: 1100px) {
-            .grid-hero,
-            .grid-2,
-            .grid-3,
-            .closing-layout {
-                grid-template-columns: 1fr;
-            }
-            .frame-shell iframe,
-            .frame-shell.tall iframe,
-            .frame-shell.slim iframe,
-            .metric-card .frame-shell iframe {
-                height: 440px;
-            }
-            .thanks-card {
-                padding: 24px 18px;
-            }
+        /* Navegação por dwell (permanecer) em vez de tabs clicáveis - ver a função
+           _fnpHandlePosition mais abaixo, no bloco de script. Estilo provisório (cores/tamanhos
+           por afinar no passe de tipografia à distância); o essencial aqui é o preenchimento
+           (.fnp-dwell-fill) refletir o progresso do dwell em tempo real. */
+        .fnp-dwell-bar {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 9998;
+            pointer-events: none;
         }
-        @media (max-width: 760px) {
-            .shell {
-                padding: 14px 10px 28px;
-            }
-            .hero {
-                border-radius: 18px;
-                padding: 18px 16px;
-            }
-            .tab-btn {
-                padding: 10px 14px;
-            }
-            .panel-head,
-            .panel-body {
-                padding-left: 14px;
-                padding-right: 14px;
-            }
-            .frame-shell iframe,
-            .frame-shell.tall iframe,
-            .frame-shell.slim iframe,
-            .metric-card .frame-shell iframe {
-                height: 360px;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
+        .fnp-dwell-zone {
+            position: relative;
+            width: 52px;
+            height: 44px;
+            border-radius: 999px;
+            background: rgba(22, 32, 44, 0.35);
+            overflow: hidden;
+            transition: opacity 160ms ease;
+        }
+        /* Primeiro/último slide: a zona correspondente não leva a lado nenhum (sem wrap-around -
+           ver goToRelativeSlide) - fica visualmente apagada e para de acumular dwell, em vez de
+           continuar a encher e nunca disparar (ver _fnpZoneAvailable). */
+        .fnp-dwell-zone.is-disabled {
+            opacity: 0.25;
+        }
+        .fnp-dwell-fill {
+            position: absolute;
+            inset: 0;
+            width: 0%;
+            background: rgba(106, 13, 173, 0.65);
+            transition: width 60ms linear;
+        }
+        .fnp-dwell-label {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #ffffff;
+            font-size: 1.15rem;
+            font-weight: 700;
         }
     </style>
 </head>
 <body>
     <main class="shell">
         <section class="hero">
-            <div class="eyebrow">Mockups da apresentação</div>
+            <div class="eyebrow">FeedNPlay - esqueleto</div>
             <h1>SMTUC: A caminho da complementaridade</h1>
-            <p>Tabs organizadas como o fluxo da apresentação: introdução, metodologia, subserviço, overlap, integração, conclusões e agradecimentos.</p>
+            <p>Build de teste para a parede FeedNPlay (9720x1920px). Conteúdo por agora igual ao dos mockups da apresentação - grid de bezels, tipografia à distância e reação à câmara de topo ainda por implementar.</p>
         </section>
 
-        <nav class="tabs" id="dashboard-tabs" aria-label="Tabs da apresentação"></nav>
+        <!-- Fica no DOM (não display:none) para o apresentador continuar a poder navegar pelas
+             setas do teclado, mas some visualmente - a navegação normal é por dwell, ver abaixo. -->
+        <nav class="tabs visually-hidden" id="dashboard-tabs" aria-label="Tabs da apresentação"></nav>
 
         <section class="tab-panels" id="dashboard-panels"></section>
     </main>
+
+    <!-- Navegação por dwell: permanecer numa das duas zonas (~1.5s) avança/recua um slide - ver
+         a função _fnpHandlePosition no bloco de script. -->
+    <div class="fnp-dwell-bar">
+        <div id="fnp-dwell-back" class="fnp-dwell-zone" aria-label="Anterior">
+            <div class="fnp-dwell-fill"></div>
+            <span class="fnp-dwell-label" aria-hidden="true">◀</span>
+        </div>
+        <div id="fnp-dwell-fwd" class="fnp-dwell-zone" aria-label="Seguinte">
+            <div class="fnp-dwell-fill"></div>
+            <span class="fnp-dwell-label" aria-hidden="true">▶</span>
+        </div>
+    </div>
+
+    <!-- Overlay de debug do sinal da câmara - só para validar o esqueleto sem estar no local do
+         FeedNPlay (ver src/feednplay/bridge.py); tirar quando o passe de tipografia/design for
+         feito. Não interfere com clique/toque (pointer-events: none). -->
+    <div id="fnp-debug" style="position:fixed;top:8px;right:8px;z-index:99999;background:rgba(0,0,0,0.72);color:#fff;font:12px/1.4 'Segoe UI',monospace;padding:8px 10px;border-radius:8px;pointer-events:none;">
+        câmara: a aguardar sinal...
+    </div>
 
     <script>
         const tabs = [{"id": "intro", "label": "Introdução", "kind": "hero", "eyebrow": "Apresentação final", "title": "SMTUC: A caminho da complementaridade", "subtitle": "Como o Metrobus mudou a mobilidade em Coimbra e o que o SMTUC pode adaptar já", "lead": "As obras ainda não estão acabadas, mas o estudo já está encaminhado e já há bastante que pode ser feito com impacto tangível.", "chips": ["Metrobus", "SMTUC", "Coimbra", "Urgência em setembro"], "highlights": ["Mudança estrutural da mobilidade", "Resposta já possível com os dados que existem", "Janela de oportunidade para a entrada de caloiros"]}, {"id": "metodologia", "label": "Metodologia", "kind": "methodology", "description": "Como os dados de SMTUC, Metrobus e população entram no mesmo fluxo de análise.", "note": "Cruza-se oferta de transporte, população e contexto urbano para perceber onde a rede mudou e onde o SMTUC pode ajustar-se já.", "steps": ["Recolha", "Limpeza", "Métricas", "Visualização"], "source_tags": ["SMTUC", "Metrobus", "População", "Locais de trabalho", "Locais de convívio"], "iframes": [{"title": "Heatmap de população", "src": "population/bgri.html?show=heatmap&v=1784039638", "caption": "Distribuição da população por Coimbra."}, {"title": "Índice de subserviço", "src": "population/bgri.html?show=choropleth&v=1784039638", "caption": "Primeira leitura da pressão de serviço."}]}, {"id": "subservico", "label": "Subserviço + Isócronas", "kind": "three-up", "description": "A métrica de subserviço e a leitura territorial das isócronas.", "note": "A taxa de subserviço relaciona população com oferta e ajuda a perceber onde o serviço está mais pressionado. As isócronas devem passar a incluir também locais de trabalho e convívio.", "iframes": [{"title": "Mapa global de subserviço", "src": "population/bgri.html?show=choropleth&v=1784039638", "caption": "Índice de subserviço em Coimbra."}, {"title": "Subserviço a 2 km", "src": "population/bgri.html?show=stadium&v=1784039638", "caption": "Leitura de detalhe da pressão territorial."}, {"title": "Isócronas dinâmicas", "src": "overlap/overlap_reachability_now.html?v=1784039645", "caption": "Cobertura, acessibilidade e overlap temporal."}]}, {"id": "overlap", "label": "Overlap", "kind": "overlap", "description": "Onde a rede SMTUC e o Metrobus mais se sobrepõem.", "note": "Este bloco mostra onde existe redundância espacial e temporal. A leitura deve ser visual, direta e rápida.", "iframes": [{"title": "Reachability e overlap temporal", "src": "overlap/overlap_reachability_now.html?v=1784039645", "caption": "Mapa principal com cobertura e temporalidade."}, {"title": "Mapa de linhas sobrepostas", "src": "overlap/overlap_lines_map.html?v=1784039685", "caption": "Linhas com maior e menor overlap."}], "stats": {"top5": [{"line": "45", "overlap_pct": "20.51%", "overlap_m": "4051.0", "extension_m": "19747.6", "overlap_stops": "19", "total_stops": "57", "avg_freq_min": "61.4"}, {"line": "26", "overlap_pct": "18.45%", "overlap_m": "5547.0", "extension_m": "30060.6", "overlap_stops": "19", "total_stops": "55", "avg_freq_min": "23.8"}, {"line": "10", "overlap_pct": "17.20%", "overlap_m": "7653.0", "extension_m": "44487.7", "overlap_stops": "21", "total_stops": "56", "avg_freq_min": "13.9"}, {"line": "33", "overlap_pct": "16.42%", "overlap_m": "4280.7", "extension_m": "26069.4", "overlap_stops": "14", "total_stops": "44", "avg_freq_min": "27.2"}, {"line": "9", "overlap_pct": "16.17%", "overlap_m": "6717.3", "extension_m": "41535.7", "overlap_stops": "21", "total_stops": "55", "avg_freq_min": "32.5"}], "bottom5": [{"line": "52T", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "16818.6", "overlap_stops": "0", "total_stops": "36", "avg_freq_min": "0.0"}, {"line": "52P", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "50242.2", "overlap_stops": "0", "total_stops": "62", "avg_freq_min": "76.7"}, {"line": "52M", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "12944.6", "overlap_stops": "0", "total_stops": "21", "avg_freq_min": "0.0"}, {"line": "52", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "44398.5", "overlap_stops": "0", "total_stops": "74", "avg_freq_min": "52.5"}, {"line": "51", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "57656.1", "overlap_stops": "0", "total_stops": "93", "avg_freq_min": "67.5"}], "bottom5_stadium": [{"line": "4", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "6995.2", "overlap_stops": "0", "total_stops": "26", "avg_freq_min": "11.5"}, {"line": "42V", "overlap_pct": "4.16%", "overlap_m": "1069.6", "extension_m": "25708.0", "overlap_stops": "5", "total_stops": "72", "avg_freq_min": "100.0"}, {"line": "5T", "overlap_pct": "4.45%", "overlap_m": "1763.3", "extension_m": "39625.3", "overlap_stops": "7", "total_stops": "81", "avg_freq_min": "19.7"}, {"line": "34", "overlap_pct": "5.16%", "overlap_m": "641.4", "extension_m": "12432.4", "overlap_stops": "5", "total_stops": "50", "avg_freq_min": "17.0"}, {"line": "38", "overlap_pct": "6.55%", "overlap_m": "1048.3", "extension_m": "15995.1", "overlap_stops": "5", "total_stops": "48", "avg_freq_min": "27.7"}], "temporal_summary": {"total_spatial_candidates": 14008, "overlap_stations": 52, "overlap_lines": 68, "temporal_overlap_pct": 58.93, "temporal_overlap_times": 8255, "temporal_overlap_stations": 52, "temporal_overlap_lines": 79, "TEMPORAL_OVERLAP_MAX_MIN": 5.0, "walk_distance_threshold": 240.0}}}, {"id": "integracao", "label": "Integração", "kind": "comparison", "description": "Comparação Portagem e Portela com a linha 54.", "note": "A versão otimizada ainda é um objetivo do projeto, por isso o foco aqui é mostrar o estado atual e a direção de melhoria: menos espera, melhor coordenação e horários mais úteis.", "columns": [{"title": "Portagem", "subtitle": "Linha 54 + 38", "current": {"title": "Estado atual", "src": "integration/portagem/l54_38_all.html?v=1783878757", "caption": "Integração atual no sentido Portela → Portagem."}, "optimized": ["Reduzir tempos de espera no transbordo", "Ajustar horários ao Metrobus", "Evidenciar a correspondência entre modos"]}, {"title": "Portela", "subtitle": "Linha 54", "current": {"title": "Estado atual", "src": "integration/portela/l54_all.html?v=1783878757", "caption": "Integração atual no sentido Portagem → Portela."}, "optimized": ["Simplificar o percurso de ligação", "Reorganizar a cadência horária", "Mostrar melhor o ganho tangível para o utilizador"]}]}, {"id": "conclusao", "label": "Conclusões", "kind": "closing", "description": "O que a apresentação quer deixar claro no final.", "headline": "O Metrobus alterou a mobilidade em Coimbra e o SMTUC precisa de se adaptar.", "points": ["Há já impacto tangível que pode ser mostrado antes de as obras terminarem.", "O reforço do SMTUC deve responder ao novo contexto, não competir com ele.", "Setembro é a oportunidade para demonstrar a nova era da mobilidade em Coimbra."]}, {"id": "agradecimentos", "label": "Agradecimentos", "kind": "thanks", "description": "Fecho minimalista e limpo para o ecrã final.", "title": "Obrigado", "subtitle": "Nomes, instituição e contactos", "contacts": ["Nome 1", "Nome 2", "Curso / Unidade curricular", "Setembro 2026"]}];
         const tabsEl = document.getElementById('dashboard-tabs');
         const panelsEl = document.getElementById('dashboard-panels');
+        const fnpDebugEl = document.getElementById('fnp-debug');
+
+        // ---------------------------------------------------------------------------------
+        // Navegação por dwell: permanecer (não clicar) numa das duas zonas ao centro-topo do
+        // ecrã avança/recua um slide. Zonas em fração de x (0-1) da área de interação da
+        // câmara - por afinar depois de calibrar a câmara real no local, a área de interação
+        // pode não corresponder exatamente à largura da parede.
+        // ---------------------------------------------------------------------------------
+        const FNP_ZONE_BACK = [0.38, 0.48];
+        const FNP_ZONE_FWD = [0.52, 0.62];
+        const FNP_DWELL_MS = 1500;
+        // As zonas antes só filtravam por x - qualquer y dentro dessa faixa horizontal enchia a
+        // barra, mesmo com o cursor bem abaixo do botão (ex.: a testar com o rato no meio do
+        // ecrã). y=0-1 tem significados diferentes consoante a fonte: no fallback de rato é a
+        // fração vertical da janela (0=topo, onde os botões estão); na câmara real é
+        // perto/longe da parede - nos dois casos, um valor baixo significa "suficientemente
+        // perto dos botões/da parede para ser intencional". Por afinar depois de calibrar a
+        // câmara real no local.
+        const FNP_ZONE_MAX_Y = 0.5;
+
+        const fnpDwellState = {
+            back: { start: null, triggered: false },
+            fwd: { start: null, triggered: false },
+        };
+        const fnpDwellEls = {
+            back: document.getElementById('fnp-dwell-back'),
+            fwd: document.getElementById('fnp-dwell-fwd'),
+        };
+        // Referências às barras de preenchimento resolvidas uma única vez - antes eram
+        // procuradas com querySelector a cada posição recebida (dezenas/s), o que somava
+        // trabalho de DOM desnecessário a cada frame e contribuía para o lag a meio do
+        // preenchimento reportado pelo utilizador.
+        const fnpDwellFillEls = {
+            back: fnpDwellEls.back ? fnpDwellEls.back.querySelector('.fnp-dwell-fill') : null,
+            fwd: fnpDwellEls.fwd ? fnpDwellEls.fwd.querySelector('.fnp-dwell-fill') : null,
+        };
+
+        function _fnpCurrentIndex() {
+            const currentButton = tabsEl.querySelector('[aria-selected="true"]');
+            const currentId = currentButton ? currentButton.dataset.tabId : tabs[0].id;
+            return Math.max(0, tabs.findIndex((item) => item.id === currentId));
+        }
+
+        // Sem wrap-around: no primeiro slide não há "Anterior", no último não há "Seguinte".
+        function _fnpZoneAvailable(zoneKey) {
+            const currentIndex = _fnpCurrentIndex();
+            if (zoneKey === 'back') return currentIndex > 0;
+            if (zoneKey === 'fwd') return currentIndex < tabs.length - 1;
+            return true;
+        }
+
+        // Chamado sempre que o slide ativo muda (setActiveTab) - apaga visualmente e impede de
+        // acumular dwell a zona que não leva a lado nenhum a partir do slide atual.
+        function _fnpRefreshDwellAvailability() {
+            if (fnpDwellEls.back) fnpDwellEls.back.classList.toggle('is-disabled', !_fnpZoneAvailable('back'));
+            if (fnpDwellEls.fwd) fnpDwellEls.fwd.classList.toggle('is-disabled', !_fnpZoneAvailable('fwd'));
+        }
+
+        function goToRelativeSlide(delta) {
+            const currentIndex = _fnpCurrentIndex();
+            const nextIndex = currentIndex + delta;
+            if (nextIndex < 0 || nextIndex >= tabs.length) return;
+            setActiveTab(tabs[nextIndex].id, false);
+        }
+
+        // Atualiza o progresso de UMA zona de dwell e devolve true no exato instante em que
+        // completa (não em cada tick seguinte enquanto lá se continua) - dispara uma só vez por
+        // permanência; é preciso sair da zona para poder disparar outra vez.
+        function _fnpUpdateDwellZone(zoneKey, range, x, y, active, now) {
+            const state = fnpDwellState[zoneKey];
+            const fillEl = fnpDwellFillEls[zoneKey];
+            const available = _fnpZoneAvailable(zoneKey);
+            const nearEnough = y !== null && y <= FNP_ZONE_MAX_Y;
+            const inZone = available && active && nearEnough && x !== null && x >= range[0] && x < range[1];
+
+            if (!inZone) {
+                state.start = null;
+                state.triggered = false;
+                if (fillEl) fillEl.style.width = '0%';
+                return false;
+            }
+
+            if (state.start === null) {
+                state.start = now;
+            }
+
+            const progress = state.triggered ? 1 : Math.min(1, (now - state.start) / FNP_DWELL_MS);
+            if (fillEl) fillEl.style.width = `${(progress * 100).toFixed(1)}%`;
+
+            if (progress >= 1 && !state.triggered) {
+                state.triggered = true;
+                return true;
+            }
+            return false;
+        }
+
+        // Iframes do slide ATUALMENTE visível apenas (não todos os já carregados) - resolvido
+        // uma vez por troca de slide em setActiveTab, não a cada posição recebida. Antes o relay
+        // ia para TODOS os iframes com data-loaded (todos os slides já visitados), o que fazia
+        // slides como o "Overlap" recalcularem a isócrona invisível em cada tick de posição
+        // mesmo estando escondidos - trabalho de fundo concorrente com a animação de
+        // preenchimento das zonas de dwell, e a causa mais provável do lag reportado.
+        let fnpActiveIframes = [];
+        function _fnpRefreshActiveIframes() {
+            const activePanel = panelsEl.querySelector('.tab-panel.is-active');
+            fnpActiveIframes = activePanel ? Array.from(activePanel.querySelectorAll('iframe[data-loaded]')) : [];
+        }
+
+        // Ponte central de posição: chamada tanto pela câmara real (window.__fnpOnPresence,
+        // via evaluate_js do bridge Python) como pelo mousemove nativo (fallback de
+        // desenvolvimento sem Kafka, ver abaixo) - as duas fontes alimentam exatamente a mesma
+        // lógica de dwell e o mesmo relay para o iframe atual.
+        function _fnpHandlePosition(data) {
+            window.__fnpLastPresence = data;
+            const now = performance.now();
+            const active = !!(data && data.active);
+            const x = active ? Number(data.x) : null;
+            const y = active ? Number(data.y) : null;
+
+            if (fnpDebugEl) {
+                fnpDebugEl.textContent = active
+                    ? `câmara: x=${x.toFixed(2)} y=${y.toFixed(2)}${data.id ? ' id=' + data.id : ''}`
+                    : 'câmara: sem presença (estado ambiente)';
+            }
+
+            const backTriggered = _fnpUpdateDwellZone('back', FNP_ZONE_BACK, x, y, active, now);
+            const fwdTriggered = _fnpUpdateDwellZone('fwd', FNP_ZONE_FWD, x, y, active, now);
+            if (backTriggered) goToRelativeSlide(-1);
+            if (fwdTriggered) goToRelativeSlide(1);
+
+            // Position-bus só para o(s) iframe(s) do slide visível (ver visualizations/
+            // reachability.py) - evaluate_js só chega a este documento de topo, nunca
+            // diretamente ao documento de um <iframe>, daí o postMessage.
+            fnpActiveIframes.forEach((iframe) => {
+                try {
+                    iframe.contentWindow.postMessage({ __fnpPosition: data }, '*');
+                } catch (e) {
+                    // iframe de origem diferente ou ainda não pronto - ignora, tenta na próxima
+                }
+            });
+        }
+
+        // As duas fontes de posição (câmara real via evaluate_js, mousemove nativo) podem
+        // disparar mais rápido do que o ecrã pinta (mousemove num browser normal chega a
+        // 100-240Hz). Processar cada evento de imediato empilhava trabalho de DOM/postMessage
+        // acima do que um frame consegue escoar, sentido como engasgo a meio do preenchimento
+        // roxo. Em vez disso, só a posição mais recente de cada frame é processada, via
+        // requestAnimationFrame - o essencial (fluidez visual) não perde nada, já que posições
+        // intermédias dentro do mesmo frame nunca chegavam a ser pintadas de qualquer forma.
+        let fnpPendingPosition = null;
+        let fnpRafScheduled = false;
+        function _fnpQueuePosition(data) {
+            fnpPendingPosition = data;
+            if (fnpRafScheduled) return;
+            fnpRafScheduled = true;
+            window.requestAnimationFrame(function () {
+                fnpRafScheduled = false;
+                const pending = fnpPendingPosition;
+                fnpPendingPosition = null;
+                if (pending) _fnpHandlePosition(pending);
+            });
+        }
+
+        window.__fnpOnPresence = function (data) {
+            _fnpQueuePosition(data);
+        };
+
+        // Fallback de desenvolvimento sem câmara/Kafka: o rato sobre a própria página gera o
+        // mesmo formato de dados que o bridge Python enviaria, para testar o dwell num browser
+        // normal (ver plano em curso).
+        document.addEventListener('mousemove', function (e) {
+            _fnpQueuePosition({
+                active: true,
+                x: e.clientX / window.innerWidth,
+                y: e.clientY / window.innerHeight,
+                id: 'mouse',
+            });
+        });
 
         function esc(value) {
             return String(value ?? '')
@@ -730,6 +944,9 @@
                     });
                 }
             });
+
+            _fnpRefreshDwellAvailability();
+            _fnpRefreshActiveIframes();
         }
 
         function renderTabs() {

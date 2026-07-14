@@ -5,3 +5,7 @@ geopandas>=0.14.0
 shapely>=2.0.0
 plotly>=5.20.0
 pytest>=8.0.0
+
+# Build FeedNPlay (parede de 9 ecrãs) - ver src/feednplay/
+pywebview>=5.0
+confluent-kafka>=2.3.0

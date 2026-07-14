@@ -27,6 +27,7 @@ to do:
 
 -resolver a visualizacao do 54. meter visualizacoes c versao otimizzada e versoa duplicada (saber +- quantos autocarros custa , a que horas, etc)
 
+-juntar tudo no dasboard, limar arestas (legendas, etc)1
+
 - no frontend: pensar de um modo mais estruturado a arquiteutra do webdesign para lidar bem com o feednplay
 
-- montar narrativa, pedir aopoio ao evgheni, florido, tiago martins
