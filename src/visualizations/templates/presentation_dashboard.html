@@ -179,7 +179,6 @@
             gap: 14px;
         }
         .card,
-        .frame-card,
         .metric-card,
         .closing-card {
             border: 1px solid var(--border);
@@ -187,11 +186,19 @@
             background: linear-gradient(180deg, #ffffff, var(--card-soft));
             overflow: hidden;
         }
-        .card-head,
-        .frame-head {
+        /* Visualizações (iframes) sem caixa - só o título (quando distingue algo real, ex.
+           "Heatmap de população" vs "Índice de subserviço") e o próprio iframe, sem borda/fundo
+           a separá-los visualmente do resto da página. */
+        .frame-card {
+            overflow: hidden;
+        }
+        .card-head {
             padding: 12px 14px;
             border-bottom: 1px solid var(--border);
             background: #fbf8ff;
+        }
+        .frame-head {
+            padding: 0 0 8px;
         }
         .card-head h3,
         .frame-head h3,
@@ -255,6 +262,28 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
+        }
+        /* Cabeçalho de coluna (Portagem/Portela) sem caixa - só o essencial (qual coluna é
+           qual), sem borda/fundo a competir com a visualização logo a seguir. */
+        .comparison-heading {
+            margin: 0;
+        }
+        .comparison-heading h3 {
+            margin: 0 0 2px;
+            font-size: 0.98rem;
+            color: var(--ink);
+        }
+        .comparison-heading p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        /* Legenda por baixo de uma visualização - texto simples, sem caixa/borda. */
+        .frame-caption {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.45;
         }
         .target-card {
             border: 1px dashed var(--border);
@@ -458,13 +487,15 @@
             return `<div class="chip-row">${items.map((item) => `<span class="chip">${esc(item)}</span>`).join('')}</div>`;
         }
 
-        function renderIframeFrame(item, extraClass = '') {
+        function renderIframeFrame(item, extraClass = '', options = {}) {
             const title = esc(item.title || item.label || 'Visualização');
             const src = esc(item.src || '');
-            const caption = item.caption ? `<div class="panel-note" style="margin:0;padding:12px 14px;border-radius:0;border-left:0;border-right:0;border-bottom:0;">${esc(item.caption)}</div>` : '';
+            const bare = !!options.bare;
+            const head = bare ? '' : `<div class="frame-head"><h3>${title}</h3></div>`;
+            const caption = item.caption ? `<p class="frame-caption">${esc(item.caption)}</p>` : '';
             return `
                 <article class="frame-card ${extraClass}">
-                    <div class="frame-head"><h3>${title}</h3></div>
+                    ${head}
                     <div class="frame-shell ${extraClass}"><iframe title="${title}" loading="lazy" data-src="${src}" referrerpolicy="no-referrer"></iframe></div>
                     ${caption}
                 </article>
@@ -640,13 +671,11 @@
                             <div class="grid-2">
                                 ${(item.columns || []).map((column) => `
                                     <div class="comparison-col">
-                                        <div class="card">
-                                            <div class="card-head"><h3>${esc(column.title || '')}</h3></div>
-                                            <div class="card-body">
-                                                <p class="lead-text" style="margin-top:0;">${esc(column.subtitle || '')}</p>
-                                            </div>
+                                        <div class="comparison-heading">
+                                            <h3>${esc(column.title || '')}</h3>
+                                            <p>${esc(column.subtitle || '')}</p>
                                         </div>
-                                        ${renderIframeFrame(column.current || {}, 'slim')}
+                                        ${renderIframeFrame(column.current || {}, 'slim', { bare: true })}
                                         <div class="target-card">
                                             <h4>Versão otimizada</h4>
                                             <ul>${(column.optimized || []).map((point) => `<li>${esc(point)}</li>`).join('')}</ul>
