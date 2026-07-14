@@ -300,6 +300,14 @@ def _add_poi_overlay(fig: object, poi_df: Optional[pd.DataFrame]) -> None:
                 xanchor="left",
                 yanchor="top",
                 showactive=True,
+                # bgcolor a combinar com o fundo branco do painel (standalone e embutido via
+                # iframe são ambos brancos, ver population_dashboard.html) e bordercolor quase
+                # invisível - só o botão selecionado fica visível, através do realce automático
+                # do Plotly (fixo em #F4FAFF, não configurável por aqui) sobre o botão ativo.
+                bgcolor="#ffffff",
+                bordercolor="rgba(20, 20, 30, 0.10)",
+                borderwidth=1,
+                font=dict(color="#5a6573", size=12),
                 buttons=[
                     dict(label="Sem POI", method="restyle", args=[{"visible": False}, [poi_trace_index]]),
                     dict(label="Com POI", method="restyle", args=[{"visible": True}, [poi_trace_index]]),

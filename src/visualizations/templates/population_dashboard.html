@@ -26,6 +26,25 @@
             .panel iframe { height: 520px; }
             h1 { font-size: 1.25rem; }
         }
+        /* Modo isolado (?show=heatmap|choropleth|stadium, ver <script> abaixo): esta página é
+           embutida como iframe dentro de outro dashboard que já mostra o título do gráfico -
+           a caixa/h2 próprios só duplicavam essa informação, e o fundo cinzento (--bg) criava
+           uma costura visível com o fundo (branco) da página que embute. Só se aplica quando
+           há ?show= na URL; aberta sozinha (bgri.html sem parâmetros) mantém a caixa/título. */
+        body.embedded,
+        body.embedded .container {
+            background: transparent;
+            padding: 0;
+        }
+        body.embedded .panel {
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            margin-bottom: 0;
+        }
+        body.embedded .panel h2 {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -63,6 +82,7 @@
         const visibleIndex = { heatmap: 0, choropleth: 2, stadium: 3 }[showMode];
 
         if (visibleIndex !== undefined) {
+            document.body.classList.add('embedded');
             panels.forEach((panel, i) => {
                 if (i !== visibleIndex) panel.style.display = 'none';
             });
