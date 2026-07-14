@@ -450,7 +450,35 @@ def create_overlap_reachability_map(
             scheduleRefresh(baseOrigin, true);
         }}
 
+        // Segunda fonte de posição, além do mousemove nativo acima: o dashboard FeedNPlay
+        // (feednplay_dashboard.html) reencaminha por postMessage a presença detetada pela
+        // câmara de topo (ver src/feednplay/bridge.py) - evaluate_js do bridge só chega ao
+        // documento de topo, nunca diretamente a este iframe, daí o postMessage em vez de um
+        // CustomEvent local. x/y vêm normalizados 0-1 (esquerda/direita, perto/longe) dentro da
+        // zona de interação da câmara - por agora mapeados 1:1 para a área do próprio mapa,
+        // tal como um mousemove sintético. Sem presença nenhuma (`active: false`), volta à
+        // origem por omissão em vez de ficar preso na última posição. Isto NÃO substitui
+        // bindMove() - as duas fontes coexistem, por isso este ficheiro continua a funcionar
+        // sozinho num browser normal (sem o bridge) tal como antes.
+        function bindFnpPosition() {{
+            window.addEventListener('message', function(event) {{
+                var payload = event.data && event.data.__fnpPosition;
+                if (!payload) return;
+
+                if (!payload.active) {{
+                    scheduleRefresh(baseOrigin, true);
+                    return;
+                }}
+
+                var rect = mapObj.getContainer().getBoundingClientRect();
+                var point = L.point(payload.x * rect.width, payload.y * rect.height);
+                var latlng = mapObj.containerPointToLatLng(point);
+                scheduleRefresh(latlng, false);
+            }});
+        }}
+
         bindMove();
+        bindFnpPosition();
     }})();
     """
     m.get_root().script.add_child(folium.Element(dynamic_iso_script))

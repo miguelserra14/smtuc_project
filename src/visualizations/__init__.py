@@ -1,5 +1,5 @@
 from .io import _write_folium_html, _write_readable_plotly_html
-from .dashboard import create_master_dashboard_html, create_presentation_dashboard_html
+from .dashboard import create_feednplay_dashboard_html, create_master_dashboard_html, create_presentation_dashboard_html
 from .integration import generate_connection_visualizations
 from .population_maps import (
     create_2km_choropleth_map,
@@ -16,6 +16,7 @@ __all__ = [
     "_write_readable_plotly_html",
     "create_master_dashboard_html",
     "create_presentation_dashboard_html",
+    "create_feednplay_dashboard_html",
     "generate_connection_visualizations",
     "create_2km_choropleth_map",
     "create_choropleth_map",

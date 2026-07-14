@@ -30,6 +30,7 @@ from overlap.overlap_db import load_line_metrics_db
 from visualizations import (
     create_master_dashboard_html,
     create_presentation_dashboard_html,
+    create_feednplay_dashboard_html,
     create_population_dashboard_html,
     create_overlap_reachability_map,
         create_overlap_lines_map,
@@ -377,6 +378,26 @@ def regenerate_presentation_dashboard() -> None:
         traceback.print_exc()
 
 
+def regenerate_feednplay_dashboard() -> None:
+    """Regenera o esqueleto do dashboard para a parede FeedNPlay."""
+    print("\n" + "=" * 60)
+    print("[INFO] Regenerando Dashboard FeedNPlay (esqueleto)...")
+    print("=" * 60)
+
+    try:
+        root = _project_root()
+        dashboard_path = root / "outputs" / "feednplay_dashboard.html"
+
+        print("[INFO] Gerando dashboard FeedNPlay...")
+        created = create_feednplay_dashboard_html(dashboard_path)
+        print(f"[SUCCESS] Dashboard FeedNPlay: {created}")
+
+    except Exception as e:
+        print(f"[ERROR] Erro ao regenerar dashboard FeedNPlay: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def main() -> None:
     """Executa regeneraÃ§Ã£o completa de todos os HTMLs."""
     print("\n" + "=" * 60)
@@ -389,7 +410,8 @@ def main() -> None:
     regenerate_integration_htmls()
     regenerate_master_dashboard()
     regenerate_presentation_dashboard()
-    
+    regenerate_feednplay_dashboard()
+
     print("\n" + "=" * 60)
     print("[SUCCESS] REGENERAÃ‡ÃƒO CONCLUÃDA!")
     print("=" * 60)

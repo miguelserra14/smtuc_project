@@ -420,3 +420,29 @@ def create_presentation_dashboard_html(
 
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
+
+
+def create_feednplay_dashboard_html(
+    output_path: Path | str,
+    title: str = "SMTUC: FeedNPlay",
+    tabs: list[dict[str, Any]] | None = None,
+) -> str:
+    """Esqueleto do build para a parede FeedNPlay (9720x1920px).
+
+    Reutiliza o mesmo conteúdo/motor de tabs de `create_presentation_dashboard_html` - só o
+    template (`feednplay_dashboard.html`) muda, com CSS full-bleed em vez de coluna centrada.
+    Grid de bezels, tipografia à distância e o bridge à câmara de topo (ver
+    `src/feednplay/bridge.py`) ainda não estão ligados aqui, ficam para depois de validar que
+    este esqueleto corre no canvas certo.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    resolved_tabs = _add_cache_busting(tabs or _default_presentation_tabs(), output_path.parent)
+
+    page = _read_template("feednplay_dashboard.html")
+    page = page.replace("__TITLE__", html.escape(title))
+    page = page.replace("__TABS_JSON__", json.dumps(resolved_tabs, ensure_ascii=False))
+
+    output_path.write_text(page, encoding="utf-8")
+    return str(output_path)
