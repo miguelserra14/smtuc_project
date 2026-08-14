@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<!-- Esqueleto do build FeedNPlay (parede 9720x1920px). Layout full-bleed só o suficiente para
-     correr no canvas certo - grid de bezels, tipografia à distância e position-bus da câmara
-     ainda não implementados aqui, ver plano em curso. Motor de tabs/navegação por teclado
-     copiado tal e qual de presentation_dashboard.html (não duplicar lógica, só o CSS mudou). -->
+<!-- Build FeedNPlay (parede 9720x1920px, 6.12x1.21m). Full-bleed, navegação por dwell,
+     tipografia à distância (--fnp-base-font-px, ver :root) e guia de bezels (?bezels=1, ver
+     .fnp-bezel-guide) - todos com valores de partida por afinar no local (ver comentários
+     junto de cada um). Motor de tabs/navegação por teclado copiado tal e qual de
+     presentation_dashboard.html (não duplicar lógica, só o CSS mudou). -->
 <html lang="pt">
 <head>
     <meta charset="utf-8" />
@@ -22,7 +23,20 @@
             --accent-2: #2d8f85;
             --accent-3: #0f5b9c;
             --shadow: 0 18px 50px rgba(106, 13, 173, 0.10);
+            /* Tipografia à distância: a parede (9720x1920px em 6.12x1.21m) tem uma densidade de
+               ~0.63mm/px, bem menor que um ecrã de secretária (~0.26mm/px) - o mesmo tamanho em
+               rem já sai maior fisicamente na parede, mas não o suficiente para ser lido
+               confortavelmente a alguns metros. Como (quase) todo o texto neste template já usa
+               rem/clamp(rem,vw,rem), aumentar só esta ÚNICA variável escala tudo
+               proporcionalmente (títulos, corpo, chips, dwell bar) sem mexer em cada regra.
+               56px = 3.5x o valor por omissão do browser (16px) - é uma ESTIMATIVA de partida,
+               não uma medição real; a primeira coisa a calibrar no local é este número, até o
+               texto ficar confortável à distância real a que o público se costuma posicionar. */
+            --fnp-base-font-px: 56px;
             color-scheme: light only;
+        }
+        html {
+            font-size: var(--fnp-base-font-px);
         }
         html, body {
             margin: 0;
@@ -48,45 +62,16 @@
         /* Sem título/tabs visíveis - navegação passa a ser por dwell (ver .fnp-dwell-*) ou,
            como reserva do apresentador, pelas setas do teclado nos botões de tab (mantidos no
            DOM via .visually-hidden, não display:none, para continuarem focáveis). */
-        .hero {
-            display: none;
-        }
-        .hero::after {
-            content: "";
-            position: absolute;
-            right: -120px;
-            bottom: -120px;
-            width: 280px;
-            height: 280px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.10);
-            filter: blur(2px);
-        }
         .eyebrow {
             display: inline-flex;
-            gap: 8px;
+            gap: 0.5rem;
             align-items: center;
-            padding: 6px 10px;
+            padding: 0.375rem 0.625rem;
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.14);
             font-size: 0.82rem;
             letter-spacing: 0.02em;
-            margin-bottom: 10px;
-        }
-        h1 {
-            margin: 0;
-            font-size: clamp(1.6rem, 2.8vw, 2.55rem);
-            line-height: 1.08;
-            position: relative;
-            z-index: 1;
-        }
-        .hero p {
-            margin: 10px auto 0;
-            max-width: 980px;
-            line-height: 1.5;
-            color: rgba(255, 255, 255, 0.90);
-            position: relative;
-            z-index: 1;
+            margin-bottom: 0.625rem;
         }
         .tabs {
             display: flex;
@@ -132,12 +117,12 @@
             animation: fadeIn 160ms ease-out;
         }
         .panel-head {
-            padding: 60px 40px 16px;
+            padding: 3.75rem 2.5rem 1rem;
             border-bottom: 1px solid var(--border);
             background: linear-gradient(180deg, rgba(248, 251, 255, 0.96), #ffffff);
         }
         .panel-title {
-            margin: 0 0 6px;
+            margin: 0 0 0.375rem;
             font-size: 1.08rem;
         }
         .panel-desc {
@@ -146,47 +131,55 @@
             line-height: 1.45;
         }
         .panel-body {
-            padding: 24px 40px 32px;
+            padding: 1.5rem 2.5rem 2rem;
         }
         .panel-note {
             border: 1px solid var(--border);
             background: linear-gradient(180deg, #ffffff, var(--card-soft));
             border-radius: 18px;
-            padding: 14px 16px;
+            padding: 0.875rem 1rem;
             color: var(--muted);
             line-height: 1.5;
-            margin-bottom: 14px;
+            margin-bottom: 0.875rem;
         }
         .chip-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 12px;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
         }
         .chip {
             display: inline-flex;
             align-items: center;
             border-radius: 999px;
-            padding: 6px 10px;
+            padding: 0.375rem 0.625rem;
             background: rgba(106, 13, 173, 0.08);
             color: var(--accent);
             font-size: 0.82rem;
             font-weight: 600;
         }
+        /* grid-template-columns escolhidas para a fronteira entre colunas cair exatamente numa
+           junção de monitores (parede = 9 monitores de 1080px cada, em 9720px totais - qualquer
+           fração N/9 cai numa junção; frações "redondas" como 1fr/1fr ou 1.15fr/0.85fr caem a
+           meio de um monitor físico, cortando o conteúdo ao meio em vez de na moldura entre
+           ecrãs). grid-3 (3 colunas iguais = 3240px cada = exatamente 3 monitores) já alinhava
+           por acaso e não mudou. Isto é a MELHOR ESTIMATIVA sem ver a parede a sério - o
+           alinhamento fino real (incluindo o padding de .panel-body) só se confirma no local,
+           com a guia visual ?bezels=1 (ver mais abaixo, perto de .fnp-bezel-guide). */
         .grid-2 {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 14px;
+            grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+            gap: 0.875rem;
         }
         .grid-3 {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 14px;
+            gap: 0.875rem;
         }
         .grid-hero {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 14px;
+            grid-template-columns: 5fr 4fr;
+            gap: 0.875rem;
         }
         .card,
         .metric-card,
@@ -203,12 +196,12 @@
             overflow: hidden;
         }
         .card-head {
-            padding: 12px 14px;
+            padding: 0.75rem 0.875rem;
             border-bottom: 1px solid var(--border);
             background: #fbf8ff;
         }
         .frame-head {
-            padding: 0 0 8px;
+            padding: 0 0 0.5rem;
         }
         .card-head h3,
         .frame-head h3,
@@ -218,33 +211,33 @@
         }
         .card-body,
         .metric-body {
-            padding: 14px;
+            padding: 0.875rem;
         }
         .lead-text {
             font-size: 1.03rem;
             line-height: 1.55;
             color: var(--ink);
-            margin: 0 0 14px;
+            margin: 0 0 0.875rem;
         }
         .bullet-list {
             margin: 0;
-            padding-left: 18px;
+            padding-left: 1.125rem;
             color: var(--muted);
             line-height: 1.55;
         }
         .bullet-list li + li {
-            margin-top: 8px;
+            margin-top: 0.5rem;
         }
         .steps {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 14px;
+            gap: 0.625rem;
+            margin-top: 0.875rem;
         }
         .step {
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 10px 12px;
+            padding: 0.625rem 0.75rem;
             background: #ffffff;
             color: var(--ink);
             font-weight: 600;
@@ -254,24 +247,24 @@
         }
         .frame-shell iframe {
             width: 100%;
-            height: 500px;
+            height: 31.25rem;
             border: 0;
             display: block;
             background: #ffffff;
         }
         .frame-shell.tall iframe {
-            height: 560px;
+            height: 35rem;
         }
         .frame-shell.slim iframe {
-            height: 420px;
+            height: 26.25rem;
         }
         .metric-card .frame-shell iframe {
-            height: 440px;
+            height: 27.5rem;
         }
         .comparison-col {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 0.875rem;
         }
         /* Cabeçalho de coluna (Portagem/Portela) sem caixa - só o essencial (qual coluna é
            qual), sem borda/fundo a competir com a visualização logo a seguir. */
@@ -279,7 +272,7 @@
             margin: 0;
         }
         .comparison-heading h3 {
-            margin: 0 0 2px;
+            margin: 0 0 0.125rem;
             font-size: 0.98rem;
             color: var(--ink);
         }
@@ -290,7 +283,7 @@
         }
         /* Legenda por baixo de uma visualização - texto simples, sem caixa/borda. */
         .frame-caption {
-            margin: 8px 0 0;
+            margin: 0.5rem 0 0;
             color: var(--muted);
             font-size: 0.86rem;
             line-height: 1.45;
@@ -299,29 +292,29 @@
             border: 1px dashed var(--border);
             border-radius: 18px;
             background: #fcfbff;
-            padding: 14px 16px;
+            padding: 0.875rem 1rem;
             color: var(--muted);
             line-height: 1.5;
         }
         .target-card h4 {
-            margin: 0 0 8px;
+            margin: 0 0 0.5rem;
             color: var(--ink);
             font-size: 0.95rem;
         }
         .target-card ul {
             margin: 0;
-            padding-left: 18px;
+            padding-left: 1.125rem;
         }
         .target-card li + li {
-            margin-top: 6px;
+            margin-top: 0.375rem;
         }
         .stats-wrap {
-            margin-top: 14px;
+            margin-top: 0.875rem;
         }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
+            gap: 0.75rem;
         }
         .stats-card {
             border: 1px solid var(--border);
@@ -331,7 +324,7 @@
         }
         .stats-card h4 {
             margin: 0;
-            padding: 10px 12px;
+            padding: 0.625rem 0.75rem;
             font-size: 0.92rem;
             border-bottom: 1px solid var(--border);
             background: #fbf8ff;
@@ -344,7 +337,7 @@
         .stats-table th,
         .stats-table td {
             text-align: center;
-            padding: 7px 8px;
+            padding: 0.4375rem 0.5rem;
             border-bottom: 1px solid var(--border);
         }
         .stats-table th {
@@ -354,14 +347,14 @@
         }
         .closing-layout {
             display: grid;
-            grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-            gap: 14px;
+            grid-template-columns: 5fr 4fr;
+            gap: 0.875rem;
         }
         .closing-hero {
             border-radius: 20px;
             background: linear-gradient(135deg, rgba(106, 13, 173, 0.98), rgba(15, 91, 156, 0.96));
             color: #ffffff;
-            padding: 22px 20px;
+            padding: 1.375rem 1.25rem;
             box-shadow: var(--shadow);
         }
         .closing-hero h2 {
@@ -370,13 +363,13 @@
             line-height: 1.15;
         }
         .closing-hero p {
-            margin: 10px 0 0;
+            margin: 0.625rem 0 0;
             color: rgba(255, 255, 255, 0.90);
             line-height: 1.55;
-            max-width: 780px;
+            max-width: 48.75rem;
         }
         .closing-card {
-            padding: 14px 16px;
+            padding: 0.875rem 1rem;
         }
         .thanks-layout {
             min-height: 60vh;
@@ -384,11 +377,11 @@
             place-items: center;
         }
         .thanks-card {
-            width: min(920px, 100%);
+            width: min(57.5rem, 100%);
             border-radius: 24px;
             background: linear-gradient(135deg, rgba(18, 28, 42, 0.98), rgba(35, 51, 74, 0.98));
             color: #ffffff;
-            padding: 34px 28px;
+            padding: 2.125rem 1.75rem;
             box-shadow: var(--shadow);
             text-align: center;
         }
@@ -397,14 +390,14 @@
             font-size: clamp(1.8rem, 4vw, 3rem);
         }
         .thanks-card p {
-            margin: 10px auto 0;
-            max-width: 720px;
+            margin: 0.625rem auto 0;
+            max-width: 45rem;
             color: rgba(255, 255, 255, 0.88);
             line-height: 1.55;
         }
         .thanks-card .chip-row {
             justify-content: center;
-            margin-top: 16px;
+            margin-top: 1rem;
         }
         .visually-hidden {
             position: absolute;
@@ -421,23 +414,21 @@
             to { opacity: 1; transform: translateY(0); }
         }
         /* Navegação por dwell (permanecer) em vez de tabs clicáveis - ver a função
-           _fnpHandlePosition mais abaixo, no bloco de script. Estilo provisório (cores/tamanhos
-           por afinar no passe de tipografia à distância); o essencial aqui é o preenchimento
-           (.fnp-dwell-fill) refletir o progresso do dwell em tempo real. */
+           _fnpHandlePosition mais abaixo, no bloco de script. */
         .fnp-dwell-bar {
             position: fixed;
-            top: 14px;
+            top: 0.875rem;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 6px;
+            gap: 0.375rem;
             z-index: 9998;
             pointer-events: none;
         }
         .fnp-dwell-zone {
             position: relative;
-            width: 52px;
-            height: 44px;
+            width: 3.25rem;
+            height: 2.75rem;
             border-radius: 999px;
             background: rgba(22, 32, 44, 0.35);
             overflow: hidden;
@@ -467,16 +458,45 @@
             font-size: 1.15rem;
             font-weight: 700;
         }
+        /* Guia visual das molduras entre os 9 monitores (só aparece com ?bezels=1 na URL - ver
+           bloco de script). Ferramenta de calibração para quem estiver fisicamente na parede a
+           decidir onde cada layout deve "respeitar" a moldura física - não é para o público
+           ver, por isso fica escondida por omissão em vez de um botão/atalho visível. As linhas
+           são posicionadas em percentagem (N/9), correta em qualquer largura de janela onde
+           esta página seja aberta, não só nos 9720px reais da parede. */
+        .fnp-bezel-guide {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99996;
+            pointer-events: none;
+        }
+        body.fnp-show-bezels .fnp-bezel-guide {
+            display: block;
+        }
+        .fnp-bezel-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 0, 60, 0.55);
+        }
+        .fnp-bezel-line span {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.25rem;
+            font-size: 0.7rem;
+            font-family: 'Segoe UI', monospace;
+            color: #ffffff;
+            background: rgba(255, 0, 60, 0.75);
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
     <main class="shell">
-        <section class="hero">
-            <div class="eyebrow">FeedNPlay - esqueleto</div>
-            <h1>SMTUC: A caminho da complementaridade</h1>
-            <p>Build de teste para a parede FeedNPlay (9720x1920px). Conteúdo por agora igual ao dos mockups da apresentação - grid de bezels, tipografia à distância e reação à câmara de topo ainda por implementar.</p>
-        </section>
-
         <!-- Fica no DOM (não display:none) para o apresentador continuar a poder navegar pelas
              setas do teclado, mas some visualmente - a navegação normal é por dwell, ver abaixo. -->
         <nav class="tabs visually-hidden" id="dashboard-tabs" aria-label="Tabs da apresentação"></nav>
@@ -497,18 +517,48 @@
         </div>
     </div>
 
-    <!-- Overlay de debug do sinal da câmara - só para validar o esqueleto sem estar no local do
-         FeedNPlay (ver src/feednplay/bridge.py); tirar quando o passe de tipografia/design for
-         feito. Não interfere com clique/toque (pointer-events: none). -->
+    <!-- Overlay de debug do sinal da câmara - permite validar o pipeline sem estar no local do
+         FeedNPlay (ver src/feednplay/bridge.py); manter até à calibração final no local, onde
+         deixa de ser preciso. Tamanho fixo de propósito (é um utilitário de developer, não
+         conteúdo para o público) - não interfere com clique/toque (pointer-events: none). -->
     <div id="fnp-debug" style="position:fixed;top:8px;right:8px;z-index:99999;background:rgba(0,0,0,0.72);color:#fff;font:12px/1.4 'Segoe UI',monospace;padding:8px 10px;border-radius:8px;pointer-events:none;">
         câmara: a aguardar sinal...
     </div>
 
+    <!-- Guia visual das 8 molduras entre os 9 monitores - só visível com ?bezels=1 na URL (ver
+         script). Populada por JS (não é prático escrever 8 divs à mão e manter em sincronia com
+         o número de monitores). -->
+    <div id="fnp-bezel-guide" class="fnp-bezel-guide"></div>
+
     <script>
-        const tabs = [{"id": "intro", "label": "Introdução", "kind": "hero", "eyebrow": "Apresentação final", "title": "SMTUC: A caminho da complementaridade", "subtitle": "Como o Metrobus mudou a mobilidade em Coimbra e o que o SMTUC pode adaptar já", "lead": "As obras ainda não estão acabadas, mas o estudo já está encaminhado e já há bastante que pode ser feito com impacto tangível.", "chips": ["Metrobus", "SMTUC", "Coimbra", "Urgência em setembro"], "highlights": ["Mudança estrutural da mobilidade", "Resposta já possível com os dados que existem", "Janela de oportunidade para a entrada de caloiros"]}, {"id": "metodologia", "label": "Metodologia", "kind": "methodology", "description": "Como os dados de SMTUC, Metrobus e população entram no mesmo fluxo de análise.", "note": "Cruza-se oferta de transporte, população e contexto urbano para perceber onde a rede mudou e onde o SMTUC pode ajustar-se já.", "steps": ["Recolha", "Limpeza", "Métricas", "Visualização"], "source_tags": ["SMTUC", "Metrobus", "População", "Locais de trabalho", "Locais de convívio"], "iframes": [{"title": "Heatmap de população", "src": "population/bgri.html?show=heatmap&v=1784044101", "caption": "Distribuição da população por Coimbra."}, {"title": "Índice de subserviço", "src": "population/bgri.html?show=choropleth&v=1784044101", "caption": "Primeira leitura da pressão de serviço."}]}, {"id": "subservico", "label": "Subserviço + Isócronas", "kind": "three-up", "description": "A métrica de subserviço e a leitura territorial das isócronas.", "note": "A taxa de subserviço relaciona população com oferta e ajuda a perceber onde o serviço está mais pressionado. As isócronas devem passar a incluir também locais de trabalho e convívio.", "iframes": [{"title": "Mapa global de subserviço", "src": "population/bgri.html?show=choropleth&v=1784044101", "caption": "Índice de subserviço em Coimbra."}, {"title": "Subserviço a 2 km", "src": "population/bgri.html?show=stadium&v=1784044101", "caption": "Leitura de detalhe da pressão territorial."}, {"title": "Isócronas dinâmicas", "src": "overlap/overlap_reachability_now.html?v=1784044107", "caption": "Cobertura, acessibilidade e overlap temporal."}]}, {"id": "overlap", "label": "Overlap", "kind": "overlap", "description": "Onde a rede SMTUC e o Metrobus mais se sobrepõem.", "note": "Este bloco mostra onde existe redundância espacial e temporal. A leitura deve ser visual, direta e rápida.", "iframes": [{"title": "Reachability e overlap temporal", "src": "overlap/overlap_reachability_now.html?v=1784044107", "caption": "Mapa principal com cobertura e temporalidade."}, {"title": "Mapa de linhas sobrepostas", "src": "overlap/overlap_lines_map.html?v=1784044143", "caption": "Linhas com maior e menor overlap."}], "stats": {"top5": [{"line": "45", "overlap_pct": "20.51%", "overlap_m": "4051.0", "extension_m": "19747.6", "overlap_stops": "19", "total_stops": "57", "avg_freq_min": "61.4"}, {"line": "26", "overlap_pct": "18.45%", "overlap_m": "5547.0", "extension_m": "30060.6", "overlap_stops": "19", "total_stops": "55", "avg_freq_min": "23.8"}, {"line": "10", "overlap_pct": "17.20%", "overlap_m": "7653.0", "extension_m": "44487.7", "overlap_stops": "21", "total_stops": "56", "avg_freq_min": "13.9"}, {"line": "33", "overlap_pct": "16.42%", "overlap_m": "4280.7", "extension_m": "26069.4", "overlap_stops": "14", "total_stops": "44", "avg_freq_min": "27.2"}, {"line": "9", "overlap_pct": "16.17%", "overlap_m": "6717.3", "extension_m": "41535.7", "overlap_stops": "21", "total_stops": "55", "avg_freq_min": "32.5"}], "bottom5": [{"line": "52T", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "16818.6", "overlap_stops": "0", "total_stops": "36", "avg_freq_min": "0.0"}, {"line": "52P", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "50242.2", "overlap_stops": "0", "total_stops": "62", "avg_freq_min": "76.7"}, {"line": "52M", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "12944.6", "overlap_stops": "0", "total_stops": "21", "avg_freq_min": "0.0"}, {"line": "52", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "44398.5", "overlap_stops": "0", "total_stops": "74", "avg_freq_min": "52.5"}, {"line": "51", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "57656.1", "overlap_stops": "0", "total_stops": "93", "avg_freq_min": "67.5"}], "bottom5_stadium": [{"line": "4", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "6995.2", "overlap_stops": "0", "total_stops": "26", "avg_freq_min": "11.5"}, {"line": "42V", "overlap_pct": "4.16%", "overlap_m": "1069.6", "extension_m": "25708.0", "overlap_stops": "5", "total_stops": "72", "avg_freq_min": "100.0"}, {"line": "5T", "overlap_pct": "4.45%", "overlap_m": "1763.3", "extension_m": "39625.3", "overlap_stops": "7", "total_stops": "81", "avg_freq_min": "19.7"}, {"line": "34", "overlap_pct": "5.16%", "overlap_m": "641.4", "extension_m": "12432.4", "overlap_stops": "5", "total_stops": "50", "avg_freq_min": "17.0"}, {"line": "38", "overlap_pct": "6.55%", "overlap_m": "1048.3", "extension_m": "15995.1", "overlap_stops": "5", "total_stops": "48", "avg_freq_min": "27.7"}], "temporal_summary": {"total_spatial_candidates": 14008, "overlap_stations": 52, "overlap_lines": 68, "temporal_overlap_pct": 58.93, "temporal_overlap_times": 8255, "temporal_overlap_stations": 52, "temporal_overlap_lines": 79, "TEMPORAL_OVERLAP_MAX_MIN": 5.0, "walk_distance_threshold": 240.0}}}, {"id": "integracao", "label": "Integração", "kind": "comparison", "description": "Comparação Portagem e Portela com a linha 54.", "note": "A versão otimizada ainda é um objetivo do projeto, por isso o foco aqui é mostrar o estado atual e a direção de melhoria: menos espera, melhor coordenação e horários mais úteis.", "columns": [{"title": "Portagem", "subtitle": "Linha 54 + 38", "current": {"title": "Estado atual", "src": "integration/portagem/l54_38_all.html?v=1784044148", "caption": "Integração atual no sentido Portela → Portagem."}, "optimized": ["Reduzir tempos de espera no transbordo", "Ajustar horários ao Metrobus", "Evidenciar a correspondência entre modos"]}, {"title": "Portela", "subtitle": "Linha 54", "current": {"title": "Estado atual", "src": "integration/portela/l54_all.html?v=1784044150", "caption": "Integração atual no sentido Portagem → Portela."}, "optimized": ["Simplificar o percurso de ligação", "Reorganizar a cadência horária", "Mostrar melhor o ganho tangível para o utilizador"]}]}, {"id": "conclusao", "label": "Conclusões", "kind": "closing", "description": "O que a apresentação quer deixar claro no final.", "headline": "O Metrobus alterou a mobilidade em Coimbra e o SMTUC precisa de se adaptar.", "points": ["Há já impacto tangível que pode ser mostrado antes de as obras terminarem.", "O reforço do SMTUC deve responder ao novo contexto, não competir com ele.", "Setembro é a oportunidade para demonstrar a nova era da mobilidade em Coimbra."]}, {"id": "agradecimentos", "label": "Agradecimentos", "kind": "thanks", "description": "Fecho minimalista e limpo para o ecrã final.", "title": "Obrigado", "subtitle": "Nomes, instituição e contactos", "contacts": ["Nome 1", "Nome 2", "Curso / Unidade curricular", "Setembro 2026"]}];
+        const tabs = [{"id": "intro", "label": "Introdução", "kind": "hero", "eyebrow": "Apresentação final", "title": "SMTUC: A caminho da complementaridade", "subtitle": "Como o Metrobus mudou a mobilidade em Coimbra e o que o SMTUC pode adaptar já", "lead": "As obras ainda não estão acabadas, mas o estudo já está encaminhado e já há bastante que pode ser feito com impacto tangível.", "chips": ["Metrobus", "SMTUC", "Coimbra", "Urgência em setembro"], "highlights": ["Mudança estrutural da mobilidade", "Resposta já possível com os dados que existem", "Janela de oportunidade para a entrada de caloiros"]}, {"id": "metodologia", "label": "Metodologia", "kind": "methodology", "description": "Como os dados de SMTUC, Metrobus e população entram no mesmo fluxo de análise.", "note": "Cruza-se oferta de transporte, população e contexto urbano para perceber onde a rede mudou e onde o SMTUC pode ajustar-se já.", "steps": ["Recolha", "Limpeza", "Métricas", "Visualização"], "source_tags": ["SMTUC", "Metrobus", "População", "Locais de trabalho", "Locais de convívio"], "iframes": [{"title": "Heatmap de população", "src": "population/bgri.html?show=heatmap&v=1784204400", "caption": "Distribuição da população por Coimbra."}, {"title": "Índice de subserviço", "src": "population/bgri.html?show=choropleth&v=1784204400", "caption": "Primeira leitura da pressão de serviço."}]}, {"id": "subservico", "label": "Subserviço + Isócronas", "kind": "three-up", "description": "A métrica de subserviço e a leitura territorial das isócronas.", "note": "A taxa de subserviço relaciona população com oferta e ajuda a perceber onde o serviço está mais pressionado. As isócronas devem passar a incluir também locais de trabalho e convívio.", "iframes": [{"title": "Mapa global de subserviço", "src": "population/bgri.html?show=choropleth&v=1784204400", "caption": "Índice de subserviço em Coimbra."}, {"title": "Subserviço a 2 km", "src": "population/bgri.html?show=stadium&v=1784204400", "caption": "Leitura de detalhe da pressão territorial."}, {"title": "Isócronas dinâmicas", "src": "overlap/overlap_reachability_now.html?v=1784204408", "caption": "Cobertura, acessibilidade e overlap temporal."}]}, {"id": "overlap", "label": "Overlap", "kind": "overlap", "description": "Onde a rede SMTUC e o Metrobus mais se sobrepõem.", "note": "Este bloco mostra onde existe redundância espacial e temporal. A leitura deve ser visual, direta e rápida.", "iframes": [{"title": "Reachability e overlap temporal", "src": "overlap/overlap_reachability_now.html?v=1784204408", "caption": "Mapa principal com cobertura e temporalidade."}, {"title": "Mapa de linhas sobrepostas", "src": "overlap/overlap_lines_map.html?v=1784204448", "caption": "Linhas com maior e menor overlap."}], "stats": {"top5": [{"line": "45", "overlap_pct": "20.51%", "overlap_m": "4051.0", "extension_m": "19747.6", "overlap_stops": "19", "total_stops": "57", "avg_freq_min": "61.4"}, {"line": "26", "overlap_pct": "18.45%", "overlap_m": "5547.0", "extension_m": "30060.6", "overlap_stops": "19", "total_stops": "55", "avg_freq_min": "23.8"}, {"line": "10", "overlap_pct": "17.20%", "overlap_m": "7653.0", "extension_m": "44487.7", "overlap_stops": "21", "total_stops": "56", "avg_freq_min": "13.9"}, {"line": "33", "overlap_pct": "16.42%", "overlap_m": "4280.7", "extension_m": "26069.4", "overlap_stops": "14", "total_stops": "44", "avg_freq_min": "27.2"}, {"line": "9", "overlap_pct": "16.17%", "overlap_m": "6717.3", "extension_m": "41535.7", "overlap_stops": "21", "total_stops": "55", "avg_freq_min": "32.5"}], "bottom5": [{"line": "52T", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "16818.6", "overlap_stops": "0", "total_stops": "36", "avg_freq_min": "0.0"}, {"line": "52P", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "50242.2", "overlap_stops": "0", "total_stops": "62", "avg_freq_min": "76.7"}, {"line": "52M", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "12944.6", "overlap_stops": "0", "total_stops": "21", "avg_freq_min": "0.0"}, {"line": "52", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "44398.5", "overlap_stops": "0", "total_stops": "74", "avg_freq_min": "52.5"}, {"line": "51", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "57656.1", "overlap_stops": "0", "total_stops": "93", "avg_freq_min": "67.5"}], "bottom5_stadium": [{"line": "4", "overlap_pct": "0.00%", "overlap_m": "0.0", "extension_m": "6995.2", "overlap_stops": "0", "total_stops": "26", "avg_freq_min": "11.5"}, {"line": "42V", "overlap_pct": "4.16%", "overlap_m": "1069.6", "extension_m": "25708.0", "overlap_stops": "5", "total_stops": "72", "avg_freq_min": "100.0"}, {"line": "5T", "overlap_pct": "4.45%", "overlap_m": "1763.3", "extension_m": "39625.3", "overlap_stops": "7", "total_stops": "81", "avg_freq_min": "19.7"}, {"line": "34", "overlap_pct": "5.16%", "overlap_m": "641.4", "extension_m": "12432.4", "overlap_stops": "5", "total_stops": "50", "avg_freq_min": "17.0"}, {"line": "38", "overlap_pct": "6.55%", "overlap_m": "1048.3", "extension_m": "15995.1", "overlap_stops": "5", "total_stops": "48", "avg_freq_min": "27.7"}], "temporal_summary": {"total_spatial_candidates": 14008, "overlap_stations": 52, "overlap_lines": 68, "temporal_overlap_pct": 58.93, "temporal_overlap_times": 8255, "temporal_overlap_stations": 52, "temporal_overlap_lines": 79, "TEMPORAL_OVERLAP_MAX_MIN": 5.0, "walk_distance_threshold": 240.0}}}, {"id": "integracao", "label": "Integração", "kind": "comparison", "description": "Comparação Portagem e Portela com a linha 54.", "note": "A versão otimizada ainda é um objetivo do projeto, por isso o foco aqui é mostrar o estado atual e a direção de melhoria: menos espera, melhor coordenação e horários mais úteis.", "columns": [{"title": "Portagem", "subtitle": "Linha 54 + 38", "current": {"title": "Estado atual", "src": "integration/portagem/l54_38_all.html?v=1784204455", "caption": "Integração atual no sentido Portela → Portagem."}, "optimized": ["Reduzir tempos de espera no transbordo", "Ajustar horários ao Metrobus", "Evidenciar a correspondência entre modos"]}, {"title": "Portela", "subtitle": "Linha 54", "current": {"title": "Estado atual", "src": "integration/portela/l54_all.html?v=1784204458", "caption": "Integração atual no sentido Portagem → Portela."}, "optimized": ["Simplificar o percurso de ligação", "Reorganizar a cadência horária", "Mostrar melhor o ganho tangível para o utilizador"]}]}, {"id": "conclusao", "label": "Conclusões", "kind": "closing", "description": "O que a apresentação quer deixar claro no final.", "headline": "O Metrobus alterou a mobilidade em Coimbra e o SMTUC precisa de se adaptar.", "points": ["Há já impacto tangível que pode ser mostrado antes de as obras terminarem.", "O reforço do SMTUC deve responder ao novo contexto, não competir com ele.", "Setembro é a oportunidade para demonstrar a nova era da mobilidade em Coimbra."]}, {"id": "agradecimentos", "label": "Agradecimentos", "kind": "thanks", "description": "Fecho minimalista e limpo para o ecrã final.", "title": "Obrigado", "subtitle": "Nomes, instituição e contactos", "contacts": ["Nome 1", "Nome 2", "Curso / Unidade curricular", "Setembro 2026"]}];
         const tabsEl = document.getElementById('dashboard-tabs');
         const panelsEl = document.getElementById('dashboard-panels');
         const fnpDebugEl = document.getElementById('fnp-debug');
+        const fnpQueryParams = new URLSearchParams(window.location.search);
+
+        // ---------------------------------------------------------------------------------
+        // Guia visual das molduras entre os 9 monitores (?bezels=1 na URL) - ferramenta de
+        // calibração para usar fisicamente na parede: mostra onde cada linha de moldura cai,
+        // para ajustar paddings/fr-ratios das grids até o conteúdo relevante não ficar cortado
+        // ao meio por uma moldura física. NUM_MONITORS/MONITOR_WIDTH_PX documentam a geometria
+        // real (9720x1920px = 9 monitores de 1080px), mas as linhas são posicionadas em
+        // percentagem, por isso funcionam corretamente nesta janela de testes OU nos 9720px
+        // reais.
+        // ---------------------------------------------------------------------------------
+        const FNP_NUM_MONITORS = 9;
+        if (fnpQueryParams.get('bezels') === '1') {
+            document.body.classList.add('fnp-show-bezels');
+            const guideEl = document.getElementById('fnp-bezel-guide');
+            if (guideEl) {
+                let linesHtml = '';
+                for (let i = 1; i < FNP_NUM_MONITORS; i++) {
+                    const pct = ((i / FNP_NUM_MONITORS) * 100).toFixed(3);
+                    linesHtml += `<div class="fnp-bezel-line" style="left:${pct}%"><span>${i}/${FNP_NUM_MONITORS}</span></div>`;
+                }
+                guideEl.innerHTML = linesHtml;
+            }
+        }
 
         // ---------------------------------------------------------------------------------
         // Navegação por dwell: permanecer (não clicar) numa das duas zonas ao centro-topo do
@@ -754,7 +804,7 @@
 
             const temporal = stats.temporal_summary || {};
             const summary = temporal.total_spatial_candidates ? `
-                <div class="panel-note" style="margin-top:14px;">
+                <div class="panel-note" style="margin-top:0.875rem;">
                     <strong>Resumo temporal:</strong> ${esc(temporal.temporal_overlap_pct || 0)}% das combinações espaciais passaram também o limiar temporal definido.
                 </div>
             ` : '';
@@ -792,7 +842,7 @@
                                 <div class="card">
                                     <div class="card-body">
                                         <div class="eyebrow" style="background:rgba(106,13,173,0.10);color:var(--accent);">${esc(item.eyebrow || 'Apresentação')}</div>
-                                        <h2 style="margin:0 0 10px;font-size:clamp(1.8rem,3vw,3rem);line-height:1.08;">${esc(item.title || '')}</h2>
+                                        <h2 style="margin:0 0 0.625rem;font-size:clamp(1.8rem,3vw,3rem);line-height:1.08;">${esc(item.title || '')}</h2>
                                         <p class="lead-text">${esc(item.subtitle || '')}</p>
                                         <p class="lead-text" style="color:var(--muted);margin-bottom:0;">${esc(item.lead || '')}</p>
                                         ${renderChips(item.chips || [])}
@@ -949,6 +999,20 @@
             return '';
         }
 
+        // A parede não tem rato/teclado ao alcance do público - controlos que só funcionam por
+        // clique (ex.: a caixa "Mostrar linha" do mapa de linhas sobrepostas, ver
+        // lines_map.py) ficam inertes mas continuariam visíveis, confundindo quem tenta
+        // "carregar" neles sem sucesso. Em vez de duplicar cada visualização numa versão
+        // interativa/não-interativa, propaga-se um sinal simples por query param que cada
+        // página embutida pode escolher respeitar (esconder o seu próprio controlo) ou ignorar
+        // em segurança se não tiver nenhum. presentation_dashboard.html (mockups no browser
+        // normal, com rato) NÃO faz este append - só este template, o da parede.
+        function _fnpWithInteractiveFlag(src) {
+            if (!src) return src;
+            const sep = src.includes('?') ? '&' : '?';
+            return `${src}${sep}interactive=0`;
+        }
+
         function setActiveTab(tabId, focusButton = false) {
             const buttons = tabsEl.querySelectorAll('[data-tab-id]');
             const panels = panelsEl.querySelectorAll('[data-panel-id]');
@@ -967,7 +1031,7 @@
                 if (active) {
                     panel.querySelectorAll('iframe[data-src]').forEach((iframe) => {
                         if (!iframe.dataset.loaded) {
-                            iframe.src = iframe.dataset.src;
+                            iframe.src = _fnpWithInteractiveFlag(iframe.dataset.src);
                             iframe.dataset.loaded = '1';
                         }
                     });
