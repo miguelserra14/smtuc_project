@@ -257,6 +257,17 @@ def _add_poi_overlay(fig: object, poi_df: Optional[pd.DataFrame]) -> None:
     `pessoas_estimadas`, `supply_departures`, `poi_underservice_score`, `confianca`. Não faz
     nada (função no-op) se `poi_df` for None/vazio - é assim que a camada fica opcional
     também ao nível da chamada, não só do clique no botão.
+
+    Nota sobre a parede FeedNPlay (sem rato/teclado ao alcance do público): ao contrário da
+    caixa "Mostrar linha" do mapa de linhas (ver lines_map.py, que respeita `?interactive=0`),
+    este botão não tem o mesmo tratamento - fica inerte mas visível. Não é um esquecimento: o
+    botão vive dentro de uma figura Plotly renderizada via `srcdoc` num iframe ANINHADO
+    (feednplay_dashboard.html -> iframe population/bgri.html -> iframe srcdoc do Plotly), e o
+    próprio texto do botão (Plotly's `updatemenus`) não sabe ler query params da página de topo.
+    Escondê-lo exigiria manipular o SVG já renderizado pelo Plotly a partir do documento pai
+    (contentDocument), algo frágil para implementar às cegas sem poder testar num browser real.
+    Fica documentado como um botão inerte-mas-inofensivo na parede, a resolver com prioridade
+    baixa se, na prática, se revelar mais confuso do que uma pequena imperfeição cosmética.
     """
     if poi_df is None or poi_df.empty:
         return

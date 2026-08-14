@@ -246,6 +246,12 @@ def create_overlap_lines_map(
           (function(){
             var selectedLayer = null;
             var map = null;
+            // ?interactive=0 - convenção usada pela parede FeedNPlay (ver feednplay_dashboard.html,
+            // _fnpWithInteractiveFlag), que não tem rato/teclado ao alcance do público: esta caixa
+            // só funciona por clique/escrita, por isso esconde-se em vez de ficar visível e inerte,
+            // confundindo quem tenta "carregar" nela sem sucesso. Sem o parâmetro (uso normal, num
+            // browser com rato), o comportamento não muda em nada.
+            var fnpHideControl = new URLSearchParams(window.location.search).get('interactive') === '0';
             function showLine(line){
               if(!line || !map) return;
               var data = __LINES_DATA__[line] || __LINES_DATA__[line.toUpperCase()];
@@ -264,6 +270,11 @@ def create_overlap_lines_map(
               selectedLayer.bindPopup(info).openPopup();
             }
             function wire(){
+              if(fnpHideControl){
+                var controlEl = document.getElementById('line-select-control');
+                if(controlEl){ controlEl.style.display = 'none'; }
+                return;
+              }
               // Só resolvemos a variável do mapa aqui dentro: por esta altura o script de
               // inicialização do Leaflet gerado pelo folium (que cria a variável do mapa) já
               // correu de certeza, mesmo que apareça fisicamente depois deste bloco no HTML.
