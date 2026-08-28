@@ -305,6 +305,7 @@ def regenerate_integration_htmls() -> None:
                 phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
                 melhorado_phase_shift_min=LINE_54_MELHORADO_PHASE_SHIFT_MIN,
                 reverse_metro_direction_id=1,  # Metrobus sentido Serpins, a partir de Portagem
+                reverse_metro_route_id="LOUSA",  # não confundir com as viagens dos ramais novos (fase 2)
             )
             print(f"[SUCCESS] IntegraÃ§Ã£o Portagem (54+38): {results.get('html_path', 'N/A')}")
         except Exception as e:
@@ -327,6 +328,7 @@ def regenerate_integration_htmls() -> None:
                 phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
                 melhorado_phase_shift_min=LINE_54_MELHORADO_PHASE_SHIFT_MIN,
                 reverse_metro_direction_id=0,  # Metrobus sentido Portagem, a passar por Portela
+                reverse_metro_route_id="LOUSA",  # não confundir com as viagens dos ramais novos (fase 2)
             )
             print(f"[SUCCESS] IntegraÃ§Ã£o Portela (54): {results.get('html_path', 'N/A')}")
         except Exception as e:

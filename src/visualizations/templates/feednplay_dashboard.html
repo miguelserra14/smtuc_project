@@ -2,8 +2,10 @@
 <!-- Build FeedNPlay (parede 9720x1920px, 6.12x1.21m). Full-bleed, navegação por dwell,
      tipografia à distância (--fnp-base-font-px, ver :root) e guia de bezels (?bezels=1, ver
      .fnp-bezel-guide) - todos com valores de partida por afinar no local (ver comentários
-     junto de cada um). Motor de tabs/navegação por teclado copiado tal e qual de
-     presentation_dashboard.html (não duplicar lógica, só o CSS mudou). -->
+     junto de cada um). FEEDNPLAY_PREVIEW_MODE (src/config.py) troca a tipografia à distância por
+     tamanho de secretária, para ver isto num PC normal em vez da escala da parede. Motor de tabs/
+     navegação por teclado copiado tal e qual de presentation_dashboard.html (não duplicar lógica,
+     só o CSS mudou). -->
 <html lang="pt">
 <head>
     <meta charset="utf-8" />
@@ -34,6 +36,14 @@
                texto ficar confortável à distância real a que o público se costuma posicionar. */
             --fnp-base-font-px: 56px;
             color-scheme: light only;
+        }
+        /* Pré-visualização no PC - liga/desliga em FEEDNPLAY_PREVIEW_MODE (src/config.py), que
+           troca --fnp-base-font-px pelo tamanho de secretária normal acima em vez do calibrado
+           para a parede. No próprio <html> (:root), não no body - custom properties só afetam o
+           elemento onde são (re)declaradas ou os seus descendentes, nunca o contrário, e o body é
+           descendente do html. Ver toggle em JS mais abaixo (FNP_PREVIEW_MODE). */
+        :root.fnp-preview-mode {
+            --fnp-base-font-px: __FNP_PREVIEW_BASE_FONT_PX__;
         }
         html {
             font-size: var(--fnp-base-font-px);
@@ -557,6 +567,15 @@
         const FNP_CLICK_TO_ADVANCE = __FNP_CLICK_TO_ADVANCE__;
         if (FNP_CLICK_TO_ADVANCE) {
             document.body.classList.add('fnp-click-to-advance');
+        }
+
+        // Liga/desliga em src/config.py (FEEDNPLAY_PREVIEW_MODE) - troca a tipografia à
+        // distância pelo tamanho de secretária normal (ver `:root.fnp-preview-mode` no CSS).
+        // Corre antes de renderTabs() (mais abaixo) para já aplicar o tamanho certo ao conteúdo
+        // gerado, em vez de o utilizador ver primeiro a escala da parede e só depois encolher.
+        const FNP_PREVIEW_MODE = __FNP_PREVIEW_MODE__;
+        if (FNP_PREVIEW_MODE) {
+            document.documentElement.classList.add('fnp-preview-mode');
         }
 
         // ---------------------------------------------------------------------------------

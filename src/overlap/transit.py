@@ -506,6 +506,7 @@ def build_reverse_stop_vs_metro_table(
     metro_direction_id: int,
     day_str: str | None = None,
     bus_origin_ref: str = "Portagem",
+    metro_route_id: str | None = None,
     output_csv_name: str | None = None,
     output_dir: str | Path | None = None,
 ) -> pd.DataFrame:
@@ -519,6 +520,14 @@ def build_reverse_stop_vs_metro_table(
     de uma paragem de origem porque nalguns casos a paragem-alvo é a própria origem da viagem
     nesse sentido (ex.: em Portagem, sentido Serpins, não há nenhuma paragem "antes" na mesma
     viagem para filtrar por origem - ver `_direction_arrival_times_for_stop`).
+
+    `metro_route_id` (opcional): restringe a pesquisa a uma única rota do Metrobus antes de
+    filtrar por sentido. Necessário desde que o feed passou a ter mais do que uma rota (fase 2 -
+    ramais Aeminium->Coimbra B / Aeminium->República, ver data/metrobus/routes.txt): sem isto,
+    `direction_id` deixa de identificar sem ambiguidade "a viagem que continua para Serpins" -
+    outras rotas também têm viagens com o mesmo `direction_id` em Portagem, mas que TERMINAM aí
+    (vindas de um ramal), não que dali partem. Omitir mantém o comportamento anterior (todas as
+    rotas), correto só quando o feed tem uma única rota.
 
     Devolve o MESMO esquema de colunas que `build_line_stop_vs_metro_table`
     (`bus_time`/`bus_line_passage`, `metro_time_from_origin`) mas com o conteúdo trocado, DE
@@ -547,6 +556,8 @@ def build_reverse_stop_vs_metro_table(
     metro_trips["service_id"] = metro_trips["service_id"].astype(str)
     if metro_services:
         metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
+    if metro_route_id is not None:
+        metro_trips = metro_trips[metro_trips["route_id"].astype(str) == str(metro_route_id)]
 
     metro_stop_id = _pick_best_target_stop_id(
         gtfs=gtfs_metro,

@@ -63,7 +63,12 @@ LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -16.0
 # possíveis, que melhora os 4 sentidos de transbordo em simultâneo, sem nenhuma regressão.
 LINE_54_MELHORADO_PHASE_SHIFT_MIN = -8.0
 
+# Parede FeedNPlay (feednplay_dashboard.html) - toggles independentes: FEEDNPLAY_CLICK_TO_ADVANCE
+# liga/desliga poder clicar/tocar nas zonas ◀/▶ (o dwell fica sempre ativo); FEEDNPLAY_PREVIEW_MODE
+# troca a escala de fonte da parede por um tamanho de secretária normal, para pré-visualizar no PC.
 FEEDNPLAY_CLICK_TO_ADVANCE: bool = True
+FEEDNPLAY_PREVIEW_MODE: bool = True
+FEEDNPLAY_PREVIEW_BASE_FONT_PX = 16
 
 
 r"""

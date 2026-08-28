@@ -587,6 +587,7 @@ def generate_connection_visualizations(
     phase_shift_line: str = "54",
     melhorado_phase_shift_min: float | None = None,
     reverse_metro_direction_id: int | None = None,
+    reverse_metro_route_id: str | None = None,
 ) -> dict[str, str]:
     """
     Gera visualizacoes de coordenacao metro -> autocarro e grava HTML em outputs/integration.
@@ -606,6 +607,10 @@ def generate_connection_visualizations(
     `build_reverse_stop_vs_metro_table`) como 3 painéis extra na mesma página, cada um com o seu
     próprio botão Atual/Otimizado/Melhorado. Sem isto, só sai o sentido metro->bus (comportamento
     anterior).
+
+    `reverse_metro_route_id` (opcional): passado tal e qual a `build_reverse_stop_vs_metro_table`
+    - restringe o sentido inverso a uma única rota do Metrobus (ver docstring lá para o porquê,
+    relevante desde que o feed passou a ter mais do que uma rota).
 
     Retorna um dicionario com os caminhos dos ficheiros gerados.
     """
@@ -715,6 +720,7 @@ def generate_connection_visualizations(
             metro_direction_id=reverse_metro_direction_id,
             day_str=day_str,
             bus_origin_ref=bus_origin_ref,
+            metro_route_id=reverse_metro_route_id,
             output_dir=atual_dir,
         )
         apply_optimization_rev = phase_shift_min is not None

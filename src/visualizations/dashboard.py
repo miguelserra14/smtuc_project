@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from config import FEEDNPLAY_CLICK_TO_ADVANCE
+from config import FEEDNPLAY_CLICK_TO_ADVANCE, FEEDNPLAY_PREVIEW_BASE_FONT_PX, FEEDNPLAY_PREVIEW_MODE
 
 from .presentation_content import PRESENTATION_TABS
 
@@ -312,7 +312,9 @@ def create_feednplay_dashboard_html(
 
     As zonas de anterior/seguinte navegam sempre por dwell (permanecer); poderem também ser
     clicadas/tocadas diretamente é opt-in, ligado/desligado por FEEDNPLAY_CLICK_TO_ADVANCE em
-    `src/config.py` (sem precisar de mexer neste ficheiro nem no template).
+    `src/config.py` (sem precisar de mexer neste ficheiro nem no template). FEEDNPLAY_PREVIEW_MODE
+    (mesmo ficheiro) troca a tipografia à distância da parede por FEEDNPLAY_PREVIEW_BASE_FONT_PX,
+    para pré-visualizar num PC normal.
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -323,6 +325,8 @@ def create_feednplay_dashboard_html(
     page = page.replace("__TITLE__", html.escape(title))
     page = page.replace("__TABS_JSON__", json.dumps(resolved_tabs, ensure_ascii=False))
     page = page.replace("__FNP_CLICK_TO_ADVANCE__", json.dumps(bool(FEEDNPLAY_CLICK_TO_ADVANCE)))
+    page = page.replace("__FNP_PREVIEW_MODE__", json.dumps(bool(FEEDNPLAY_PREVIEW_MODE)))
+    page = page.replace("__FNP_PREVIEW_BASE_FONT_PX__", f"{FEEDNPLAY_PREVIEW_BASE_FONT_PX}px")
 
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
