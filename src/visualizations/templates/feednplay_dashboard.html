@@ -434,11 +434,25 @@
             overflow: hidden;
             transition: opacity 160ms ease;
         }
+        /* Clique/toque nas zonas é opt-in via FEEDNPLAY_CLICK_TO_ADVANCE (src/config.py) - o
+           script injeta a classe fnp-click-to-advance no <body> quando ligado (ver
+           __FNP_CLICK_TO_ADVANCE__ mais abaixo). Com a flag desligada, a barra-mãe
+           (.fnp-dwell-bar) mantém pointer-events:none, herdado pelas zonas, que passam a
+           responder só por dwell/mousemove, como antes desta opção existir. */
+        body.fnp-click-to-advance .fnp-dwell-zone {
+            pointer-events: auto;
+            cursor: pointer;
+        }
         /* Primeiro/último slide: a zona correspondente não leva a lado nenhum (sem wrap-around -
            ver goToRelativeSlide) - fica visualmente apagada e para de acumular dwell, em vez de
-           continuar a encher e nunca disparar (ver _fnpZoneAvailable). */
+           continuar a encher e nunca disparar (ver _fnpZoneAvailable). Sem clique nem cursor de
+           "clicável" também, pelo mesmo motivo. */
         .fnp-dwell-zone.is-disabled {
             opacity: 0.25;
+        }
+        body.fnp-click-to-advance .fnp-dwell-zone.is-disabled {
+            pointer-events: none;
+            cursor: default;
         }
         .fnp-dwell-fill {
             position: absolute;
@@ -537,6 +551,14 @@
         const fnpDebugEl = document.getElementById('fnp-debug');
         const fnpQueryParams = new URLSearchParams(window.location.search);
 
+        // Liga/desliga em src/config.py (FEEDNPLAY_CLICK_TO_ADVANCE), injetado por
+        // create_feednplay_dashboard_html - o dwell (permanecer ~1.5s) fica sempre ativo, isto só
+        // acrescenta (ou não) poder clicar/tocar diretamente nas zonas para o mesmo efeito.
+        const FNP_CLICK_TO_ADVANCE = __FNP_CLICK_TO_ADVANCE__;
+        if (FNP_CLICK_TO_ADVANCE) {
+            document.body.classList.add('fnp-click-to-advance');
+        }
+
         // ---------------------------------------------------------------------------------
         // Guia visual das molduras entre os 9 monitores (?bezels=1 na URL) - ferramenta de
         // calibração para usar fisicamente na parede: mostra onde cada linha de moldura cai,
@@ -621,6 +643,17 @@
             const nextIndex = currentIndex + delta;
             if (nextIndex < 0 || nextIndex >= tabs.length) return;
             setActiveTab(tabs[nextIndex].id, false);
+        }
+
+        // Clique/toque direto nas zonas de anterior/seguinte, como alternativa ao dwell (permanecer
+        // ~1.5s) - útil para testar sem câmara e para quem prefira carregar em vez de esperar. Reusa
+        // o mesmo goToRelativeSlide do dwell e do teclado, por isso mantém a mesma regra de "sem
+        // wrap-around" (clique no primeiro/último slide não faz nada, ver _fnpZoneAvailable acima).
+        // Só liga com FNP_CLICK_TO_ADVANCE (FEEDNPLAY_CLICK_TO_ADVANCE em config.py) - com a flag
+        // desligada nem o listener é registado (a zona também não tem pointer-events, ver CSS).
+        if (FNP_CLICK_TO_ADVANCE) {
+            if (fnpDwellEls.back) fnpDwellEls.back.addEventListener('click', () => goToRelativeSlide(-1));
+            if (fnpDwellEls.fwd) fnpDwellEls.fwd.addEventListener('click', () => goToRelativeSlide(1));
         }
 
         // Atualiza o progresso de UMA zona de dwell e devolve true no exato instante em que

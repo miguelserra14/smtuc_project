@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from config import FEEDNPLAY_CLICK_TO_ADVANCE
+
 from .presentation_content import PRESENTATION_TABS
 
 
@@ -307,6 +309,10 @@ def create_feednplay_dashboard_html(
     Grid de bezels, tipografia à distância e o bridge à câmara de topo (ver
     `src/feednplay/bridge.py`) ainda não estão ligados aqui, ficam para depois de validar que
     este esqueleto corre no canvas certo.
+
+    As zonas de anterior/seguinte navegam sempre por dwell (permanecer); poderem também ser
+    clicadas/tocadas diretamente é opt-in, ligado/desligado por FEEDNPLAY_CLICK_TO_ADVANCE em
+    `src/config.py` (sem precisar de mexer neste ficheiro nem no template).
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -316,6 +322,7 @@ def create_feednplay_dashboard_html(
     page = _read_template("feednplay_dashboard.html")
     page = page.replace("__TITLE__", html.escape(title))
     page = page.replace("__TABS_JSON__", json.dumps(resolved_tabs, ensure_ascii=False))
+    page = page.replace("__FNP_CLICK_TO_ADVANCE__", json.dumps(bool(FEEDNPLAY_CLICK_TO_ADVANCE)))
 
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
