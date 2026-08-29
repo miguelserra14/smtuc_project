@@ -273,6 +273,89 @@ def regenerate_overlap_htmls() -> None:
         traceback.print_exc()
 
 
+def regenerate_overlap_fase2_htmls() -> None:
+    """Regenera os 2 HTMLs standalone (isócronas + mapa de linhas) com os dados da fase 2
+    (data/metrobus_fase2 - Aeminium + ramais Coimbra B/República), para o slide dedicado da
+    apresentação. Deliberadamente SEPARADO de `regenerate_overlap_htmls()`: todas as restantes
+    visualizações (incluindo o slide "Overlap" original) continuam a usar `metrobus` (dados
+    antigos, pré-fase 2) - ver `PRESENTATION_TABS` em presentation_content.py para o porquê. Usa
+    ficheiros de saída/cache PRÓPRIOS (sufixo `_fase2`) para não pisar os da versão antiga."""
+    print("\n" + "=" * 60)
+    print("[INFO] Regenerando HTMLs de Overlap (fase 2 - slide dedicado)...")
+    print("=" * 60)
+
+    if not _require_dataset("metrobus_fase2"):
+        print("[WARNING] Dataset metrobus_fase2 não disponível. A saltar slide da fase 2.")
+        return
+
+    try:
+        _require_geo_stack()
+        gpkg = _require_bgri_data()
+    except Exception as e:
+        print(f"[WARNING] Geostack/BGRI não disponível - a saltar slide da fase 2: {e}")
+        return
+
+    try:
+        out_dir = _project_root() / "outputs" / "overlap"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        print("[INFO] Verificando cache de métricas de linha (fase 2)...")
+        load_line_metrics_db(
+            db_path=f"{out_dir}/line_metrics_db_fase2.csv",
+            metrobus_dataset="metrobus_fase2",
+        )
+
+        day_str = resolve_reference_day().strftime("%Y-%m-%d")
+        reach_time_str = REACHABILITY_REFERENCE_TIME if USE_FIXED_REFERENCE_DAY else None
+        print(f"[INFO] Isócronas (fase 2): usando data/hora de referência {day_str} {reach_time_str or '(agora)'}")
+
+        print("[INFO] Computando reachability (fase 2)...")
+        merged_fase2 = compute_underserved_zones(
+            day_str=day_str,
+            catchment_m=CATCHMENT_M,
+            datasets=("smtuc", "metrobus_fase2"),
+            bgri_gpkg_path=str(gpkg),
+            bgri_layer="BGRI2021_0603",
+            population_col="N_INDIVIDUOS",
+            output_csv_path=f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap_fase2.csv",
+        )
+        reach_gdf_fase2 = compute_bgri_reachability_now(
+            merged_bgri=merged_fase2,
+            origin_lat=STADIUM_COORD[0],
+            origin_lon=STADIUM_COORD[1],
+            datasets=("smtuc", "metrobus_fase2"),
+            day_str=day_str,
+            time_str=reach_time_str,
+            max_transfers=REACHABILITY_MAX_TRANSFERS,
+        )
+        selected_time = str(reach_gdf_fase2["reach_time"].iloc[0]) if not reach_gdf_fase2.empty else "00:00:00"
+
+        print("[INFO] Gerando mapa de reachability (fase 2)...")
+        fig_map_fase2 = create_overlap_reachability_map(
+            reach_gdf=reach_gdf_fase2,
+            origin_lat=STADIUM_COORD[0],
+            origin_lon=STADIUM_COORD[1],
+            day_str=day_str,
+            time_str=selected_time,
+        )
+        reachability_html_fase2 = out_dir / "overlap_reachability_now_fase2.html"
+        _write_folium_html(fig_map_fase2, reachability_html_fase2)
+        print(f"[SUCCESS] Mapa de reachability (fase 2): {reachability_html_fase2}")
+
+        lines_map_html_fase2 = out_dir / "overlap_lines_map_fase2.html"
+        created = create_overlap_lines_map(
+            output_path=lines_map_html_fase2,
+            metrics_csv=f"{out_dir}/line_metrics_db_fase2.csv",
+            metrobus_dataset="metrobus_fase2",
+        )
+        print(f"[SUCCESS] Mapa de linhas (fase 2): {created}")
+
+    except Exception as e:
+        print(f"[ERROR] Erro ao regenerar HTMLs de overlap (fase 2): {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def regenerate_integration_htmls() -> None:
     """Regenera HTMLs de integraÃ§Ã£o (Portagem e Portela)."""
     print("\n" + "=" * 60)
@@ -409,6 +492,7 @@ def main() -> None:
     # Regenerar em ordem
     regenerate_population_htmls()
     regenerate_overlap_htmls()
+    regenerate_overlap_fase2_htmls()
     regenerate_integration_htmls()
     regenerate_master_dashboard()
     regenerate_presentation_dashboard()

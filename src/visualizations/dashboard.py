@@ -27,8 +27,10 @@ def _to_float(value: str | None) -> float:
         return 0.0
 
 
-def _load_overlap_stats() -> dict[str, list[dict[str, str]]] | None:
-    metrics_path = Path("outputs/overlap/line_metrics_db.csv")
+def _load_overlap_stats(
+    metrics_path: str | Path = "outputs/overlap/line_metrics_db.csv",
+) -> dict[str, list[dict[str, str]]] | None:
+    metrics_path = Path(metrics_path)
     if not metrics_path.exists():
         return None
 
@@ -264,17 +266,28 @@ def create_master_dashboard_html(
     return str(output_path)
 
 
+# Slides de kind "overlap" -> ficheiro de métricas próprio (ver _default_presentation_tabs).
+# Por omissão (qualquer id não listado aqui) usa-se o cache "atual" (dados antigos, pré-fase 2) -
+# só o slide dedicado da fase 2 precisa de apontar para o seu próprio cache (dados novos).
+_OVERLAP_TAB_METRICS_PATH = {
+    "overlap_fase2": "outputs/overlap/line_metrics_db_fase2.csv",
+}
+_DEFAULT_OVERLAP_METRICS_PATH = "outputs/overlap/line_metrics_db.csv"
+
+
 def _default_presentation_tabs() -> list[dict[str, Any]]:
     """Devolve os dados dos slides da apresentação - texto vem de `presentation_content.py`,
-    exceto "stats" (slide "overlap"), calculado aqui em tempo real a partir do cache de
-    métricas de linha. `deepcopy` evita mutar a lista partilhada ao nível do módulo entre
-    chamadas sucessivas (ex.: presentation_dashboard.html e feednplay_dashboard.html chamam
-    esta função cada um a sua vez)."""
-    overlap_stats = _load_overlap_stats()
+    exceto "stats" nos slides de kind "overlap", calculado aqui em tempo real a partir do cache
+    de métricas de linha (ver `_OVERLAP_TAB_METRICS_PATH` - há mais do que um slide "overlap"
+    desde que o slide dedicado à fase 2 existe, cada um com o seu próprio cache/dataset, por
+    isso a escolha é por `id`, não só por `kind`). `deepcopy` evita mutar a lista partilhada ao
+    nível do módulo entre chamadas sucessivas (ex.: presentation_dashboard.html e
+    feednplay_dashboard.html chamam esta função cada um a sua vez)."""
     tabs = copy.deepcopy(PRESENTATION_TABS)
     for tab in tabs:
         if tab.get("kind") == "overlap":
-            tab["stats"] = overlap_stats
+            metrics_path = _OVERLAP_TAB_METRICS_PATH.get(str(tab.get("id")), _DEFAULT_OVERLAP_METRICS_PATH)
+            tab["stats"] = _load_overlap_stats(metrics_path)
     return tabs
 
 

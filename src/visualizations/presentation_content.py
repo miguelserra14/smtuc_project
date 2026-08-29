@@ -98,6 +98,27 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
             },
         ],
     },
+    # --- Slide 4b: Overlap + Isócronas com a fase 2 ("stats" também anexado em tempo real, mas a
+    # partir de um cache próprio - ver _OVERLAP_TAB_METRICS_PATH em dashboard.py) --------------
+    {
+        "id": "overlap_fase2",
+        "label": "Overlap (Fase 2)",
+        "kind": "overlap",
+        "description": "O mesmo overlap e isócronas, mas já com a extensão da fase 2 do Metrobus (Aeminium + ramais Coimbra B/República, inauguração prevista em setembro).",
+        "note": "Dados provisórios (data/metrobus_fase2, ainda não é o feed oficial) - serve para antecipar como o overlap e a cobertura mudam quando a fase 2 abrir, enquanto o resto da apresentação usa os dados atuais (pré-fase 2).",
+        "iframes": [
+            {
+                "title": "Reachability e overlap temporal (fase 2)",
+                "src": "overlap/overlap_reachability_now_fase2.html",
+                "caption": "Mesma leitura do slide anterior, recalculada com a extensão da fase 2.",
+            },
+            {
+                "title": "Mapa de linhas sobrepostas (fase 2)",
+                "src": "overlap/overlap_lines_map_fase2.html",
+                "caption": "Linhas SMTUC com maior e menor overlap face à rede já com a fase 2.",
+            },
+        ],
+    },
     # --- Slide 5: Integração (Portagem/Portela) ----------------------------------------------
     {
         "id": "integracao",
