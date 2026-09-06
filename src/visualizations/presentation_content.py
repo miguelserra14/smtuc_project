@@ -24,12 +24,6 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
         "title": "SMTUC: A caminho da complementaridade",
         "subtitle": "Como o Metrobus mudou a mobilidade em Coimbra e o que o SMTUC pode adaptar já",
         "lead": "As obras ainda não estão acabadas, mas o estudo já está encaminhado e já há bastante que pode ser feito com impacto tangível.",
-        "chips": ["Metrobus", "SMTUC", "Coimbra", "Urgência em setembro"],
-        "highlights": [
-            "Mudança estrutural da mobilidade",
-            "Resposta já possível com os dados que existem",
-            "Janela de oportunidade para a entrada de caloiros",
-        ],
     },
     # --- Slide 2: Metodologia ----------------------------------------------------------------
     {
@@ -175,9 +169,8 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
         "id": "agradecimentos",
         "label": "Agradecimentos",
         "kind": "thanks",
-        "description": "Fecho minimalista e limpo para o ecrã final.",
         "title": "Obrigado",
-        "subtitle": "Nomes, instituição e contactos",
-        "contacts": ["Nome 1", "Nome 2", "Curso / Unidade curricular", "Setembro 2026"],
+        "subtitle": "Miguel Serra, DEI-FCTUC, 2026",
+        "contacts": ["miguel.serra@student.dei.uc.pt"],
     },
 ]

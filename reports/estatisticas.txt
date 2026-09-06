@@ -110,6 +110,118 @@ PRESSUPOSTOS E LIMITAÇÕES (a ter em conta antes de citar como nº oficial)
   herdado do cálculo já existente no projeto, não corrigido aqui.
 
 
+TEMPO DE CONDUÇÃO E CO2 NOS TROÇOS EM OVERLAP (set/2025 - set/2026)
+----------------------------------------------------------------------------
+Continuação do cálculo acima (mesmos 503.574 km/ano, mesma repartição
+61% combustão / 39% elétrico e mesmos 3 cenários de consumo).
+
+VELOCIDADE MÉDIA - dado direto do GTFS, não uma suposição externa
+Calculada a partir do horário GTFS da SMTUC (6.854 viagens válidas): por
+viagem, distância = soma das distâncias haversine entre paragens
+consecutivas (mesma metodologia já usada para overlap_extension_m/
+line_extension_m), tempo = duração agendada (última chegada - primeira
+partida). Média ponderada pela distância (distância total / tempo
+total, mais robusta que a média simples das velocidades por viagem):
+    -> 15,53 km/h
+(média simples por viagem: 15,14 km/h; mediana: 14,33 km/h - valores
+próximos, a ponderada foi a escolhida). Consistente com o que é
+publicado para autocarros urbanos em Portugal (tipicamente 15-20 km/h).
+
+TEMPO DE CONDUÇÃO
+    tempo = 503.574 km/ano / 15,53 km/h = 32.426 horas/ano
+    (toda a frota, não 1 veículo só) -> ~88,8 horas/dia em média, ou
+    seja, tipicamente 4-5 autocarros em simultâneo a percorrer troços em
+    overlap a qualquer hora do dia.
+
+CO2 EMITIDO - fatores de emissão usados
+- Gasóleo: 2,68 kg CO2/L (combustão direta/tailpipe - valor
+  internacional amplamente citado, ex. DEFRA/UK, próximo dos valores
+  usados em inventários nacionais, intervalo geral 2,6-2,7 kg/L)
+- Eletricidade: 0,097 kg CO2/kWh (fator de emissão da rede elétrica
+  portuguesa, 2025 - fonte oficial APA/Agência Portuguesa do Ambiente;
+  é um valor baixo porque a rede portuguesa já tem forte penetração
+  renovável)
+
+RESULTADO (3 cenários, mesmos litros/kWh já calculados na secção acima)
+    Cenário           Gasóleo (t CO2/ano)  Eletricidade (t CO2/ano)  TOTAL
+    Base  (138.231 L | 127.656 kWh)   370,5                12,4      ~383 t CO2/ano
+    Baixo (107.513 L | 117.836 kWh)   288,1                11,4      ~300 t CO2/ano
+    Alto  (168.949 L | 196.394 kWh)   452,8                19,1      ~472 t CO2/ano
+
+O gasóleo domina de forma esmagadora (~97% do CO2 total no cenário
+base) - mesmo sendo só 61% dos km, porque a eletricidade portuguesa
+emite ~28x menos CO2 por unidade de energia do que queimar gasóleo.
+
+PRESSUPOSTOS E LIMITAÇÕES (além dos já listados na secção anterior)
+- Velocidade de 15,53 km/h é a média de TODA a rede SMTUC (todas as
+  linhas, não só as que têm overlap) - troços em overlap tendem a ser
+  mais centrais/urbanos, onde a velocidade real pode ser um pouco menor
+  do que a média geral (mais trânsito, mais paragens por km).
+- Distância usada (haversine, stop-a-stop) subestima a distância real de
+  estrada (as vias não são linhas retas entre paragens) - herdado da
+  mesma limitação já assinalada para overlap_extension_m/line_extension_m
+  no resto do projeto; a velocidade e a distância partilham o mesmo viés,
+  por isso o tempo de condução resultante fica razoavelmente consistente
+  internamente, mas ambos os valores absolutos (km e km/h) são,
+  provavelmente, uma leve subestimativa da realidade.
+- Fator de emissão do gasóleo é um valor internacional genérico, não
+  específico da frota SMTUC (idade/manutenção dos motores pode desviar
+  o valor real para cima ou para baixo).
+- Fator de emissão da eletricidade é a média anual da rede nacional
+  (2025) - carregar de noite (fora de horas de ponta) tende a ter uma
+  intensidade de carbono ainda mais baixa, o que não foi tido em conta.
+
+
+CUSTO SALARIAL DOS CONDUTORES NOS TROÇOS EM OVERLAP (set/2025 - set/2026)
+----------------------------------------------------------------------------
+Continuação do cálculo de tempo de condução (32.426 horas/ano, secção
+anterior) - quanto custa, em salários, ter condutores a percorrer esse
+tempo especificamente nos troços que se sobrepõem ao Metrobus.
+
+SALÁRIO BASE - valor oficial e específico da SMTUC, não uma média
+genérica de mercado
+Vencimento ilíquido inicial de 1.390,33 EUR/mês para "agente único de
+transportes coletivos" (designação oficial do condutor na SMTUC - o
+mesmo profissional também faz bilheteira a bordo). Há um suplemento de
+233,75 EUR previsto pela Lei n.º 46/2026, mas só entra em vigor com o
+PRÓXIMO Orçamento do Estado (2027) - fora do período set/2025-set/2026
+pedido, por isso não entrou no cálculo, só como nota de contexto.
+É o valor de ENTRADA de carreira - condutores com antiguidade têm
+escalões salariais mais altos; não há dados públicos da distribuição
+real de antiguidade na SMTUC, por isso este número é um piso, não uma
+média ponderada.
+
+CONVERSÃO PARA CUSTO POR HORA
+    Salário anual bruto   = 1.390,33 EUR x 14 meses (12 + subsídio de
+                             férias + subsídio de Natal) = 19.464,62 EUR
+    Custo anual c/ TSU    = 19.464,62 EUR x 1,2375 (encargo patronal,
+                             Taxa Social Única 23,75%)    = 24.087,47 EUR
+    Horas de trabalho/ano = 220 dias úteis x 8h            = 1.760 h/ano
+
+    Custo horário (só salário):      19.464,62 / 1.760 = 11,06 EUR/h
+    Custo horário (c/ encargos TSU): 24.087,47 / 1.760 = 13,69 EUR/h
+
+Cada hora de condução exige exatamente 1 condutor, por isso a conversão
+horas de condução -> horas de condutor é direta (1:1), sem pressupostos
+extra de repartição de frota (ao contrário do cálculo de combustível).
+
+RESULTADO (aplicado às 32.426 horas/ano de condução em overlap)
+    Salário bruto pago ao condutor:              11,06 EUR/h -> ~358.600 EUR/ano
+    Custo total p/ SMTUC (c/ TSU patronal):       13,69 EUR/h -> ~443.800 EUR/ano
+
+PRESSUPOSTOS E LIMITAÇÕES
+- Valor de entrada de carreira, não média ponderada por antiguidade real
+  da frota de condutores da SMTUC (não disponível publicamente).
+- 220 dias úteis x 8h é uma convenção padrão portuguesa, não o horário
+  real acordado no contrato coletivo/acordo de empresa da SMTUC.
+- Não inclui outros subsídios comuns (alimentação, isenção de horário,
+  etc.) nem o suplemento de 233,75 EUR da Lei 46/2026, que só se aplica
+  a partir de 2027 (fora do período em análise).
+- Herda a mesma limitação da secção anterior: as 32.426 horas/ano vêm de
+  uma distância (haversine) que subestima ligeiramente a distância real
+  de estrada.
+
+
 FONTES
 ----------------------------------------------------------------------------
 1. CM de Coimbra adquire 30 novos autocarros elétricos para os SMTUC (fev/2025)
@@ -143,3 +255,24 @@ FONTES
    (Contas Poupança)
    https://contaspoupanca.pt/casa/2026-01-16-eletricidade--qual-e-a-empresa-mais-barata-este-mes---janeiro-2026--7e125a35
    -> tarifa regulada SU Eletricidade (BTN) em jan 2026: ~0,16 EUR/kWh
+
+8. O consumo de combustível e as emissões de CO2 (moey! Blog)
+   https://moey.pt/en/blog/o-consumo-de-combustivel-e-as-emissoes-de-co2
+   -> fator de emissão do gasóleo: 2,68 kg CO2/L (intervalo 2,6-2,7 kg/L)
+
+9. Fator de Emissão da Eletricidade 2025 Portugal (APA - Agência
+   Portuguesa do Ambiente, fonte oficial)
+   https://apambiente.pt/sites/default/files/_Clima/Inventarios/20250808/fe_gee_eletricidade_2025_final_apc.pdf
+   -> fator de emissão da rede elétrica portuguesa 2025: 97 g CO2eq/kWh
+
+10. SMTUC abrem quatro concursos para reforçar operação, manutenção e
+    atendimento (coimbra.pt, ago/2026)
+    https://www.coimbra.pt/2026/08/smtuc-abrem-quatro-concursos-para-reforcar-operacao-manutencao-e-atendimento/
+    -> salário oficial SMTUC: 1.390,33 EUR/mês (agente único de
+       transportes coletivos), + suplemento 233,75 EUR da Lei 46/2026
+       (só a partir do OE de 2027)
+
+11. Emprego e Salário - Motoristas de autocarros urbanos e guarda-freios
+    de eléctricos (Meusalario.pt)
+    https://meusalario.pt/emprego/portugal-emprego-e-salario/condutores-de-autocarros-e-carros-electricos
+    -> comparação com a média nacional para o mesmo cargo
