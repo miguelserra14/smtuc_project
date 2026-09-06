@@ -1015,6 +1015,7 @@
                                         <h2 style="margin:0 0 0.625rem;font-size:clamp(1.8rem,3vw,3rem);line-height:1.08;">${esc(item.title || '')}</h2>
                                         <p class="lead-text">${esc(item.subtitle || '')}</p>
                                         <p class="lead-text" style="color:var(--muted);margin-bottom:0;">${esc(item.lead || '')}</p>
+                                        <p class="lead-text" style="color:var(--muted);margin-bottom:0;">${esc(item.contacts?.join(', ') || '')}</p>
                                         ${renderChips(item.chips || [])}
                                     </div>
                                 </div>

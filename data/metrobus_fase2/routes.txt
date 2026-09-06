@@ -1,4 +1,3 @@
 route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
-LOUSA,CML,Lousã,Portagem ↔ Serpins,3,005EB8,FFFFFF
-METRO_CBE,MM,Verde,Aeminium ↔ Coimbra B,3,2E8B57,FFFFFF
-METRO_REP,MM,Vermelho,Aeminium ↔ Praça,3,D32F2F,FFFFFF
+LOUSA,CML,Azul,Coimbra B ↔ Serpins,3,005EB8,FFFFFF
+METRO_REP,MM,Verde,Coimbra B ↔ Praça,3,2E8B57,FFFFFF

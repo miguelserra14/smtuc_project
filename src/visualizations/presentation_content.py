@@ -20,7 +20,6 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
         "id": "intro",
         "label": "Introdução",
         "kind": "hero",
-        "eyebrow": "Apresentação final",
         "title": "SMTUC: A caminho da complementaridade",
         "subtitle": "Como o Metrobus mudou a mobilidade em Coimbra e o que o SMTUC pode adaptar já",
         "lead": "As obras ainda não estão acabadas, mas o estudo já está encaminhado e já há bastante que pode ser feito com impacto tangível.",
