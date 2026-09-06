@@ -3,32 +3,55 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light only" />
+    <meta name="color-scheme" content="dark" />
     <title>__TITLE__</title>
+    <!-- Tipografia e cores inspiradas em cm-coimbra.pt/comovou (a comunicação oficial da própria
+         Câmara sobre esta mesma fase 2 do Metrobus): títulos grandes em monospace (Space Mono),
+         corpo de texto em Inter Tight, base quase-preta com acentos em amarelo/âmbar/azul-céu.
+         Só a "casca" da página muda aqui - nenhuma visualização em si (os iframes) é alterada,
+         só como se integram na página (cartões claros a flutuar sobre a base escura, para o
+         fundo branco de cada mapa/gráfico não ficar cortado a direito contra o escuro). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #f7f4ff;
-            --bg-2: #f2edf9;
+            /* Tokens pensados para o CANVAS escuro (a página em si) - --ink/--muted/--border
+               ficam claros aqui de propósito. Dentro de qualquer cartão claro (.card,
+               .frame-card, .panel-note, etc.) estes 3 são redefinidos localmente mais abaixo
+               para as versões escuras-sobre-branco - o resto do CSS (e o JS que gera os
+               painéis) usa sempre os MESMOS var(--ink)/var(--muted)/var(--border) sem saber em
+               que fundo está; é essa redefinição por âmbito que resolve os dois contrastes. */
+            --page-bg: #16130f;
+            --page-bg-2: #1d1811;
+            --ink: #f5f3ee;
+            --muted: rgba(245, 243, 238, 0.68);
+            --border: rgba(245, 243, 238, 0.16);
             --card: #ffffff;
-            --card-soft: #fcfaff;
-            --ink: #16202c;
-            --muted: #5d6878;
-            --border: #e7dff2;
-            --accent: #6a0dad;
-            --accent-2: #2d8f85;
-            --accent-3: #0f5b9c;
-            --shadow: 0 18px 50px rgba(106, 13, 173, 0.10);
-            color-scheme: light only;
+            --card-soft: #faf8f4;
+            --accent: #ffdd2b;
+            --accent-ink: #221d13;
+            --accent-2: #ffb500;
+            --accent-3: #8ccbff;
+            --shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
+            --font-head: 'Space Mono', 'Courier New', monospace;
+            --font-body: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
+            color-scheme: dark;
+        }
+        /* Redefine os 3 tokens de texto/fronteira para as suas versões "sobre branco" dentro de
+           qualquer cartão claro - ver comentário em :root. */
+        .card, .metric-card, .closing-card, .panel-note, .target-card, .stats-card,
+        .stats-table, .frame-card, .step {
+            --ink: #221d13;
+            --muted: #5c574c;
+            --border: #e7e2d8;
         }
         html, body {
             margin: 0;
             padding: 0;
-            background:
-                radial-gradient(circle at top left, rgba(15, 91, 156, 0.12), transparent 30%),
-                radial-gradient(circle at top right, rgba(45, 143, 133, 0.10), transparent 26%),
-                linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+            background: var(--page-bg);
             color: var(--ink);
-            font-family: Segoe UI, Tahoma, sans-serif;
+            font-family: var(--font-body);
         }
         .shell {
             max-width: 1520px;
@@ -36,24 +59,7 @@
             padding: 22px 16px 40px;
         }
         .hero {
-            background: linear-gradient(135deg, rgba(106, 13, 173, 0.98), rgba(15, 91, 156, 0.96));
-            color: #ffffff;
-            border-radius: 24px;
-            padding: 22px 24px 20px;
-            box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
-        }
-        .hero::after {
-            content: "";
-            position: absolute;
-            right: -120px;
-            bottom: -120px;
-            width: 280px;
-            height: 280px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.10);
-            filter: blur(2px);
+            padding: 12px 4px 8px;
         }
         .eyebrow {
             display: inline-flex;
@@ -61,86 +67,98 @@
             align-items: center;
             padding: 6px 10px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.14);
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-            margin-bottom: 10px;
+            background: var(--accent);
+            color: var(--accent-ink);
+            font-family: var(--font-head);
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
         }
         h1 {
             margin: 0;
-            font-size: clamp(1.6rem, 2.8vw, 2.55rem);
-            line-height: 1.08;
-            position: relative;
-            z-index: 1;
+            font-family: var(--font-head);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+            font-size: clamp(1.5rem, 2.6vw, 2.35rem);
+            line-height: 1.15;
+            border-left: 6px solid var(--accent);
+            padding-left: 16px;
         }
         .hero p {
-            margin: 10px auto 0;
+            margin: 12px 0 0 22px;
             max-width: 980px;
-            line-height: 1.5;
-            color: rgba(255, 255, 255, 0.90);
-            position: relative;
-            z-index: 1;
+            line-height: 1.55;
+            color: var(--muted);
         }
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin: 18px 0 14px;
+            margin: 22px 0 16px;
         }
         .tab-btn {
             border: 1px solid var(--border);
-            background: rgba(255, 255, 255, 0.82);
+            background: rgba(255, 255, 255, 0.06);
             color: var(--ink);
-            border-radius: 999px;
-            padding: 11px 16px;
             font: inherit;
+            font-family: var(--font-head);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            border-radius: 999px;
+            padding: 10px 16px;
             cursor: pointer;
-            transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease, color 140ms ease;
+            transition: transform 140ms ease, background 140ms ease, color 140ms ease, border-color 140ms ease;
         }
         .tab-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 8px 20px rgba(19, 33, 57, 0.08);
+            background: rgba(255, 255, 255, 0.11);
+            border-color: var(--accent-3);
         }
         .tab-btn[aria-selected="true"] {
-            background: var(--ink);
-            color: #ffffff;
-            border-color: var(--ink);
+            background: var(--accent);
+            color: var(--accent-ink);
+            border-color: var(--accent);
         }
         .tab-panels {
-            margin-top: 10px;
+            margin-top: 6px;
         }
         .tab-panel {
             display: none;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
         }
         .tab-panel.is-active {
             display: block;
             animation: fadeIn 160ms ease-out;
         }
         .panel-head {
-            padding: 18px 20px 12px;
-            border-bottom: 1px solid var(--border);
-            background: linear-gradient(180deg, rgba(248, 251, 255, 0.96), #ffffff);
+            padding: 10px 2px 16px;
         }
         .panel-title {
             margin: 0 0 6px;
-            font-size: 1.08rem;
+            font-family: var(--font-head);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -0.005em;
+            font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+            color: var(--ink);
+            border-left: 5px solid var(--accent-2);
+            padding-left: 13px;
         }
         .panel-desc {
-            margin: 0;
+            margin: 0 0 0 18px;
             color: var(--muted);
-            line-height: 1.45;
+            line-height: 1.5;
+            max-width: 900px;
         }
         .panel-body {
-            padding: 18px 20px 20px;
+            padding: 2px 2px 20px;
         }
         .panel-note {
             border: 1px solid var(--border);
-            background: linear-gradient(180deg, #ffffff, var(--card-soft));
+            background: var(--card);
             border-radius: 18px;
             padding: 14px 16px;
             color: var(--muted);
@@ -157,58 +175,91 @@
             display: inline-flex;
             align-items: center;
             border-radius: 999px;
-            padding: 6px 10px;
-            background: rgba(106, 13, 173, 0.08);
-            color: var(--accent);
-            font-size: 0.82rem;
-            font-weight: 600;
+            padding: 5px 11px;
+            background: rgba(255, 181, 0, 0.14);
+            color: #8a5f00;
+            font-family: var(--font-head);
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        /* Dentro de cartões escuros (fecho/agradecimentos) os chips invertem para claro-sobre-
+           escuro, em vez de herdar o par âmbar-sobre-branco pensado para cartões claros. */
+        .closing-hero .chip-row .chip,
+        .thanks-card .chip-row .chip {
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
         }
         .grid-2 {
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 14px;
+            gap: 16px;
         }
         .grid-3 {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 14px;
+            gap: 16px;
         }
         .grid-hero {
             display: grid;
             grid-template-columns: 1.15fr 0.85fr;
-            gap: 14px;
+            gap: 16px;
         }
         .card,
         .metric-card,
         .closing-card {
             border: 1px solid var(--border);
             border-radius: 18px;
-            background: linear-gradient(180deg, #ffffff, var(--card-soft));
+            background: var(--card);
             overflow: hidden;
         }
-        /* Visualizações (iframes) sem caixa - só o título (quando distingue algo real, ex.
-           "Heatmap de população" vs "Índice de subserviço") e o próprio iframe, sem borda/fundo
-           a separá-los visualmente do resto da página. */
+        /* Slide "Introdução" - o cartão principal (título grande da apresentação) fica escuro
+           de propósito, como abertura de maior impacto (ver kind==="hero" no JS), distinto dos
+           restantes cartões (claros) que levam conteúdo/dados a seguir. */
+        .hero-card {
+            background: linear-gradient(165deg, var(--page-bg-2), #100d09);
+            border-color: rgba(255, 255, 255, 0.10);
+        }
+        .hero-card, .hero-card .lead-text {
+            --ink: #f5f3ee;
+            --muted: rgba(245, 243, 238, 0.72);
+            --border: rgba(245, 243, 238, 0.16);
+        }
+        /* Visualizações (iframes) apresentadas como cartão claro arredondado a flutuar sobre o
+           fundo escuro - o fundo branco do mapa/gráfico deixa de "cortar" contra o escuro e
+           ganha a mesma moldura que o resto do conteúdo. */
         .frame-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--card);
+            box-shadow: var(--shadow);
             overflow: hidden;
         }
         .card-head {
             padding: 12px 14px;
             border-bottom: 1px solid var(--border);
-            background: #fbf8ff;
+            background: var(--card-soft);
         }
         .frame-head {
-            padding: 0 0 8px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            background: var(--card-soft);
         }
         .card-head h3,
         .frame-head h3,
         .metric-card h3 {
             margin: 0;
-            font-size: 0.95rem;
+            font-family: var(--font-head);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #8a5f00;
         }
         .card-body,
         .metric-body {
-            padding: 14px;
+            padding: 16px;
         }
         .lead-text {
             font-size: 1.03rem;
@@ -234,10 +285,12 @@
         .step {
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 10px 12px;
-            background: #ffffff;
+            padding: 9px 12px;
+            background: var(--card-soft);
             color: var(--ink);
-            font-weight: 600;
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 0.85rem;
         }
         .frame-shell {
             padding: 0;
@@ -263,32 +316,33 @@
             flex-direction: column;
             gap: 14px;
         }
-        /* Cabeçalho de coluna (Portagem/Portela) sem caixa - só o essencial (qual coluna é
-           qual), sem borda/fundo a competir com a visualização logo a seguir. */
         .comparison-heading {
-            margin: 0;
+            margin: 0 0 2px;
         }
         .comparison-heading h3 {
             margin: 0 0 2px;
-            font-size: 0.98rem;
-            color: var(--ink);
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            font-size: 0.92rem;
+            color: var(--accent-3);
         }
         .comparison-heading p {
             margin: 0;
             color: var(--muted);
             font-size: 0.9rem;
         }
-        /* Legenda por baixo de uma visualização - texto simples, sem caixa/borda. */
         .frame-caption {
-            margin: 8px 0 0;
+            margin: 0;
+            padding: 10px 14px 14px;
             color: var(--muted);
             font-size: 0.86rem;
             line-height: 1.45;
+            font-style: italic;
         }
         .target-card {
             border: 1px dashed var(--border);
+            background: var(--card-soft);
             border-radius: 18px;
-            background: #fcfbff;
             padding: 14px 16px;
             color: var(--muted);
             line-height: 1.5;
@@ -296,7 +350,9 @@
         .target-card h4 {
             margin: 0 0 8px;
             color: var(--ink);
-            font-size: 0.95rem;
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            font-size: 0.88rem;
         }
         .target-card ul {
             margin: 0;
@@ -317,14 +373,16 @@
             border: 1px solid var(--border);
             border-radius: 16px;
             overflow: hidden;
-            background: #ffffff;
+            background: var(--card);
         }
         .stats-card h4 {
             margin: 0;
             padding: 10px 12px;
-            font-size: 0.92rem;
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            font-size: 0.82rem;
             border-bottom: 1px solid var(--border);
-            background: #fbf8ff;
+            background: var(--card-soft);
         }
         .stats-table {
             width: 100%;
@@ -336,32 +394,37 @@
             text-align: center;
             padding: 7px 8px;
             border-bottom: 1px solid var(--border);
+            color: var(--ink);
         }
         .stats-table th {
             color: var(--muted);
-            background: #fcfbff;
+            background: var(--card-soft);
             font-weight: 600;
         }
         .closing-layout {
             display: grid;
             grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-            gap: 14px;
+            gap: 16px;
         }
         .closing-hero {
             border-radius: 20px;
-            background: linear-gradient(135deg, rgba(106, 13, 173, 0.98), rgba(15, 91, 156, 0.96));
+            border-top: 5px solid var(--accent);
+            background: linear-gradient(165deg, var(--page-bg-2), #100d09);
             color: #ffffff;
             padding: 22px 20px;
             box-shadow: var(--shadow);
         }
         .closing-hero h2 {
             margin: 0;
-            font-size: clamp(1.35rem, 2.2vw, 2rem);
-            line-height: 1.15;
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: clamp(1.3rem, 2.1vw, 1.9rem);
+            line-height: 1.2;
         }
         .closing-hero p {
-            margin: 10px 0 0;
-            color: rgba(255, 255, 255, 0.90);
+            margin: 12px 0 0;
+            color: rgba(255, 255, 255, 0.78);
             line-height: 1.55;
             max-width: 780px;
         }
@@ -376,20 +439,24 @@
         .thanks-card {
             width: min(920px, 100%);
             border-radius: 24px;
-            background: linear-gradient(135deg, rgba(18, 28, 42, 0.98), rgba(35, 51, 74, 0.98));
+            border-top: 5px solid var(--accent);
+            background: linear-gradient(165deg, var(--page-bg-2), #0d0b08);
             color: #ffffff;
-            padding: 34px 28px;
+            padding: 36px 28px;
             box-shadow: var(--shadow);
             text-align: center;
         }
         .thanks-card h2 {
             margin: 0;
-            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: clamp(1.7rem, 3.6vw, 2.7rem);
         }
         .thanks-card p {
-            margin: 10px auto 0;
+            margin: 12px auto 0;
             max-width: 720px;
-            color: rgba(255, 255, 255, 0.88);
+            color: rgba(255, 255, 255, 0.78);
             line-height: 1.55;
         }
         .thanks-card .chip-row {
@@ -431,17 +498,11 @@
             .shell {
                 padding: 14px 10px 28px;
             }
-            .hero {
-                border-radius: 18px;
-                padding: 18px 16px;
+            .h1, h1 {
+                padding-left: 12px;
             }
             .tab-btn {
                 padding: 10px 14px;
-            }
-            .panel-head,
-            .panel-body {
-                padding-left: 14px;
-                padding-right: 14px;
             }
             .frame-shell iframe,
             .frame-shell.tall iframe,
@@ -575,9 +636,9 @@
                         </div>
                         <div class="panel-body">
                             <div class="grid-hero">
-                                <div class="card">
+                                <div class="card hero-card">
                                     <div class="card-body">
-                                        <div class="eyebrow" style="background:rgba(106,13,173,0.10);color:var(--accent);">${esc(item.eyebrow || 'Apresentação')}</div>
+                                        <div class="eyebrow">${esc(item.eyebrow || 'Apresentação')}</div>
                                         <h2 style="margin:0 0 10px;font-size:clamp(1.8rem,3vw,3rem);line-height:1.08;">${esc(item.title || '')}</h2>
                                         <p class="lead-text">${esc(item.subtitle || '')}</p>
                                         <p class="lead-text" style="color:var(--muted);margin-bottom:0;">${esc(item.lead || '')}</p>
