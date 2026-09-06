@@ -1,0 +1,145 @@
+FROTA SMTUC - COMPOSIÇÃO E ELETRIFICAÇÃO
+=========================================
+Compilado em: 2026-09-06
+Fontes: comunicados oficiais da Câmara Municipal de Coimbra (coimbra.pt) e SMTUC.
+
+
+NÚMEROS CONCRETOS (contagem de veículos) - baseline mais recente (fev/2025)
+----------------------------------------------------------------------------
+Total frota (autocarros médios + "standard"): 118 veículos
+Elétricos:                                     46 veículos  (~39%)
+Combustão (essencialmente diesel):             72 veículos  (~61%)
+
+Não há registo de autocarros a gás natural (GNC) na frota SMTUC - essa
+tecnologia está associada a outro operador (TST/Setúbal), não a Coimbra.
+Dentro do lote não-100%-elétrico há 2 miniautocarros híbridos - ainda
+queimam combustível fóssil, mas com consumo reduzido face a diesel puro.
+
+
+TRAJETÓRIA (plano de renovação em curso)
+----------------------------------------------------------------------------
+- Fev/2025: Câmara aprovou a compra de mais 30 autocarros elétricos
+  (14 standard + 16 médios; investimento de 13M€), ainda não entregues à
+  data do comunicado. Se somados aos 46 já existentes (sem contar
+  eventuais abates): 76/118 = ~64% elétricos - CÁLCULO PRÓPRIO a partir
+  dos dois números da frota atual, não uma percentagem citada
+  diretamente pela Câmara.
+
+- Nov/2024: a Câmara usa noutro comunicado uma métrica diferente,
+  "mobilidade elétrica": 27% em 2024 -> projeção de >45% para 2025.
+  Não fica claro se é ponderada por km/serviço em vez de simples
+  contagem de veículos - por isso não bate certo com o cálculo de 64%
+  acima; tratar como dois indicadores distintos, não contraditórios.
+
+- Plano de Renovação da Frota (2023): idade média da frota:
+    15,8 anos (2023) -> 12,2 anos (2024) -> projeção de 9 anos (2025)
+  Meta: taxa de imobilização de 15% e entrada de ~15 autocarros
+  novos/ano até 2030 (investimento ~40M€ nesse horizonte).
+
+
+DESPESA ANUAL ESTIMADA EM GASÓLEO E ELETRICIDADE NOS TROÇOS EM OVERLAP
+(set/2025 - set/2026)
+----------------------------------------------------------------------------
+Pergunta: quanto gasta a SMTUC por ano (gasóleo + eletricidade) a percorrer
+especificamente os troços de linha que se sobrepõem ao Metrobus (dados
+PRÉ-FASE 2, os 85,4 km totais já apurados em outputs/overlap/
+line_metrics_db.csv)? Não há dados de consumo/custo reais publicados por
+troço - o que se segue é uma ESTIMATIVA própria, com metodologia e
+pressupostos explícitos abaixo, não um valor oficial da SMTUC.
+
+METODOLOGIA (3 passos)
+1) Km percorridos por ano nos troços em overlap, linha a linha:
+     viagens/dia   = janela de serviço (19h, 05h30-00h30) / headway médio
+                     (avg_freq_min, já calculado em line_metrics_db.csv)
+     km/dia         = (overlap_extension_m / nº direções) x viagens/dia
+   Somado às 67 linhas com frequência definida (só a "10F" ficou de fora,
+   por não ter frequência calculada - representa só 190 m dos 85,4 km,
+   irrelevante) e anualizado (x365 dias, sem distinguir dia útil/fim de
+   semana):
+     -> 503.574 km/ano percorridos nos troços em overlap (ambas direções)
+
+2) Reparte esses km pela composição da frota (39% elétrico / 61%
+   combustão, ver secção acima), assumindo veículos distribuídos
+   proporcionalmente por todas as linhas (não há dados de que veículo
+   serve que linha):
+     Combustão: 307.180 km/ano
+     Elétrico:  196.394 km/ano
+
+3) Aplica consumo típico (litros/km ou kWh/km) e preço unitário à data
+   de 1 de janeiro de 2026 (ver PREÇOS abaixo) a cada parcela.
+
+PREÇOS USADOS (1 janeiro de 2026, não os de agosto/set 2026)
+- Gasóleo: 1,533 EUR/L - preço médio nacional à bomba, DGEG, sexta-feira
+  1 jan 2026 (fonte 6 abaixo). Preferido ao preço de bomba de ago/set 2026
+  (2,03 EUR/L, um pico sazonal) porque fica mais próximo do que a SMTUC
+  pagaria num contrato a granel/frota - não elimina a diferença
+  bomba-vs-granel, mas o preço de janeiro compensa parte dela.
+- Eletricidade: 0,16 EUR/kWh - tarifa regulada SU Eletricidade (BTN),
+  janeiro de 2026 (fonte 7 abaixo).
+
+CONSUMO (valores típicos da literatura, sem dados reais da frota SMTUC)
+- Gasóleo: 0,45 L/km (intervalo típico 0,35-0,55 L/km em autocarro
+  urbano; frotas mais antigas consomem mais, modelos recentes menos)
+- Elétrico: 0,65 kWh/km (0,61 kWh/km é valor real medido num Iveco
+  E-Way de 12m; Coimbra, por ser mais acidentada, pode consumir mais -
+  intervalo alargado até 1,00 kWh/km no cenário alto)
+
+RESULTADO (cenário base)
+    Gasóleo:       138.231 L/ano   x 1,533 EUR/L  = ~211.900 EUR/ano
+    Eletricidade:  127.656 kWh/ano x 0,16  EUR/kWh = ~20.400 EUR/ano
+    TOTAL:                                          ~232.300 EUR/ano
+
+Intervalo de sensibilidade (variando só o consumo, preços fixos nos
+valores de 1 jan 2026 acima): ~184.000 EUR a ~290.000 EUR/ano.
+O gasóleo domina a despesa (~91% do total), dado o peso de 61% da frota
+a combustão.
+
+PRESSUPOSTOS E LIMITAÇÕES (a ter em conta antes de citar como nº oficial)
+- Preço do gasóleo continua a ser preço de bomba a retalho, não o preço
+  real de um contrato a granel da SMTUC; também não contabiliza um
+  eventual reembolso parcial do ISP (imposto sobre combustíveis) que
+  operadores de transporte público podem ter direito - não quantificado
+  aqui.
+- Janela de serviço (19h/dia) e ano uniforme (365 dias) são estimativas
+  próprias, não dados reais de operação da SMTUC.
+- Frota 39%/61% repartida por igual por todas as linhas - na realidade os
+  elétricos podem estar concentrados nalgumas linhas (tipicamente mais
+  centrais/planas), o que mudaria este número.
+- avg_freq_min (de line_metrics_db.csv) mistura viagens de todos os
+  service_id (dia útil/sábado/domingo) em vez de isolar só dias úteis -
+  herdado do cálculo já existente no projeto, não corrigido aqui.
+
+
+FONTES
+----------------------------------------------------------------------------
+1. CM de Coimbra adquire 30 novos autocarros elétricos para os SMTUC (fev/2025)
+   https://www.coimbra.pt/2025/02/cm-de-coimbra-adquire-30-novos-autocarros-eletricos-para-os-smtuc/
+   -> fonte da baseline: 118 total / 46 elétricos
+
+2. SMTUC com orçamento de 37,9M€ para 2025 e aquisição de 30 novos
+   autocarros elétricos (nov/2024)
+   https://www.coimbra.pt/2024/11/smtuc-com-orcamento-de-399-me-para-2025-e-aquisicao-de-30-novos-autocarros-eletricos/
+   -> fonte da métrica "mobilidade elétrica" 27% -> 45%
+
+3. SMTUC assinalam crescimento significativo da procura e melhoria da
+   qualidade do serviço em 2024 (mai/2025)
+   https://www.coimbra.pt/2025/05/smtuc-assinalam-crescimento-significativo-da-procura-e-melhoria-da-qualidade-do-servico-em-2024/
+   -> idade média da frota em 2024
+
+4. CM de Coimbra aprovou Plano de Renovação da Frota dos SMTUC (mai/2023)
+   https://www.coimbra.pt/2023/05/cm-de-coimbra-aprovou-plano-de-renovacao-da-frota-dos-smtuc/
+   -> plano de renovação, meta 2030
+
+5. Frota SMTUC - página oficial (smtuc.pt)
+   https://www.smtuc.pt/en/frota-smtuc/
+   -> devolveu 404 no momento da consulta; manter para verificação futura
+
+6. Preços dos combustíveis: gasolina desce, gasóleo mantém-se (Renascença,
+   citando dados DGEG, 5 jan 2026)
+   https://rr.pt/noticia/amp/economia/2026/01/05/precos-dos-combustiveis-gasolina-desce-gasoleo-mantem-se/453970/
+   -> preço médio do gasóleo em Portugal a 1 jan 2026: 1,533 EUR/L
+
+7. ELETRICIDADE | Qual é a empresa mais barata este mês? (Janeiro 2026)
+   (Contas Poupança)
+   https://contaspoupanca.pt/casa/2026-01-16-eletricidade--qual-e-a-empresa-mais-barata-este-mes---janeiro-2026--7e125a35
+   -> tarifa regulada SU Eletricidade (BTN) em jan 2026: ~0,16 EUR/kWh

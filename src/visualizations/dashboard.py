@@ -114,6 +114,15 @@ def _load_overlap_stats(
 
     walk_distance_threshold = WALK_SPEED_M_MIN * SPATIAL_OVERLAP_WALK_MIN
 
+    # Soma simples de overlap_extension_m por linha (cada linha já vem com o seu próprio
+    # troço em overlap, não há dupla-contagem entre linhas a corrigir aqui) - dá a extensão
+    # total de linhas SMTUC que coincide (a pé) com o Metrobus, para o slide de overlap.
+    total_overlap_extension_m = sum(_to_float(r.get("overlap_extension_m")) for r in rows)
+    if total_overlap_extension_m >= 1000:
+        total_overlap_extension_fmt = f"{total_overlap_extension_m / 1000:.1f} km"
+    else:
+        total_overlap_extension_fmt = f"{total_overlap_extension_m:.0f} m"
+
     return {
         "top5": _fmt(top5),
         "bottom5": _fmt(bottom5),
@@ -128,6 +137,8 @@ def _load_overlap_stats(
             "temporal_overlap_lines": temporal_overlap_lines,
             "TEMPORAL_OVERLAP_MAX_MIN": TEMPORAL_OVERLAP_MAX_MIN,
             "walk_distance_threshold": walk_distance_threshold,
+            "total_overlap_extension_m": round(total_overlap_extension_m, 1),
+            "total_overlap_extension_fmt": total_overlap_extension_fmt,
         },
     }
 

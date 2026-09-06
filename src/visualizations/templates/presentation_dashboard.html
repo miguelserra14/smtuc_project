@@ -32,7 +32,6 @@
             --accent: #ffdd2b;
             --accent-ink: #221d13;
             --accent-2: #ffb500;
-            --accent-3: #8ccbff;
             --shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
             --font-head: 'Space Mono', 'Courier New', monospace;
             --font-body: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
@@ -40,8 +39,7 @@
         }
         /* Redefine os 3 tokens de texto/fronteira para as suas versões "sobre branco" dentro de
            qualquer cartão claro - ver comentário em :root. */
-        .card, .metric-card, .closing-card, .panel-note, .target-card, .stats-card,
-        .stats-table, .frame-card, .step {
+        .card, .frame-card, .step {
             --ink: #221d13;
             --muted: #5c574c;
             --border: #e7e2d8;
@@ -116,7 +114,7 @@
         .tab-btn:hover {
             transform: translateY(-1px);
             background: rgba(255, 255, 255, 0.11);
-            border-color: var(--accent-3);
+            border-color: var(--accent);
         }
         .tab-btn[aria-selected="true"] {
             background: var(--accent);
@@ -156,14 +154,18 @@
         .panel-body {
             padding: 2px 2px 20px;
         }
+        /* Notas, "versão otimizada", tabelas e cabeçalho de coluna ficam ESCUROS (tom do
+           canvas) - só .card/.frame-card continuam claros, porque o conteúdo lá dentro
+           (gráfico/mapa) já é branco por si; o resto do texto acompanha o fundo escuro. */
         .panel-note {
             border: 1px solid var(--border);
-            background: var(--card);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 18px;
             padding: 14px 16px;
             color: var(--muted);
             line-height: 1.5;
             margin-bottom: 14px;
+            box-shadow: var(--shadow);
         }
         .chip-row {
             display: flex;
@@ -206,13 +208,37 @@
             grid-template-columns: 1.15fr 0.85fr;
             gap: 16px;
         }
-        .card,
-        .metric-card,
-        .closing-card {
+        .card {
             border: 1px solid var(--border);
             border-radius: 18px;
             background: var(--card);
             overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        /* Cartões que ficam ao lado de um cartão de abertura escuro (hero-card / closing-hero,
+           ver kind==="hero"/"closing" no JS) ficam ESCUROS (tom do canvas), não brancos como os
+           restantes cartões - texto curto lê-se bem sobre o fundo escuro e evita 3 blocos
+           brancos a competir visualmente com o cartão principal ao lado. */
+        .metric-card,
+        .closing-card {
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .metric-card .lead-text,
+        .closing-card .lead-text {
+            font-weight: 500;
+        }
+        /* Mesmo reforço tipográfico dado ao texto das duas caixas acima - texto a 400 (normal)
+           fica com pouca presença sobre fundo escuro translúcido; 500 dá a estas caixas escuras
+           (nota, versão otimizada, subtítulo de coluna) o mesmo registo visual. */
+        .panel-note,
+        .target-card,
+        .comparison-heading p {
+            font-weight: 500;
         }
         /* Slide "Introdução" - o cartão principal (título grande da apresentação) fica escuro
            de propósito, como abertura de maior impacto (ver kind==="hero" no JS), distinto dos
@@ -316,15 +342,23 @@
             flex-direction: column;
             gap: 14px;
         }
+        /* Cabeçalho de coluna (Portagem/Portela) como cartão claro - antes ficava só texto
+           solto sobre o fundo escuro, destoando do frame-card (com caixa) logo a seguir. */
         .comparison-heading {
-            margin: 0 0 2px;
+            margin: 0;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 14px;
+            box-shadow: var(--shadow);
         }
         .comparison-heading h3 {
             margin: 0 0 2px;
             font-family: var(--font-head);
             text-transform: uppercase;
             font-size: 0.92rem;
-            color: var(--accent-3);
+            color: var(--ink);
         }
         .comparison-heading p {
             margin: 0;
@@ -341,11 +375,12 @@
         }
         .target-card {
             border: 1px dashed var(--border);
-            background: var(--card-soft);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 18px;
             padding: 14px 16px;
             color: var(--muted);
             line-height: 1.5;
+            box-shadow: var(--shadow);
         }
         .target-card h4 {
             margin: 0 0 8px;
@@ -373,7 +408,8 @@
             border: 1px solid var(--border);
             border-radius: 16px;
             overflow: hidden;
-            background: var(--card);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: var(--shadow);
         }
         .stats-card h4 {
             margin: 0;
@@ -382,7 +418,7 @@
             text-transform: uppercase;
             font-size: 0.82rem;
             border-bottom: 1px solid var(--border);
-            background: var(--card-soft);
+            background: rgba(255, 255, 255, 0.06);
         }
         .stats-table {
             width: 100%;
@@ -398,7 +434,7 @@
         }
         .stats-table th {
             color: var(--muted);
-            background: var(--card-soft);
+            background: rgba(255, 255, 255, 0.06);
             font-weight: 600;
         }
         .closing-layout {
@@ -605,6 +641,11 @@
                     <strong>Resumo temporal:</strong> ${esc(temporal.temporal_overlap_pct || 0)}% das combinações espaciais passaram também o limiar temporal definido.
                 </div>
             ` : '';
+            const totalExtension = temporal.total_overlap_extension_fmt ? `
+                <div class="panel-note" style="margin-top:14px;">
+                    <strong>Extensão total em overlap:</strong> ${esc(temporal.total_overlap_extension_fmt)} de linhas SMTUC coincidem, a pé, com paragens do Metrobus (soma de todas as linhas com overlap).
+                </div>
+            ` : '';
 
             return `
                 <section class="stats-wrap">
@@ -619,6 +660,7 @@
                         </article>
                     </div>
                     ${summary}
+                    ${totalExtension}
                 </section>
             `;
         }
