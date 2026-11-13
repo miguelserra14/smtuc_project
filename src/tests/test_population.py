@@ -60,12 +60,17 @@ def test_population_detail_near_stadium_1km() -> None:
 
 
 @pytest.fixture(scope="module")
-def bgri_underserved_context() -> dict[str, object]:
-    """Build shared context for underserved zones and visualization outputs."""
+def bgri_underserved_context(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
+    """Build shared context for underserved zones and visualization outputs.
+
+    Tudo o que os testes geram (CSV de lacunas, bgri.html) vai para uma pasta temporária - nunca
+    para outputs/, que tem os ficheiros publicados (ver conftest.py, que falha se algum teste
+    lá escrever)."""
     _require_geo_stack_or_skip()
     gpkg = _require_bgri_data_or_skip()
 
     day_str = resolve_reference_day().strftime("%Y-%m-%d")
+    out_dir = tmp_path_factory.mktemp("population")
 
     # Compute underserved zones
     merged = compute_underserved_zones(
@@ -75,11 +80,8 @@ def bgri_underserved_context() -> dict[str, object]:
         bgri_gpkg_path=str(gpkg),
         bgri_layer="BGRI2021_0603",
         population_col="N_INDIVIDUOS",
-        output_csv_path=f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap.csv",
+        output_csv_path=str(out_dir / "bgri_transport_gap.csv"),
     )
-
-    out_dir = _project_root() / OUTPUTS_POPULATION_DIR
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     poi_df = compute_poi_underservice(day_str=day_str, catchment_m=CATCHMENT_M)
 

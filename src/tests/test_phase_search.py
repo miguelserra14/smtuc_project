@@ -7,24 +7,15 @@ diferença com transbordo não seria atribuível só ao transbordo.
 
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests.reference_data import require_reference_data
 
-# Impressão digital (sha256 com quebras de linha normalizadas, 16 hex) dos feeds com que -16/-8
-# foram obtidos. Com outros dados (ex.: feeds oficiais AGIT, Fase 0B do roadmap) estes valores
-# deixam de ser esperados - o teste salta em vez de falhar; correr o script de novo e atualizar.
-_REFERENCE_FEEDS = {
-    "data/smtuc/stop_times.txt": "3c8decc86b8151c4",
-    "data/smtuc/trips.txt": "3eff670395ac47c5",
-    "data/metrobus/stop_times.txt": "be14cc6fd84cd7a0",
-    "data/metrobus/trips.txt": "91bc02a1b7168790",
-}
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _load_script():
@@ -32,13 +23,6 @@ def _load_script():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
-
-def _fingerprint(rel: str) -> str | None:
-    path = ROOT / rel
-    if not path.exists():
-        return None
-    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:16]
 
 
 def _schedule(bus: list[tuple[str, str]], metro: list[str]) -> pd.DataFrame:
@@ -72,9 +56,7 @@ def test_ranking_prefers_more_improved_then_fewer_regressions() -> None:
 
 @pytest.mark.integration
 def test_reproduces_original_shifts_without_transfer(tmp_path: Path) -> None:
-    mismatched = [rel for rel, fp in _REFERENCE_FEEDS.items() if _fingerprint(rel) != fp]
-    if mismatched:
-        pytest.skip(f"dados GTFS diferentes dos usados para -16/-8: {mismatched}")
+    require_reference_data("smtuc", "metrobus")  # -16/-8 e -11/-10 calibrados para estes feeds
     script = _load_script()
     schedules = script.load_schedules(tmp_path)
     old_rule = {k: v.drop(columns=["target_transfer_min", "trigger_transfer_min"]) for k, v in schedules.items()}
@@ -93,9 +75,7 @@ def test_reproduces_original_shifts_without_transfer(tmp_path: Path) -> None:
 def test_transfer_rule_changes_the_optimum(tmp_path: Path) -> None:
     """Com o transbordo a pé, -16 deixa de ser o melhor desvio "otimizado" (valores atuais do
     config marcados como provisórios até se decidir - ver resumo do passo 0.2)."""
-    mismatched = [rel for rel, fp in _REFERENCE_FEEDS.items() if _fingerprint(rel) != fp]
-    if mismatched:
-        pytest.skip(f"dados GTFS diferentes: {mismatched}")
+    require_reference_data("smtuc", "metrobus")  # -16/-8 e -11/-10 calibrados para estes feeds
     script = _load_script()
     results, base = script.search(script.load_schedules(tmp_path), range(-20, 21))
     assert base["Portagem metro→bus"]["median"] == 27.0  # era 19.5 com transbordo 0
@@ -108,9 +88,7 @@ def test_config_shifts_match_documented_properties(tmp_path: Path) -> None:
     otimizado é o 1º do ranking (3 melhorados, 1 regressão) e o melhorado é o desvio sem nenhuma
     regressão com menor espera total. Se os dados mudarem, este teste falha (ou salta) e lembra
     que é preciso correr scripts/search_phase_shift.py de novo."""
-    mismatched = [rel for rel, fp in _REFERENCE_FEEDS.items() if _fingerprint(rel) != fp]
-    if mismatched:
-        pytest.skip(f"dados GTFS diferentes - correr scripts/search_phase_shift.py e rever config: {mismatched}")
+    require_reference_data("smtuc", "metrobus")  # -16/-8 e -11/-10 calibrados para estes feeds
     from config import LINE_54_MELHORADO_PHASE_SHIFT_MIN, LINE_54_OPTIMIZED_PHASE_SHIFT_MIN
 
     script = _load_script()

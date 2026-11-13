@@ -37,7 +37,20 @@ $DevkitRoot = Join-Path (Split-Path -Parent $ProjectRoot) "feednplay_devkit"
 $ComposeFile = Join-Path $DevkitRoot "data_streaming\docker-compose.yaml"
 $ProducerScript = Join-Path $DevkitRoot "data_streaming\examples_of_data_producers\produce_cam_top_data_in_python\produce_cam_top_data.py"
 $SampleVideo = Join-Path $DevkitRoot "data_streaming\examples_of_data_producers\produce_cam_top_data_in_python\top_cam_sample.mp4"
-$PythonExe = "C:\Users\migue\miniconda3\envs\smtuc312\python.exe"
+# Executável Python: scripts/local_settings.ps1 (local, fora do git - ver local_settings.example.ps1),
+# senão $env:SMTUC_PYTHON, senão o `python` do PATH.
+$PythonExe = $null
+$LocalSettings = Join-Path $PSScriptRoot "local_settings.ps1"
+if (Test-Path $LocalSettings) { . $LocalSettings }
+if (-not $PythonExe -and $env:SMTUC_PYTHON) { $PythonExe = $env:SMTUC_PYTHON }
+if (-not $PythonExe) {
+    $PythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $PythonCmd) {
+        Write-Error "Python nao encontrado: cria scripts/local_settings.ps1 (ver local_settings.example.ps1) ou define SMTUC_PYTHON."
+        exit 1
+    }
+    $PythonExe = $PythonCmd.Source
+}
 $BridgeScript = Join-Path $ProjectRoot "src\feednplay\bridge.py"
 $DashboardHtml = Join-Path $ProjectRoot "outputs\feednplay_dashboard.html"
 $LogDir = Join-Path $ProjectRoot "scripts\.feednplay_logs"

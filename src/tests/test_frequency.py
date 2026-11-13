@@ -16,6 +16,7 @@ import pytest
 from gtfs_processing.gtfs import GTFSData
 from gtfs_processing.gtfs_probe import ServiceCalendarError
 from overlap import overlap_db as odb
+from tests.reference_data import require_reference_data
 
 MONDAY = date(2026, 5, 11)
 
@@ -242,8 +243,7 @@ def test_old_format_cache_is_recomputed(tmp_path: Path, fake_compute: list[date]
 @pytest.mark.integration
 @pytest.mark.parametrize("line, expected", [("7", 20.0), ("54", 40.0), ("10", 75.0)])
 def test_real_line_frequencies(line: str, expected: float) -> None:
-    if not (Path(__file__).resolve().parents[2] / "data" / "smtuc" / "trips.txt").exists():
-        pytest.skip("dados GTFS não disponíveis")
+    require_reference_data("smtuc")  # valores conferidos à mão para ESTE feed
     gtfs = odb._load_gtfs_cached("smtuc")
     route_ids = odb._line_to_route_ids(gtfs)[line]
     assert odb._line_avg_frequency_min(gtfs, route_ids, MONDAY) == expected

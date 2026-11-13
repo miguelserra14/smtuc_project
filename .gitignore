@@ -7,3 +7,8 @@ outputs/*
 !outputs/**/*.html
 !outputs/**/*.csv
 scripts/.feednplay_logs/
+
+# Valores locais/privados (coordenadas pessoais, caminhos desta máquina) - nunca versionar.
+# Modelos públicos: src/config_local.example.py, scripts/local_settings.example.ps1
+src/config_local.py
+scripts/local_settings.ps1

@@ -14,6 +14,7 @@ import pytest
 
 from gtfs_processing.gtfs import GTFSData
 from overlap.transit import compute_transfer_waits, transfer_minutes
+from tests.reference_data import require_reference_data
 from visualizations.integration import (
     _build_waits_table,
     _double_and_shift_schedule_bus_times,
@@ -179,8 +180,8 @@ def test_reverse_shift_keeps_trigger_transfer() -> None:
 # --------------------------------------------------------------------------------------------
 
 def _require_data() -> None:
-    if not (Path(__file__).resolve().parents[2] / "data" / "smtuc" / "trips.txt").exists():
-        pytest.skip("dados GTFS não disponíveis")
+    # Distâncias/transbordos fixos (2.39, 1.28) só valem para estes feeds (coords do metro sintético).
+    require_reference_data("smtuc", "metrobus")
 
 
 @pytest.mark.integration

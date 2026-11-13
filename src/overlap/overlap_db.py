@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from datetime import date
 from functools import lru_cache
@@ -289,6 +290,20 @@ def _resolve_db_path(path: str | None = None) -> Path:
     return (_project_root() / rel).resolve()
 
 
+def _atomic_write_csv(df: pd.DataFrame, path: Path) -> None:
+    """Grava `df` em `path` sem nunca deixar um CSV truncado: escreve primeiro num temporário na
+    mesma pasta e só depois o troca pelo destino (os.replace é atómico no mesmo volume). Antes
+    gravava-se diretamente - uma execução interrompida a meio deixava um CSV parcial que a
+    validação de cache (que só lê a 1ª linha) aceitava como válido."""
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        df.to_csv(tmp, index=False)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
 def _dataset_signature(dataset: str) -> str:
     # Recursive on purpose: load_gtfs()/_find_gtfs_dir() accept the dataset's GTFS files sitting
     # in a nested subfolder (e.g. data/smtuc/some_export/routes.txt), not just directly under
@@ -492,10 +507,13 @@ def build_line_metrics_db(
             temporal_overlap_max_min=TEMPORAL_OVERLAP_MAX_MIN,
         )
     except Exception as exc:
-        # Se o cálculo temporal falhar, prossegue sem ele (o CSV fica com zeros nas colunas
-        # temporais) - mas avisa-se sempre, porque esse CSV é cacheado e fica "colado" com
-        # zeros até ao próximo force_refresh, sem qualquer outro sinal de que algo correu mal.
-        print(f"[WARNING] compute_temporal_overlaps_for_db falhou, a gravar line_metrics_db.csv sem colunas temporais (ficarão a 0): {exc}")
+        # NÃO se grava nada: antes gravava-se o CSV com zeros nas colunas temporais, que ficava
+        # em cache ("colado") até um force_refresh, e os dashboards mostravam 0 overlaps
+        # temporais como se fosse um resultado. O cache anterior (se existir) fica intacto e o
+        # erro sobe - o regenerate regista-o como falha e sai com código 1.
+        raise RuntimeError(
+            f"overlap temporal falhou - {csv_path.name} NÃO foi gravado (cache anterior intacto): {exc}"
+        ) from exc
 
     fresh["__meta_smtuc_dataset"] = smtuc_dataset
     fresh["__meta_metro_dataset"] = metrobus_dataset
@@ -510,7 +528,7 @@ def build_line_metrics_db(
     fresh["__meta_reference_day"] = reference_day.isoformat()
     fresh["__meta_schema_version"] = str(LINE_METRICS_SCHEMA_VERSION)
     fresh["__meta_frequency_window_h"] = f"{FREQUENCY_WINDOW_START_H}-{FREQUENCY_WINDOW_END_H}"
-    fresh.to_csv(csv_path, index=False)
+    _atomic_write_csv(fresh, csv_path)
 
     return fresh.drop(columns=[c for c in fresh.columns if c.startswith("__meta_")], errors="ignore")
 

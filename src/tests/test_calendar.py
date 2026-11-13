@@ -25,6 +25,7 @@ from gtfs_processing.gtfs_probe import (
     is_public_holiday,
     public_holidays,
 )
+from tests.reference_data import require_reference_data
 
 WEEKDAY = date(2026, 5, 11)  # segunda-feira normal (o dia de referência fixo do projeto)
 SATURDAY = date(2026, 5, 16)
@@ -268,6 +269,7 @@ def _real(dataset: str):
 )
 def test_real_feeds(dataset: str, weekday_trips: int, sunday_ids: set[str]) -> None:
     gtfs = _real(dataset)
+    require_reference_data(dataset)  # contagens fixas: só valem para os feeds calibrados
     trip_sids = gtfs.trips["service_id"].astype(str)
 
     active = _active_service_ids(gtfs, WEEKDAY)
@@ -283,6 +285,7 @@ def test_real_feeds(dataset: str, weekday_trips: int, sunday_ids: set[str]) -> N
 @pytest.mark.integration
 def test_real_feed_out_of_range_propagates_to_departures() -> None:
     _real("smtuc")
+    require_reference_data("smtuc")  # OUT_OF_RANGE só está fora do período deste feed
     from population.operations_population import _departures_per_stop_for_day
 
     with pytest.raises(ServiceCalendarError):

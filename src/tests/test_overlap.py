@@ -38,6 +38,7 @@ from overlap.overlap import (
     line_overlap_top,
     temporal_overlap_events_for_metrics,
 )
+from overlap import overlap_db
 from population.data_processing import compute_underserved_zones
 from visualizations import create_overlap_reachability_map, _write_folium_html
 
@@ -98,6 +99,23 @@ def _require_dataset(dataset: str) -> Path:
     if not d.exists() or any(not (d / f).exists() for f in required):
         pytest.skip(f"Dataset GTFS inválido/incompleto: {d}")
     return d
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _isolated_metrics_cache(tmp_path_factory: pytest.TempPathFactory):
+    """line_overlap_top/line_low_overlap_near_stadium_top usam o cache por omissão
+    (outputs/overlap/line_metrics_db.csv) e reescrevem-no quando a chave não bate certo. Aqui o
+    cache aponta para uma CÓPIA numa pasta temporária: se a chave bater, é usada tal e qual
+    (rápido); se não, o recálculo fica na cópia e o ficheiro publicado nunca é tocado."""
+    import shutil
+
+    published = Path(__file__).resolve().parents[2] / overlap_db.LINE_METRICS_DB_PATH
+    tmp_db = tmp_path_factory.mktemp("overlap_cache") / "line_metrics_db.csv"
+    if published.exists():
+        shutil.copy2(published, tmp_db)
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(overlap_db, "LINE_METRICS_DB_PATH", str(tmp_db))
+        yield tmp_db
 
 
 @pytest.mark.integration
@@ -234,7 +252,7 @@ def test_compare_nearest_network() -> None:
 
 
 @pytest.mark.integration
-def test_overlap_reachability_map_now() -> None:
+def test_overlap_reachability_map_now(tmp_path: Path) -> None:
     _require_dataset("smtuc")
     _require_dataset("metrobus")
 
@@ -246,6 +264,7 @@ def test_overlap_reachability_map_now() -> None:
 
     merged = compute_underserved_zones(
         day_str=day_str,
+        output_csv_path=None,  # sem isto gravava em outputs/population/bgri_transport_gap.csv
     )
 
     reach_gdf = compute_bgri_reachability_now(
@@ -266,9 +285,7 @@ def test_overlap_reachability_map_now() -> None:
         time_str=selected_time,
     )
 
-    out_dir = Path(__file__).resolve().parents[2] / OUTPUTS_OVERLAP_DIR
-    out_dir.mkdir(parents=True, exist_ok=True)
-    output_html = out_dir / "overlap_reachability_now.html"
+    output_html = tmp_path / "overlap_reachability_now.html"
     _write_folium_html(fig_map, output_html)
 
     print(f"Mapa overlap reachability gerado: {output_html}")
