@@ -11,6 +11,7 @@ from overlap.transit import (
     build_line_stop_vs_metro_table,
     build_metro_bus_connection_metrics,
     build_reverse_stop_vs_metro_table,
+    compute_transfer_waits,
     resolve_reference_day,
 )
 
@@ -71,62 +72,34 @@ def _period_label(seconds: int) -> str:
 
 
 def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
-    if "bus_line_passage" in schedule_df.columns:
-        bus_line_col = schedule_df["bus_line_passage"].astype(str).str.strip()
-    else:
-        bus_line_col = schedule_df.get("bus_line", pd.Series([""] * len(schedule_df))).astype(str).str.strip()
-
-    bus_events = []
-    for time_v, line_v in zip(schedule_df["bus_time"].astype(str).tolist(), bus_line_col.tolist()):
-        if not str(time_v).strip():
-            continue
-        bus_events.append(
-            {
-                "time_s": _hhmmss_to_seconds(time_v),
-                "time": str(time_v),
-                "line": str(line_v),
-            }
-        )
-    bus_events = sorted(bus_events, key=lambda r: (int(r["time_s"]), str(r["line"])))
-    metro_times = sorted(
-        {
-            _hhmmss_to_seconds(v)
-            for v in schedule_df["metro_time_from_origin"].astype(str).tolist()
-            if str(v).strip()
-        }
-    )
-
+    """Tabela de esperas por chegada (gatilho), com a regra única de transbordo de
+    `overlap.transit.compute_transfer_waits`: a partida seguinte só conta se der para lá chegar a
+    pé (distância real entre paragens + margem). `wait_min` = minutos entre a chegada e a partida
+    apanhada, caminhada incluída; `transfer_min` = a parte que é caminhada + margem."""
     rows: list[dict] = []
-    for metro_s in metro_times:
-        next_bus = next((b for b in bus_events if int(b["time_s"]) >= metro_s), None)
-        if next_bus is None:
-            wait_min = None
-            next_bus_str = ""
-            next_bus_line = ""
+    for w in compute_transfer_waits(schedule_df):
+        wait_min = w["wait_min"]
+        if wait_min is None:
             class_label = "sem_ligacao"
+        elif wait_min <= 10:
+            class_label = "<=10"
+        elif wait_min <= 15:
+            class_label = "10-15"
         else:
-            wait_min = round((int(next_bus["time_s"]) - metro_s) / 60.0, 2)
-            next_bus_str = str(next_bus["time"])
-            next_bus_line = str(next_bus["line"])
-            if wait_min <= 10:
-                class_label = "<=10"
-            elif wait_min <= 15:
-                class_label = "10-15"
-            else:
-                class_label = ">15"
-
+            class_label = ">15"
         rows.append(
             {
-                "metro_time": _seconds_to_hhmmss(metro_s),
-                "next_bus_time": next_bus_str,
-                "next_bus_line": next_bus_line,
+                "metro_time": _seconds_to_hhmmss(w["trigger_s"]),
+                "next_bus_time": w["target_time"],
+                "next_bus_line": w["target_line"],
                 "wait_min": wait_min,
+                "transfer_min": w["transfer_min"],
                 "wait_class": class_label,
-                "period": _period_label(metro_s),
+                "period": _period_label(w["trigger_s"]),
             }
         )
-
-    return pd.DataFrame(rows)
+    columns = ["metro_time", "next_bus_time", "next_bus_line", "wait_min", "transfer_min", "wait_class", "period"]
+    return pd.DataFrame(rows, columns=columns)
 
 
 def _shift_schedule_bus_times(schedule_df: pd.DataFrame, line_value: str, shift_minutes: float) -> pd.DataFrame:
@@ -273,6 +246,7 @@ def _wait_chart_traces(
             "next_bus_time": True,
             "next_bus_line": True,
             "wait_min": True,
+            "transfer_min": True,
             "index_label": False,
         },
     )
@@ -284,6 +258,7 @@ def _wait_chart_traces(
                 .replace("metro_time=", f"{trigger_label}=")
                 .replace("next_bus_time=", f"{target_label}=")
                 .replace("next_bus_line=", f"{target_line_label}=")
+                .replace("transfer_min=", "Transbordo a pé, incluído (min)=")
             )
 
     if not zero_waits.empty:

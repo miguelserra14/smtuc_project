@@ -86,15 +86,61 @@ DEFAULT_OUTPUT_GAP_CSV = "outputs/population/bgri_transport_gap.csv"
 # para a fonte/raciocínio de cada estimativa - este CSV é gerado a partir desse ficheiro).
 POINTS_OF_INTEREST_CSV = "data/points_of_interest.csv"
 
-# Desvio de fase (min) do horário otimizado da linha 54 em Portela/Portagem - mesmo nº de viagens
-# e ciclo de 40 min, só desloca a partida. -16 min é o melhor compromisso achado por busca
-# exaustiva de fase (-20 a +20 min) nos 4 sentidos de transbordo: regride ligeiramente só 1 deles.
-LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -16.0
+# Transbordo metro <-> autocarro (visualizations/integration.py, overlap/transit.py): tempo mínimo
+# para mudar de veículo = distância real entre as duas paragens usadas ÷ WALK_SPEED_M_MIN + esta
+# margem (sair do veículo, atravessar, chegar antes da partida). Antes assumia-se 0 min - ligações
+# "à mesma hora" contavam como perfeitas, apesar de as paragens estarem a 20-250 m.
+TRANSFER_BUFFER_MIN = 1.0
 
-# Desvio de fase (min) da proposta "melhorado": assume um 2º autocarro no ciclo (dobra a
-# frequência de 40 para 20 min, +1 autocarro/motorista). -8 min é o único desvio, dos 20
-# possíveis, que melhora os 4 sentidos de transbordo em simultâneo, sem nenhuma regressão.
-LINE_54_MELHORADO_PHASE_SHIFT_MIN = -8.0
+# Os 2 nós de integração linha 54 <-> Metrobus analisados (fonte única para
+# regenerate_all_htmls.py e scripts/search_phase_shift.py - não duplicar estes argumentos).
+INTEGRATION_SITES: tuple[dict, ...] = (
+    {
+        "name": "Portagem",  # Portela -> Portagem, linhas 54 + 38
+        "metro_stop_ref": "Portagem",
+        "bus_stop_ref": "Portagem",
+        "line_number": ("54", "38"),
+        "metro_origin_ref": "Portela",
+        "bus_origin_ref": "Portela do Mondego",
+        "output_prefix": "l54_38",
+        "output_subdir": "portagem",
+        "fixed_html_name": "l54_38_all.html",
+        "reverse_metro_direction_id": 1,  # Metrobus sentido Serpins, a partir de Portagem
+        "reverse_metro_route_id": "LOUSA",  # não confundir com as viagens dos ramais (fase 2)
+    },
+    {
+        "name": "Portela",  # Portagem -> Portela, linha 54
+        "metro_stop_ref": "Portela",
+        "bus_stop_ref": "Portela do Mondego",
+        "line_number": "54",
+        "metro_origin_ref": "Portagem",
+        "bus_origin_ref": "Portagem",
+        "output_prefix": "l54",
+        "output_subdir": "portela",
+        "fixed_html_name": "l54_all.html",
+        "reverse_metro_direction_id": 0,  # Metrobus sentido Portagem, a passar por Portela
+        "reverse_metro_route_id": "LOUSA",
+    },
+)
+
+# Desvios de fase da linha 54 em Portela/Portagem - PROVISÓRIOS: obtidos com o feed Metrobus
+# sintético (data/metrobus, sem o serviço urbano nem parte da ponta da tarde). Quando houver dados
+# oficiais (Fase 0B do roadmap), correr `scripts/search_phase_shift.py` e atualizar aqui.
+# Ambos já contam com o transbordo a pé (TRANSFER_BUFFER_MIN + distância real entre paragens);
+# sem ele (regra antiga, `--sem-transbordo`) os ótimos eram -16 e -8.
+
+# "otimizado": mesmo nº de viagens e ciclo de 40 min, só desloca a partida. -11 min é o melhor
+# compromisso da busca exaustiva (-20 a +20 min) nos 4 sentidos de transbordo: melhora 3,
+# regride ligeiramente 1 (Portela bus->metro, 14 -> 15 min de mediana); menor espera total (58 min
+# de soma de medianas, contra 75 com o antigo -16).
+LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -11.0
+
+# "melhorado": 2º autocarro no ciclo (40 -> 20 min, +1 autocarro/motorista). Com transbordo já
+# nenhum desvio melhora os 4 sentidos; -10 min é o que melhora sem NENHUMA regressão (melhora 2,
+# mantém 2) e tem a menor espera total (54). Alternativa preterida: -9 (melhora 3 mas regride
+# Portagem bus->metro de 12 para 21 min; soma 64) - o script ordena primeiro por nº de sentidos
+# melhorados, por isso lista -9 à frente; a escolha de -10 privilegia "sem regressões".
+LINE_54_MELHORADO_PHASE_SHIFT_MIN = -10.0
 
 # Parede FeedNPlay (feednplay_dashboard.html) - toggles independentes: FEEDNPLAY_CLICK_TO_ADVANCE
 # liga/desliga poder clicar/tocar nas zonas ◀/▶ (o dwell fica sempre ativo); FEEDNPLAY_PREVIEW_MODE

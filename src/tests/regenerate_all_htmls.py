@@ -50,6 +50,7 @@ from src.config import (
     USE_FIXED_REFERENCE_DAY,
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
     LINE_54_MELHORADO_PHASE_SHIFT_MIN,
+    INTEGRATION_SITES,
 )
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
 from overlap.overlap_db import _load_gtfs_cached
@@ -464,51 +465,25 @@ def regenerate_integration_htmls() -> None:
         day_str = resolve_reference_day().strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
         
-        # Portagem: Linhas 54 + 38 (Portela → Portagem)
-        # Generates: l54_38_wt.csv, line_54_38_bus_portagem_metro_portagem.csv, etc.
-        print("\n[INFO] Gerando integração Portagem (Portela → Portagem) com linhas 54 + 38...")
-        try:
-            results = generate_connection_visualizations(
-                metro_stop_ref="Portagem",
-                bus_stop_ref="Portagem",
-                line_number=["54", "38"],
-                day_str=day_str,
-                metro_origin_ref="Portela",
-                bus_origin_ref="Portela do Mondego",
-                output_prefix="l54_38",  # Explicitly use prefix for lines 54+38
-                output_subdir="portagem",
-                fixed_html_name="l54_38_all.html",
-                phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
-                melhorado_phase_shift_min=LINE_54_MELHORADO_PHASE_SHIFT_MIN,
-                reverse_metro_direction_id=1,  # Metrobus sentido Serpins, a partir de Portagem
-                reverse_metro_route_id="LOUSA",  # não confundir com as viagens dos ramais novos (fase 2)
-            )
-            print(f"[SUCCESS] Integração Portagem (54+38): {results.get('combined_html', 'N/A')}")
-        except Exception as e:
-            _record_failure("integração Portagem (54+38)", e)
-        
-        # Portela: Linha 54 (Portagem → Portela)
-        # Generates: l54_wt.csv, line_54_bus_portela_do_mondego_metro_portela.csv, etc.
-        print("\n[INFO] Gerando integração Portela (Portagem → Portela) com linha 54...")
-        try:
-            results = generate_connection_visualizations(
-                metro_stop_ref="Portela",
-                bus_stop_ref="Portela do Mondego",
-                line_number="54",
-                day_str=day_str,
-                metro_origin_ref="Portagem",
-                bus_origin_ref="Portagem",
-                output_prefix="l54",  # Explicitly use prefix for line 54 only
-                output_subdir="portela",
-                fixed_html_name="l54_all.html",
-                phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
-                melhorado_phase_shift_min=LINE_54_MELHORADO_PHASE_SHIFT_MIN,
-                reverse_metro_direction_id=0,  # Metrobus sentido Portagem, a passar por Portela
-                reverse_metro_route_id="LOUSA",  # não confundir com as viagens dos ramais novos (fase 2)
-            )
-            print(f"[SUCCESS] Integração Portela (54): {results.get('combined_html', 'N/A')}")
-        except Exception as e:
-            _record_failure("integração Portela (54)", e)
+        # Nós de integração definidos uma só vez em config.INTEGRATION_SITES (também usados por
+        # scripts/search_phase_shift.py, que procura os desvios de fase abaixo).
+        for site in INTEGRATION_SITES:
+            lines = [site["line_number"]] if isinstance(site["line_number"], str) else list(site["line_number"])
+            label = f"integração {site['name']} ({'+'.join(lines)})"
+            print()
+            print(f"[INFO] Gerando {label}: {site['metro_origin_ref']} → {site['metro_stop_ref']}...")
+            kwargs = {k: v for k, v in site.items() if k != "name"}
+            kwargs["line_number"] = lines if len(lines) > 1 else lines[0]
+            try:
+                results = generate_connection_visualizations(
+                    day_str=day_str,
+                    phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
+                    melhorado_phase_shift_min=LINE_54_MELHORADO_PHASE_SHIFT_MIN,
+                    **kwargs,
+                )
+                print(f"[SUCCESS] {label}: {results.get('combined_html', 'N/A')}")
+            except Exception as e:
+                _record_failure(label, e)
         
     except Exception as e:
         _record_failure("integração", e)

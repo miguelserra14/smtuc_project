@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import random
 import re
 from datetime import date, datetime, timedelta
@@ -11,6 +12,7 @@ import pandas as pd
 from config import (
     OUTPUTS_INTEGRATION_DIR,
     REACHABILITY_REFERENCE_DAY,
+    TRANSFER_BUFFER_MIN,
     USE_FIXED_REFERENCE_DAY,
     WALK_SPEED_M_MIN,
 )
@@ -292,6 +294,97 @@ def _direction_arrival_times_for_stop(gtfs, trips: pd.DataFrame, target_stop_id:
     return sorted(set(rows["arrival_time"].astype(str).tolist()))
 
 
+def _stop_latlon(gtfs, stop_id: str) -> tuple[float, float]:
+    row = gtfs.stops[gtfs.stops["stop_id"].astype(str) == str(stop_id)]
+    if row.empty:
+        raise ValueError(f"Paragem sem coordenadas: {stop_id}")
+    return float(row.iloc[0]["stop_lat"]), float(row.iloc[0]["stop_lon"])
+
+
+def _distance_m(a: tuple[float, float], b: tuple[float, float]) -> float:
+    lat1, lon1, lat2, lon2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+    return 2 * 6371000.0 * math.asin(math.sqrt(h))
+
+
+def transfer_minutes(
+    gtfs_a,
+    stop_a: str,
+    gtfs_b,
+    stop_b: str,
+    walk_speed_m_min: float = WALK_SPEED_M_MIN,
+    buffer_min: float = TRANSFER_BUFFER_MIN,
+) -> float:
+    """Tempo mínimo (min) para mudar entre duas paragens (de feeds possivelmente diferentes):
+    distância real a pé ÷ velocidade + margem fixa (ver config.TRANSFER_BUFFER_MIN)."""
+    dist = _distance_m(_stop_latlon(gtfs_a, stop_a), _stop_latlon(gtfs_b, stop_b))
+    return round(dist / float(walk_speed_m_min) + float(buffer_min), 2)
+
+
+def _optional_minutes(value: object) -> float:
+    """Minutos de transbordo de uma célula da tabela: vazio/NaN/ausente -> 0 (tabelas antigas,
+    sem as colunas de transbordo, continuam a funcionar com o comportamento anterior)."""
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return 0.0 if math.isnan(out) else out
+
+
+def _non_empty_time(value: object) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text if text and text.lower() != "nan" else None
+
+
+def compute_transfer_waits(schedule_df: pd.DataFrame) -> list[dict]:
+    """Regra ÚNICA de espera no transbordo, partilhada pelo gráfico (visualizations/integration.py)
+    e pelas métricas (`build_metro_bus_connection_metrics`).
+
+    Lê o contrato de colunas das tabelas de `build_line_stop_vs_metro_table` /
+    `build_reverse_stop_vs_metro_table`: `metro_time_from_origin` = chegadas que desencadeiam a
+    espera ("gatilhos"), `bus_time` (+ `bus_line_passage`) = partidas a apanhar ("alvos").
+    `trigger_transfer_min` / `target_transfer_min` (opcionais, alinhadas com cada coluna) somam o
+    tempo de transbordo a pé; um alvo só é apanhável se partir em ou depois de
+    `gatilho + transbordo`. Antes não havia transbordo nenhum: uma partida à mesma hora da chegada
+    contava como ligação perfeita de 0 min, fisicamente impossível.
+
+    Devolve, por gatilho (ordenado), `trigger_s`, `transfer_min`, `target_s`/`target_time`/
+    `target_line` (None se não houver ligação) e `wait_min` = minutos entre a chegada e a partida
+    apanhada (inclui a caminhada) ou None.
+    """
+    if schedule_df is None or schedule_df.empty:
+        return []
+    line_col = next((c for c in ("bus_line_passage", "bus_line") if c in schedule_df.columns), None)
+
+    targets: list[tuple[int, float, str, str]] = []
+    triggers: set[tuple[int, float]] = set()
+    for row in schedule_df.to_dict("records"):
+        target_time = _non_empty_time(row.get("bus_time"))
+        if target_time:
+            line = str(row.get(line_col, "")).strip() if line_col else ""
+            targets.append((_hhmmss_to_seconds(target_time), _optional_minutes(row.get("target_transfer_min")), target_time, line))
+        trigger_time = _non_empty_time(row.get("metro_time_from_origin"))
+        if trigger_time:
+            triggers.add((_hhmmss_to_seconds(trigger_time), _optional_minutes(row.get("trigger_transfer_min"))))
+    targets.sort(key=lambda tg: (tg[0], tg[3]))
+
+    out: list[dict] = []
+    for trigger_s, trigger_tr in sorted(triggers):
+        target = next((tg for tg in targets if tg[0] >= trigger_s + (trigger_tr + tg[1]) * 60.0 - 1e-6), None)
+        out.append(
+            {
+                "trigger_s": trigger_s,
+                # Sem ligação -> None (não 0.0, que se leria como "transbordo instantâneo").
+                "transfer_min": round(trigger_tr + target[1], 2) if target else None,
+                "target_s": target[0] if target else None,
+                "target_time": target[2] if target else "",
+                "target_line": target[3] if target else "",
+                "wait_min": round((target[0] - trigger_s) / 60.0, 2) if target else None,
+            }
+        )
+    return out
+
+
 def _resolve_bus_arrival_events(
     gtfs_bus,
     day: date,
@@ -364,15 +457,18 @@ def _resolve_bus_arrival_events(
             str(row["trip_id"]): str(route_to_line.get(str(row["route_id"]), str(row["route_id"]))).strip()
             for _, row in line_trips[["trip_id", "route_id"]].iterrows()
         }
-        bus_events.extend(
-            _arrival_events_for_stop(
-                gtfs=gtfs_bus,
-                trips=line_trips,
-                target_stop_id=line_target_stop_id,
-                origin_candidates=bus_origin_candidates,
-                line_by_trip=line_by_trip,
-            )
+        line_events = _arrival_events_for_stop(
+            gtfs=gtfs_bus,
+            trips=line_trips,
+            target_stop_id=line_target_stop_id,
+            origin_candidates=bus_origin_candidates,
+            line_by_trip=line_by_trip,
         )
+        # Paragem física usada por esta linha (pode ser diferente entre linhas no mesmo nó - ex.:
+        # Portagem tem várias) - necessária para o tempo de transbordo de cada passagem.
+        for ev in line_events:
+            ev["stop_id"] = str(line_target_stop_id)
+        bus_events.extend(line_events)
 
     if not matched_any_line:
         raise ValueError(f"Linha(s) não encontrada(s): {line_label}")
@@ -436,6 +532,10 @@ def build_line_stop_vs_metro_table(
     )
     bus_times = [ev["time"] for ev in bus_events]
     bus_lines = [ev["line"] for ev in bus_events]
+    bus_stop_ids = [ev.get("stop_id", "") for ev in bus_events]
+    transfer_by_stop = {
+        sid: transfer_minutes(gtfs_metro, metro_stop_id, gtfs_bus, sid) for sid in dict.fromkeys(bus_stop_ids) if sid
+    }
     metro_times = _arrival_times_for_stop(
         gtfs=gtfs_metro,
         trips=metro_trips,
@@ -454,6 +554,10 @@ def build_line_stop_vs_metro_table(
         "metro_time_from_origin",
         "origin_ref",
         "date",
+        "bus_stop_id",
+        "metro_stop_id",
+        "target_transfer_min",
+        "trigger_transfer_min",
     ]
     if n == 0:
         out_df = pd.DataFrame(columns=columns)
@@ -481,6 +585,11 @@ def build_line_stop_vs_metro_table(
                 "metro_time_from_origin": metro_times[i] if i < len(metro_times) else "",
                 "origin_ref": str(metro_origin_ref),
                 "date": day.strftime("%Y-%m-%d"),
+                # Transbordo metro -> esta paragem de autocarro (alinhado com bus_time).
+                "bus_stop_id": bus_stop_ids[i] if i < len(bus_stop_ids) else "",
+                "metro_stop_id": str(metro_stop_id),
+                "target_transfer_min": transfer_by_stop.get(bus_stop_ids[i]) if i < len(bus_stop_ids) else None,
+                "trigger_transfer_min": 0.0 if i < len(metro_times) else None,
             }
         )
 
@@ -574,7 +683,16 @@ def build_reverse_stop_vs_metro_table(
     bus_events, line_label, line_slug = _resolve_bus_arrival_events(
         gtfs_bus, day, bus_target_candidates, bus_origin_candidates, line_number
     )
-    bus_arrival_times = sorted({str(ev["time"]) for ev in bus_events})
+    # (hora, paragem) únicos: com várias linhas, a mesma hora pode chegar a paragens diferentes,
+    # cada uma com o seu tempo de transbordo até ao metro.
+    bus_arrivals = sorted(
+        {(str(ev["time"]), str(ev.get("stop_id", ""))) for ev in bus_events},
+        key=lambda a: (_hhmmss_to_seconds(a[0]), a[1]),
+    )
+    bus_arrival_times = [time for time, _ in bus_arrivals]
+    transfer_by_stop = {
+        sid: transfer_minutes(gtfs_bus, sid, gtfs_metro, metro_stop_id) for _, sid in bus_arrivals if sid
+    }
 
     n = max(len(bus_arrival_times), len(metro_departure_times))
     columns = [
@@ -587,6 +705,10 @@ def build_reverse_stop_vs_metro_table(
         "metro_time_from_origin",
         "origin_ref",
         "date",
+        "bus_stop_id",
+        "metro_stop_id",
+        "target_transfer_min",
+        "trigger_transfer_min",
     ]
     out_dir = Path(output_dir) if output_dir is not None else (
         Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
@@ -615,6 +737,12 @@ def build_reverse_stop_vs_metro_table(
                 "metro_time_from_origin": bus_arrival_times[i] if i < len(bus_arrival_times) else "",
                 "origin_ref": str(bus_origin_ref),
                 "date": day.strftime("%Y-%m-%d"),
+                # Transbordo desta paragem de autocarro -> metro (alinhado com metro_time_from_origin,
+                # que nesta tabela invertida guarda as chegadas de autocarro).
+                "bus_stop_id": bus_arrivals[i][1] if i < len(bus_arrivals) else "",
+                "metro_stop_id": str(metro_stop_id),
+                "target_transfer_min": 0.0 if i < len(metro_departure_times) else None,
+                "trigger_transfer_min": transfer_by_stop.get(bus_arrivals[i][1]) if i < len(bus_arrivals) else None,
             }
         )
 
@@ -672,21 +800,11 @@ def build_metro_bus_connection_metrics(
                 if str(v).strip()
             }
         )
-        metro_times = sorted(
-            {
-                _hhmmss_to_seconds(v)
-                for v in schedule_df["metro_time_from_origin"].astype(str).tolist()
-                if str(v).strip()
-            }
-        )
-
-        waits_min: list[float | None] = []
-        for metro_s in metro_times:
-            next_bus = next((b for b in bus_times if b >= metro_s), None)
-            if next_bus is None:
-                waits_min.append(None)
-            else:
-                waits_min.append(round((next_bus - metro_s) / 60.0, 2))
+        # Mesma regra (com transbordo a pé) que o gráfico de esperas - ver compute_transfer_waits.
+        waits = compute_transfer_waits(schedule_df)
+        metro_times = [w["trigger_s"] for w in waits]
+        waits_min: list[float | None] = [w["wait_min"] for w in waits]
+        transfer_values = pd.Series([w["transfer_min"] for w in waits if w["wait_min"] is not None], dtype="float")
 
         waits_series = pd.Series(waits_min, dtype="float")
         waits_valid = waits_series.dropna()
@@ -730,6 +848,13 @@ def build_metro_bus_connection_metrics(
                 "value": round(float(waits_valid.max()), 2) if not waits_valid.empty else None,
                 "unit": "min",
                 "note": "tempo de espera para o próximo autocarro",
+            },
+            {
+                "scope": "overall",
+                "metric": "transfer_walk_median_min",
+                "value": round(float(transfer_values.median()), 2) if not transfer_values.empty else None,
+                "unit": "min",
+                "note": "tempo mínimo de transbordo (caminhada + margem) já incluído nas esperas",
             },
         ]
 
