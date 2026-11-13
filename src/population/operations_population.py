@@ -35,8 +35,8 @@ def _departures_per_stop_for_day(dataset: str, day: date) -> pd.DataFrame:
     active_services = _active_service_ids(gtfs, day)
     trips = gtfs.trips.copy()
     trips["service_id"] = trips["service_id"].astype(str)
-    if active_services:
-        trips = trips[trips["service_id"].isin(active_services)]
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    trips = trips[trips["service_id"].isin(active_services)]
 
     if trips.empty:
         return pd.DataFrame(columns=["stop_id", "departures", "stop_lat", "stop_lon", "dataset"])

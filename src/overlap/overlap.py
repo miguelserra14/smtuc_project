@@ -561,8 +561,8 @@ def _next_service_relevant_time(
         trips = gtfs.trips[["trip_id", "service_id"]].copy()
         trips["trip_id"] = trips["trip_id"].astype(str)
         trips["service_id"] = trips["service_id"].astype(str)
-        if active_services:
-            trips = trips[trips["service_id"].isin(active_services)]
+        # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+        trips = trips[trips["service_id"].isin(active_services)]
         if trips.empty:
             continue
 
@@ -644,8 +644,8 @@ def _reachable_stops_for_dataset_now(
     trips = gtfs.trips[["trip_id", "service_id"]].copy()
     trips["trip_id"] = trips["trip_id"].astype(str)
     trips["service_id"] = trips["service_id"].astype(str)
-    if active_services:
-        trips = trips[trips["service_id"].isin(active_services)]
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    trips = trips[trips["service_id"].isin(active_services)]
     if trips.empty:
         out = stops.copy()
         out["dataset"] = dataset
@@ -766,8 +766,8 @@ def _reachable_stops_multimodal_now(
         trips["trip_id"] = trips["trip_id"].astype(str)
         trips["service_id"] = trips["service_id"].astype(str)
         active_services = _active_service_ids(gtfs, day)
-        if active_services:
-            trips = trips[trips["service_id"].isin(active_services)]
+        # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+        trips = trips[trips["service_id"].isin(active_services)]
         if trips.empty:
             continue
 
@@ -866,14 +866,22 @@ def _reachable_stops_multimodal_now(
                     if np.isfinite(earliest_at_stop_s) and dep_s >= earliest_at_stop_s and dep_s >= float(t0):
                         on_board = True
 
-        # Transfer-walk relaxation from improved stops.
-        # One relaxation wave per round keeps runtime bounded while enabling chained transfers across rounds.
+        # Transfer-walk relaxation from stops improved BY A TRIP in this round (RAPTOR footpaths).
+        # A caminhada parte sempre da chegada de viagem fotografada ANTES deste ciclo (snapshot),
+        # nunca de um valor já baixado por outra caminhada no mesmo ciclo. Antes lia-se
+        # arrivals_curr_s, que este próprio ciclo vai alterando: A->B a pé e depois B->C a pé
+        # encadeavam-se (ultrapassando o limite de max_transfer_walk_min) ou não, conforme a
+        # ordem de iteração do set changed_stop_ids - que depende de PYTHONHASHSEED, aleatório
+        # em cada execução. Resultado: isócronas diferentes a cada regeneração (1072-1090
+        # paragens alcançáveis a partir do estádio, medido). Com o snapshot o resultado é
+        # independente da ordem; `sorted` fica só por legibilidade/reprodutibilidade de debug.
         if changed_stop_ids:
-            for sid in list(changed_stop_ids):
+            trip_arrival_s = {sid: float(arrivals_curr_s.get(sid, inf_s)) for sid in changed_stop_ids}
+            for sid in sorted(changed_stop_ids):
                 src_idx = stop_id_to_idx.get(sid)
                 if src_idx is None:
                     continue
-                base_arrival_s = float(arrivals_curr_s.get(sid, inf_s))
+                base_arrival_s = trip_arrival_s[sid]
                 if not np.isfinite(base_arrival_s):
                     continue
 
@@ -1020,6 +1028,7 @@ def compute_bgri_reachability_now(
                 time_str=morning_time,
                 walk_speed_m_min=walk_speed_m_min,
                 max_min=max_min,
+                max_transfers=max_transfers,  # antes omitido -> caía no default do config
             )
 
     out = merged_bgri.copy()

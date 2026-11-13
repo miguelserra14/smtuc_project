@@ -328,8 +328,8 @@ def _resolve_bus_arrival_events(
     all_bus_trips = gtfs_bus.trips.copy()
     all_bus_trips["route_id"] = all_bus_trips["route_id"].astype(str)
     all_bus_trips["service_id"] = all_bus_trips["service_id"].astype(str)
-    if bus_services:
-        all_bus_trips = all_bus_trips[all_bus_trips["service_id"].isin(bus_services)]
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    all_bus_trips = all_bus_trips[all_bus_trips["service_id"].isin(bus_services)]
 
     route_to_line = {}
     if "route_short_name" in routes.columns:
@@ -421,8 +421,8 @@ def build_line_stop_vs_metro_table(
     metro_services = _active_service_ids(gtfs_metro, day)
     metro_trips = gtfs_metro.trips.copy()
     metro_trips["service_id"] = metro_trips["service_id"].astype(str)
-    if metro_services:
-        metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
 
     metro_stop_id = _pick_best_target_stop_id(
         gtfs=gtfs_metro,
@@ -554,8 +554,8 @@ def build_reverse_stop_vs_metro_table(
     metro_services = _active_service_ids(gtfs_metro, day)
     metro_trips = gtfs_metro.trips.copy()
     metro_trips["service_id"] = metro_trips["service_id"].astype(str)
-    if metro_services:
-        metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
     if metro_route_id is not None:
         metro_trips = metro_trips[metro_trips["route_id"].astype(str) == str(metro_route_id)]
 
@@ -891,8 +891,8 @@ def find_direct_options(dataset: str, origin_ref: str, dest_ref: str, day_str: s
     services = _active_service_ids(gtfs, d)
     trips = gtfs.trips.copy()
     trips["service_id"] = trips["service_id"].astype(str)
-    if services:
-        trips = trips[trips["service_id"].isin(services)]
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    trips = trips[trips["service_id"].isin(services)]
 
     st = gtfs.stop_times.copy()
     left = st.rename(

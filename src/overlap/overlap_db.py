@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
@@ -9,6 +10,8 @@ import numpy as np
 import pandas as pd
 
 from config import (
+    FREQUENCY_WINDOW_END_H,
+    FREQUENCY_WINDOW_START_H,
     LINE_METRICS_DB_PATH,
     STADIUM_COORD,
     STADIUM_RADIUS_M,
@@ -17,6 +20,14 @@ from config import (
     TEMPORAL_OVERLAP_MAX_MIN,
 )
 from gtfs_processing.gtfs import load_gtfs
+from gtfs_processing.gtfs_probe import _active_service_ids
+
+# Versão do cálculo guardada no cache (line_metrics_db.csv). Incrementar SEMPRE que a fórmula de
+# alguma coluna mudar: a assinatura dos dados/parâmetros não deteta alterações de código, por isso
+# sem isto um CSV calculado com a fórmula antiga continuava a ser servido até um force_refresh.
+#   2 - avg_freq_min por dia de referência + sentido + mediana 7h-20h, + coluna ref_day_trips
+#       (passo 0.1 do roadmap)
+LINE_METRICS_SCHEMA_VERSION = 2
 
 
 @lru_cache(maxsize=8)
@@ -150,28 +161,86 @@ def _route_direction_summaries(
     return summaries
 
 
-def _line_avg_frequency_min(gtfs_smtuc, route_ids: list[str]) -> float | None:
+def _direction_headway_median_min(
+    stop_times: pd.DataFrame,
+    window_start_s: int,
+    window_end_s: int,
+) -> float | None:
+    """Mediana (min) dos intervalos entre passagens consecutivas de um sentido, medidos numa
+    paragem de referência: a paragem servida por mais viagens desse sentido (desempate pelo
+    stop_id, para ser determinístico). Medir numa paragem comum - e não na 1ª partida de cada
+    viagem - evita misturar viagens curtas que começam a meio do percurso com as completas.
+    Só contam passagens dentro de [window_start_s, window_end_s). None se houver < 2."""
+    if stop_times.empty:
+        return None
+    trips_per_stop = stop_times.groupby("stop_id")["trip_id"].nunique()
+    max_trips = trips_per_stop.max()
+    ref_stop = sorted(trips_per_stop[trips_per_stop == max_trips].index.astype(str))[0]
+    at_ref = stop_times[stop_times["stop_id"].astype(str) == ref_stop]
+    times = pd.to_numeric(at_ref["departure_seconds"], errors="coerce").dropna()
+    times = times[(times >= window_start_s) & (times < window_end_s)]
+    passages = np.sort(times.unique())
+    if len(passages) < 2:
+        return None
+    return float(np.median(np.diff(passages))) / 60.0
+
+
+def _line_trips_on_day(gtfs_smtuc, route_ids: list[str], reference_day: date) -> int:
+    """Nº de viagens (ambos os sentidos) da linha no dia de referência - acompanha avg_freq_min
+    porque, numa linha esporádica (ex.: 5 viagens/dia), um intervalo mediano de "275 min" diz pouco
+    sozinho."""
+    active = _active_service_ids(gtfs_smtuc, reference_day)
+    trips = gtfs_smtuc.trips
+    mask = trips["route_id"].astype(str).isin([str(r) for r in route_ids]) & trips["service_id"].astype(str).isin(active)
+    return int(mask.sum())
+
+
+def _line_avg_frequency_min(
+    gtfs_smtuc,
+    route_ids: list[str],
+    reference_day: date,
+    window_start_h: float = FREQUENCY_WINDOW_START_H,
+    window_end_h: float = FREQUENCY_WINDOW_END_H,
+) -> float | None:
+    """Intervalo típico (min) entre autocarros de uma linha no dia de referência.
+
+    Por sentido (`direction_id`), mediana dos intervalos entre passagens numa paragem de
+    referência, dentro da janela [window_start_h, window_end_h); o valor da linha é a média dos
+    sentidos com dados. Antes misturavam-se TODOS os service_id (úteis + sábados + domingos) e os
+    dois sentidos numa só lista de partidas, o que dava valores 3-4x mais baixos do que o real
+    (ex.: linha 7 com 6.6 min quando passa de ~22 em ~22 min em cada sentido num dia útil).
+    """
     if not route_ids:
         return None
 
-    trips = gtfs_smtuc.trips[gtfs_smtuc.trips["route_id"].astype(str).isin([str(r) for r in route_ids])]
-    if trips.empty:
+    active = _active_service_ids(gtfs_smtuc, reference_day)
+    trips = gtfs_smtuc.trips[
+        gtfs_smtuc.trips["route_id"].astype(str).isin([str(r) for r in route_ids])
+        & gtfs_smtuc.trips["service_id"].astype(str).isin(active)
+    ]
+    if trips.empty or "departure_seconds" not in gtfs_smtuc.stop_times.columns:
         return None
 
     stop_times = gtfs_smtuc.stop_times[gtfs_smtuc.stop_times["trip_id"].astype(str).isin(trips["trip_id"].astype(str))]
-    if stop_times.empty or "departure_seconds" not in stop_times.columns:
+    if stop_times.empty:
         return None
 
-    first_dep = stop_times.groupby("trip_id", as_index=False).agg(first_dep_s=("departure_seconds", "min")).dropna(subset=["first_dep_s"])
-    departures = sorted(first_dep["first_dep_s"].astype(float).unique().tolist())
-    if len(departures) < 2:
-        return None
+    if "direction_id" in trips.columns and trips["direction_id"].notna().any():
+        direction_by_trip = dict(zip(trips["trip_id"].astype(str), trips["direction_id"].fillna(-1).astype(str)))
+    else:
+        direction_by_trip = {str(t): "na" for t in trips["trip_id"]}
+    directions = stop_times["trip_id"].astype(str).map(direction_by_trip)
 
-    headways_s = [b - a for a, b in zip(departures[:-1], departures[1:]) if b > a]
-    if not headways_s:
+    window_start_s = int(float(window_start_h) * 3600)
+    window_end_s = int(float(window_end_h) * 3600)
+    medians = [
+        m
+        for _, group in stop_times.groupby(directions, sort=True)
+        if (m := _direction_headway_median_min(group, window_start_s, window_end_s)) is not None
+    ]
+    if not medians:
         return None
-
-    return round((sum(headways_s) / len(headways_s)) / 60.0, 1)
+    return round(float(np.mean(medians)), 1)
 
 
 def _line_to_route_ids(gtfs_smtuc) -> dict[str, list[str]]:
@@ -273,6 +342,7 @@ def _compute_line_metrics(
     stadium_lat: float,
     stadium_lon: float,
     radius_m: float,
+    reference_day: date,
 ) -> pd.DataFrame:
     gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
     gtfs_metro = _load_gtfs_cached(metrobus_dataset)
@@ -316,7 +386,8 @@ def _compute_line_metrics(
 
         row = {
             "line": str(line),
-            "avg_freq_min": _line_avg_frequency_min(gtfs_smtuc, route_ids),
+            "avg_freq_min": _line_avg_frequency_min(gtfs_smtuc, route_ids, reference_day),
+            "ref_day_trips": _line_trips_on_day(gtfs_smtuc, route_ids, reference_day),
             "overlap_extension_m": round(overlap_ext_m, 1),
             "line_extension_m": round(total_ext_m, 1),
             "overlap_pct": round((overlap_ext_m / total_ext_m) * 100.0, 2),
@@ -358,7 +429,15 @@ def build_line_metrics_db(
     radius_m: float = STADIUM_RADIUS_M,
     db_path: str | None = None,
     force_refresh: bool = False,
+    reference_day: date | None = None,
 ) -> pd.DataFrame:
+    """Tabela de métricas por linha, cacheada em CSV. `reference_day` (por omissão o dia de
+    referência global, `resolve_reference_day()`) entra no cálculo de avg_freq_min e por isso
+    também na chave do cache, tal como LINE_METRICS_SCHEMA_VERSION e a janela de frequência."""
+    if reference_day is None:
+        from overlap.transit import resolve_reference_day
+
+        reference_day = resolve_reference_day()
     csv_path = _resolve_db_path(db_path)
     csv_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -379,6 +458,9 @@ def build_line_metrics_db(
                 and float(cached.iloc[0].get("__meta_temporal_overlap_max_min", -1.0)) == float(TEMPORAL_OVERLAP_MAX_MIN)
                 and str(cached.iloc[0].get("__meta_sig_smtuc", "")) == signature_smtuc
                 and str(cached.iloc[0].get("__meta_sig_metro", "")) == signature_metro
+                and str(cached.iloc[0].get("__meta_reference_day", "")) == reference_day.isoformat()
+                and str(cached.iloc[0].get("__meta_schema_version", "")) == str(LINE_METRICS_SCHEMA_VERSION)
+                and str(cached.iloc[0].get("__meta_frequency_window_h", "")) == f"{FREQUENCY_WINDOW_START_H}-{FREQUENCY_WINDOW_END_H}"
             )
             if meta_ok:
                 return cached.drop(columns=[c for c in cached.columns if c.startswith("__meta_")], errors="ignore")
@@ -392,6 +474,7 @@ def build_line_metrics_db(
         stadium_lat=stadium_lat,
         stadium_lon=stadium_lon,
         radius_m=radius_m,
+        reference_day=reference_day,
     )
     if fresh.empty:
         return fresh
@@ -424,6 +507,9 @@ def build_line_metrics_db(
     fresh["__meta_temporal_overlap_max_min"] = float(TEMPORAL_OVERLAP_MAX_MIN)
     fresh["__meta_sig_smtuc"] = signature_smtuc
     fresh["__meta_sig_metro"] = signature_metro
+    fresh["__meta_reference_day"] = reference_day.isoformat()
+    fresh["__meta_schema_version"] = str(LINE_METRICS_SCHEMA_VERSION)
+    fresh["__meta_frequency_window_h"] = f"{FREQUENCY_WINDOW_START_H}-{FREQUENCY_WINDOW_END_H}"
     fresh.to_csv(csv_path, index=False)
 
     return fresh.drop(columns=[c for c in fresh.columns if c.startswith("__meta_")], errors="ignore")

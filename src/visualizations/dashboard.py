@@ -71,7 +71,13 @@ def _load_overlap_stats(
                     "extension_m": f"{_to_float(row.get('line_extension_m')):.1f}",
                     "overlap_stops": str(row.get("overlap_stops", "-")),
                     "total_stops": str(row.get("total_stops", "-")),
-                    "avg_freq_min": f"{_to_float(row.get('avg_freq_min')):.1f}",
+                    # Vazio = sem passagens suficientes no dia/janela de referência -> "-", nunca
+                    # "0.0" (que se leria como "passa de 0 em 0 min").
+                    "avg_freq_min": (
+                        f"{_to_float(row.get('avg_freq_min')):.1f}"
+                        if str(row.get("avg_freq_min") or "").strip() not in ("", "nan", "None")
+                        else "-"
+                    ),
                 }
             )
         return out

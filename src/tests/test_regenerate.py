@@ -1,0 +1,136 @@
+"""Testes do entrypoint regenerate_all_htmls.py (passo 0.4 do roadmap): output UTF-8 mesmo com
+stdout redirecionado, registo de falhas por secção e exit code != 0 quando algo falha.
+
+Não geram HTML nenhum: as secções reais são substituídas por stubs.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+import tests.regenerate_all_htmls as regen
+
+ROOT = Path(__file__).resolve().parents[2]
+SECTIONS = (
+    "regenerate_population_htmls",
+    "regenerate_overlap_htmls",
+    "regenerate_overlap_fase2_htmls",
+    "regenerate_integration_htmls",
+    "regenerate_master_dashboard",
+    "regenerate_presentation_dashboard",
+    "regenerate_feednplay_dashboard",
+)
+
+
+@pytest.fixture(autouse=True)
+def _clean_registry(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(regen, "_FAILURES", [])
+    monkeypatch.setattr(regen, "_SKIPPED", [])
+    monkeypatch.setattr(regen, "_WARNINGS", [])
+    # Não mexer no sys.stdout do pytest (capture) - testado à parte num subprocesso.
+    monkeypatch.setattr(regen, "_configure_utf8_output", lambda: None)
+
+
+def _stub_sections(monkeypatch: pytest.MonkeyPatch, calls: list[str], failing: str | None = None) -> None:
+    for name in SECTIONS:
+        def _stub(_name: str = name) -> None:
+            calls.append(_name)
+            if _name == failing:
+                try:
+                    raise RuntimeError("boom")
+                except RuntimeError as exc:
+                    regen._record_failure(_name, exc)
+        monkeypatch.setattr(regen, name, _stub)
+
+
+def test_summary_exit_code() -> None:
+    assert regen._print_summary() == 0
+    regen._record_skip("x", "sem geostack")
+    regen._record_warning("y", "sem POI")
+    assert regen._print_summary() == 0  # saltos e avisos não são falhas
+    regen._record_failure("z", ValueError("falhou"))
+    assert regen._print_summary() == 1
+
+
+def test_summary_lists_every_problem(capsys: pytest.CaptureFixture[str]) -> None:
+    regen._record_failure("integração Portela (54)", KeyError("stop"))
+    regen._record_skip("overlap fase 2", "dataset metrobus_fase2 não disponível")
+    regen._print_summary()
+    out = capsys.readouterr().out
+    assert "REGENERAÇÃO INCOMPLETA - 1 falha(s)" in out
+    assert "integração Portela (54): KeyError" in out
+    assert "overlap fase 2: dataset metrobus_fase2 não disponível" in out
+    assert "SEM FALHAS" not in out
+
+
+def test_main_all_ok_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+    _stub_sections(monkeypatch, calls)
+    monkeypatch.setattr(regen, "_validate_reference_day", lambda: True)
+    with pytest.raises(SystemExit) as exc_info:
+        regen.main()
+    assert exc_info.value.code == 0
+    assert calls == list(SECTIONS)
+
+
+def test_main_one_section_failing_exits_one_but_runs_the_rest(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+    _stub_sections(monkeypatch, calls, failing="regenerate_integration_htmls")
+    monkeypatch.setattr(regen, "_validate_reference_day", lambda: True)
+    with pytest.raises(SystemExit) as exc_info:
+        regen.main()
+    assert exc_info.value.code == 1
+    assert calls == list(SECTIONS)  # uma falha não impede as secções seguintes
+    assert [s for s, _ in regen._FAILURES] == ["regenerate_integration_htmls"]
+
+
+def test_main_invalid_reference_day_generates_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+    _stub_sections(monkeypatch, calls)
+    monkeypatch.setattr(regen, "_validate_reference_day", lambda: False)
+    with pytest.raises(SystemExit) as exc_info:
+        regen.main()
+    assert exc_info.value.code == 1
+    assert calls == []
+
+
+def test_real_integration_section_records_failure_instead_of_swallowing(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A secção de integração real, com a geração a rebentar: tem de ficar registada como falha
+    # (antes era só um print [WARNING] e o script acabava "CONCLUÍDA" com exit 0).
+    monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
+
+    def _boom(**kwargs):
+        raise UnicodeEncodeError("charmap", "→", 0, 1, "character maps to <undefined>")
+
+    monkeypatch.setattr(regen, "generate_connection_visualizations", _boom)
+    regen.regenerate_integration_htmls()
+    assert [s for s, _ in regen._FAILURES] == ["integração Portagem (54+38)", "integração Portela (54)"]
+
+
+def test_utf8_output_survives_redirected_stdout() -> None:
+    """Corre num subprocesso com o stdout num pipe (o caso que rebentava: cp1252 sem "→") e SEM
+    PYTHONIOENCODING/PYTHONUTF8, para reproduzir as condições reais."""
+    code = (
+        "import sys; sys.path[:0] = [r'%s', r'%s'];"
+        "import tests.regenerate_all_htmls as r; r._configure_utf8_output();"
+        "print('Portela → Portagem · REGENERAÇÃO CONCLUÍDA')"
+    ) % (ROOT / "src", ROOT)
+    env = {k: v for k, v in __import__("os").environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, env=env, cwd=ROOT, timeout=300)
+    assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
+    assert "Portela → Portagem · REGENERAÇÃO CONCLUÍDA" in proc.stdout.decode("utf-8")
+
+
+def test_without_fix_redirected_stdout_really_breaks() -> None:
+    """Controlo: confirma que o problema existe sem a correção (senão o teste acima não prova nada).
+    Só se aplica quando a codificação por omissão de um pipe não é UTF-8 (Windows/cp1252)."""
+    env = {k: v for k, v in __import__("os").environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
+    probe = subprocess.run([sys.executable, "-c", "import sys; print(sys.stdout.encoding)"], capture_output=True, env=env, timeout=60)
+    if "utf" in probe.stdout.decode().lower():
+        pytest.skip("stdout redirecionado já é UTF-8 neste sistema")
+    proc = subprocess.run([sys.executable, "-c", "print('→')"], capture_output=True, env=env, timeout=60)
+    assert proc.returncode != 0 and b"UnicodeEncodeError" in proc.stderr

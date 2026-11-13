@@ -1,4 +1,4 @@
-﻿"""
+"""
 Script para regenerar todos os ficheiros HTML da dashboard.
 
 Uso:
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-# Importar as funÃ§Ãµes de geraÃ§Ã£o
+# Importar as funções de geração
 from population.data_processing import (
     _project_root,
     _require_bgri_data,
@@ -52,35 +52,133 @@ from src.config import (
     LINE_54_MELHORADO_PHASE_SHIFT_MIN,
 )
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
+from overlap.overlap_db import _load_gtfs_cached
+from gtfs_processing.gtfs_probe import (
+    ServiceCalendarError,
+    _active_service_ids,
+    feed_service_period,
+    is_public_holiday,
+)
+
+# Registo do que correu mal / foi saltado durante a execução, para o resumo final e o exit code.
+# Antes cada secção engolia o seu erro com um print e o script acabava sempre com "CONCLUÍDA" e
+# exit code 0, mesmo com secções inteiras por gerar (ex.: integração saltada por um
+# UnicodeEncodeError de um print com "→" quando o stdout estava redirecionado).
+_FAILURES: list[tuple[str, str]] = []
+_SKIPPED: list[tuple[str, str]] = []
+_WARNINGS: list[tuple[str, str]] = []
+
+
+def _record_failure(section: str, exc: BaseException) -> None:
+    """Uma secção/artefacto que devia ter sido gerado e não foi - faz o script sair com código 1."""
+    import traceback
+
+    print(f"[ERROR] {section}: {type(exc).__name__}: {exc}")
+    traceback.print_exc()
+    _FAILURES.append((section, f"{type(exc).__name__}: {exc}"))
+
+
+def _record_skip(section: str, reason: str) -> None:
+    """Secção saltada por falta de uma dependência/dados opcionais (não conta como falha)."""
+    print(f"[WARNING] {section}: saltado - {reason}")
+    _SKIPPED.append((section, reason))
+
+
+def _record_warning(section: str, reason: str) -> None:
+    """Artefacto gerado, mas com conteúdo opcional em falta (não conta como falha)."""
+    print(f"[WARNING] {section}: {reason}")
+    _WARNINGS.append((section, reason))
+
+
+def _configure_utf8_output() -> None:
+    """Força UTF-8 no stdout/stderr. Com o output redirecionado (pipe, ficheiro de log, tarefa
+    agendada) o Python no Windows usa a codepage cp1252, que não tem "→" - um único print com
+    esse carácter lançava UnicodeEncodeError e abortava a secção onde estava."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass
+
+
+def _print_summary() -> int:
+    """Imprime o resumo da execução e devolve o exit code (1 se houve alguma falha)."""
+    print("\n" + "=" * 60)
+    if _FAILURES:
+        print(f"[ERROR] REGENERAÇÃO INCOMPLETA - {len(_FAILURES)} falha(s):")
+        for section, msg in _FAILURES:
+            print(f"   - {section}: {msg}")
+    else:
+        print("[SUCCESS] REGENERAÇÃO CONCLUÍDA SEM FALHAS")
+    for label, items in (("saltado(s)", _SKIPPED), ("aviso(s)", _WARNINGS)):
+        if items:
+            print(f"[WARNING] {len(items)} {label}:")
+            for section, msg in items:
+                print(f"   - {section}: {msg}")
+    print("=" * 60)
+    return 1 if _FAILURES else 0
+
+
+# Todos os feeds GTFS que alguma secção deste script avalia contra o dia de referência.
+_REFERENCE_DAY_DATASETS = ("smtuc", "metrobus", "metrobus_fase2")
+
+
+def _validate_reference_day() -> bool:
+    """Confirma, ANTES de gerar qualquer HTML, que o dia de referência pode ser avaliado em todos
+    os feeds (dentro do período de cada calendário, service_id ligáveis às trips). Sem isto, um
+    dia fora do período só rebentava a meio, secção a secção, e cada secção engolia o erro.
+    Devolve False (e explica porquê) se algum feed falhar; feeds ausentes são só avisados."""
+    day = resolve_reference_day()
+    holiday_note = " (feriado - avaliado como domingo)" if is_public_holiday(day) else ""
+    print(f"[INFO] Dia de referência: {day.isoformat()} ({day.strftime('%A')}){holiday_note}")
+    ok = True
+    for dataset in _REFERENCE_DAY_DATASETS:
+        if not _require_dataset(dataset):
+            continue
+        gtfs = _load_gtfs_cached(dataset)
+        period = feed_service_period(gtfs)
+        try:
+            services = _active_service_ids(gtfs, day)
+        except ServiceCalendarError as exc:
+            print(f"[ERROR] {dataset}: {exc}")
+            ok = False
+            continue
+        n_trips = int(gtfs.trips["service_id"].astype(str).isin(services).sum())
+        print(f"[INFO] {dataset}: período {period}, serviços ativos {sorted(services)}, {n_trips}/{len(gtfs.trips)} viagens")
+        if n_trips == 0:
+            print(f"[WARNING] {dataset}: nenhuma viagem ativa em {day.isoformat()} - as visualizações deste feed ficarão vazias.")
+    return ok
 
 
 def _require_dataset(dataset: str) -> Path:
-    """Verifica se um dataset GTFS estÃ¡ disponÃ­vel."""
+    """Verifica se um dataset GTFS está disponível."""
     root = _project_root()
     d = root / "data" / dataset
     required = ["routes.txt", "trips.txt", "stops.txt", "stop_times.txt"]
     if not d.exists() or any(not (d / f).exists() for f in required):
-        print(f"[WARNING] Dataset GTFS invÃ¡lido/incompleto: {d}")
+        print(f"[WARNING] Dataset GTFS inválido/incompleto: {d}")
         return None
     return d
 
 
 def regenerate_population_htmls() -> None:
-    """Regenera todos os HTMLs da populaÃ§Ã£o (BGRI)."""
+    """Regenera todos os HTMLs da população (BGRI)."""
     print("\n" + "=" * 60)
-    print("[INFO] Regenerando HTMLs de PopulaÃ§Ã£o...")
+    print("[INFO] Regenerando HTMLs de População...")
     print("=" * 60)
     
     try:
         _require_geo_stack()
     except Exception as e:
-        print(f"[WARNING] Geostack nÃ£o disponÃ­vel: {e}")
+        _record_skip("população", f"geostack não disponível: {e}")
         return
     
     try:
         gpkg = _require_bgri_data()
     except Exception as e:
-        print(f"[WARNING] Dataset BGRI nÃ£o disponÃ­vel: {e}")
+        _record_skip("população", f"dataset BGRI não disponível: {e}")
         return
     
     try:
@@ -118,11 +216,11 @@ def regenerate_population_htmls() -> None:
         try:
             poi_df = compute_poi_underservice(day_str=day_str, catchment_m=CATCHMENT_M)
         except Exception as e:
-            print(f"[WARNING] Não foi possível calcular a camada de pontos de interesse: {e}")
+            _record_warning("população", f"camada de pontos de interesse não calculada: {e}")
             poi_df = None
 
-        # Criar dashboard de populaÃ§Ã£o
-        print("[INFO] Gerando dashboard de populaÃ§Ã£o...")
+        # Criar dashboard de população
+        print("[INFO] Gerando dashboard de população...")
         dashboard_html = out_dir / "bgri.html"
         create_population_dashboard_html(
             dashboard_html,
@@ -132,12 +230,10 @@ def regenerate_population_htmls() -> None:
             stadium_radius_m=POPULATION_STADIUM_MAP_RADIUS_M,
             poi_df=poi_df,
         )
-        print(f"[SUCCESS] Dashboard populaÃ§Ã£o: {dashboard_html}")
+        print(f"[SUCCESS] Dashboard população: {dashboard_html}")
         
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar HTMLs de populaÃ§Ã£o: {e}")
-        import traceback
-        traceback.print_exc()
+        _record_failure("população", e)
 
 
 def regenerate_overlap_htmls() -> None:
@@ -173,7 +269,7 @@ def regenerate_overlap_htmls() -> None:
         print("[INFO] Computando reachability...")
         merged = compute_underserved_zones(day_str=reach_day_str)
 
-        # Computar reachability a partir do estÃ¡dio
+        # Computar reachability a partir do estádio
         reach_gdf = compute_bgri_reachability_now(
             merged_bgri=merged,
             origin_lat=STADIUM_COORD[0],
@@ -246,7 +342,8 @@ def regenerate_overlap_htmls() -> None:
                 temporal_html += "</div>"
 
                 footer_html = "<div id=\"overlap-stats-footer\" style=\"max-width:980px;margin:8px auto 28px;background:#fff;padding:6px;border:1px solid #ddd;border-radius:4px;\">" + "\n".join(footer_parts) + temporal_html + "</div>"
-            except Exception:
+            except Exception as e:
+                _record_warning("overlap", f"rodapé de estatísticas omitido: {e}")
                 footer_html = ""
 
         _write_folium_html(fig_map, reachability_html, footer_html=footer_html)
@@ -258,19 +355,17 @@ def regenerate_overlap_htmls() -> None:
             created = create_overlap_lines_map(output_path=lines_map_html)
             print(f"[SUCCESS] Mapa de linhas (overlap): {created}")
         except Exception as e:
-            print(f"[WARNING] Não foi possível gerar mapa de linhas: {e}")
+            _record_failure("overlap: mapa de linhas", e)
 
         try:
             breakdown_html = out_dir / "overlap_temporal_breakdown.html"
             created = create_temporal_overlap_breakdown_html(output_path=breakdown_html)
             print(f"[SUCCESS] Breakdown overlap temporal: {created}")
         except Exception as e:
-            print(f"[WARNING] Não foi possível gerar breakdown de overlap temporal: {e}")
+            _record_failure("overlap: breakdown temporal", e)
 
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar HTMLs de overlap: {e}")
-        import traceback
-        traceback.print_exc()
+        _record_failure("overlap", e)
 
 
 def regenerate_overlap_fase2_htmls() -> None:
@@ -285,14 +380,14 @@ def regenerate_overlap_fase2_htmls() -> None:
     print("=" * 60)
 
     if not _require_dataset("metrobus_fase2"):
-        print("[WARNING] Dataset metrobus_fase2 não disponível. A saltar slide da fase 2.")
+        _record_skip("overlap fase 2", "dataset metrobus_fase2 não disponível")
         return
 
     try:
         _require_geo_stack()
         gpkg = _require_bgri_data()
     except Exception as e:
-        print(f"[WARNING] Geostack/BGRI não disponível - a saltar slide da fase 2: {e}")
+        _record_skip("overlap fase 2", f"geostack/BGRI não disponível: {e}")
         return
 
     try:
@@ -351,27 +446,25 @@ def regenerate_overlap_fase2_htmls() -> None:
         print(f"[SUCCESS] Mapa de linhas (fase 2): {created}")
 
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar HTMLs de overlap (fase 2): {e}")
-        import traceback
-        traceback.print_exc()
+        _record_failure("overlap fase 2", e)
 
 
 def regenerate_integration_htmls() -> None:
-    """Regenera HTMLs de integraÃ§Ã£o (Portagem e Portela)."""
+    """Regenera HTMLs de integração (Portagem e Portela)."""
     print("\n" + "=" * 60)
-    print("[INFO] Regenerando HTMLs de IntegraÃ§Ã£o...")
+    print("[INFO] Regenerando HTMLs de Integração...")
     print("=" * 60)
     
     # Verificar datasets
     if not _require_dataset("smtuc") or not _require_dataset("metrobus"):
-        print("[WARNING] Datasets GTFS nÃ£o disponÃ­veis. Pulando integraÃ§Ã£o.")
+        _record_skip("integração", "datasets GTFS smtuc/metrobus não disponíveis")
         return
     
     try:
         day_str = resolve_reference_day().strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
         
-        # Portagem: Linhas 54 + 38 (Portela â†’ Portagem)
+        # Portagem: Linhas 54 + 38 (Portela → Portagem)
         # Generates: l54_38_wt.csv, line_54_38_bus_portagem_metro_portagem.csv, etc.
         print("\n[INFO] Gerando integração Portagem (Portela → Portagem) com linhas 54 + 38...")
         try:
@@ -390,11 +483,11 @@ def regenerate_integration_htmls() -> None:
                 reverse_metro_direction_id=1,  # Metrobus sentido Serpins, a partir de Portagem
                 reverse_metro_route_id="LOUSA",  # não confundir com as viagens dos ramais novos (fase 2)
             )
-            print(f"[SUCCESS] IntegraÃ§Ã£o Portagem (54+38): {results.get('html_path', 'N/A')}")
+            print(f"[SUCCESS] Integração Portagem (54+38): {results.get('combined_html', 'N/A')}")
         except Exception as e:
-            print(f"[WARNING] Erro na integraÃ§Ã£o Portagem (54+38): {e}")
+            _record_failure("integração Portagem (54+38)", e)
         
-        # Portela: Linha 54 (Portagem â†’ Portela)
+        # Portela: Linha 54 (Portagem → Portela)
         # Generates: l54_wt.csv, line_54_bus_portela_do_mondego_metro_portela.csv, etc.
         print("\n[INFO] Gerando integração Portela (Portagem → Portela) com linha 54...")
         try:
@@ -413,14 +506,12 @@ def regenerate_integration_htmls() -> None:
                 reverse_metro_direction_id=0,  # Metrobus sentido Portagem, a passar por Portela
                 reverse_metro_route_id="LOUSA",  # não confundir com as viagens dos ramais novos (fase 2)
             )
-            print(f"[SUCCESS] IntegraÃ§Ã£o Portela (54): {results.get('html_path', 'N/A')}")
+            print(f"[SUCCESS] Integração Portela (54): {results.get('combined_html', 'N/A')}")
         except Exception as e:
-            print(f"[WARNING] Erro na integraÃ§Ã£o Portela (54): {e}")
+            _record_failure("integração Portela (54)", e)
         
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar HTMLs de integraÃ§Ã£o: {e}")
-        import traceback
-        traceback.print_exc()
+        _record_failure("integração", e)
 
 
 def regenerate_master_dashboard() -> None:
@@ -438,9 +529,7 @@ def regenerate_master_dashboard() -> None:
         print(f"[SUCCESS] Dashboard master: {created}")
         
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar dashboard master: {e}")
-        import traceback
-        traceback.print_exc()
+        _record_failure("dashboard master", e)
 
 
 def regenerate_presentation_dashboard() -> None:
@@ -458,9 +547,7 @@ def regenerate_presentation_dashboard() -> None:
         print(f"[SUCCESS] Dashboard mockups: {created}")
 
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar dashboard de mockups: {e}")
-        import traceback
-        traceback.print_exc()
+        _record_failure("dashboard de mockups", e)
 
 
 def regenerate_feednplay_dashboard() -> None:
@@ -478,17 +565,21 @@ def regenerate_feednplay_dashboard() -> None:
         print(f"[SUCCESS] Dashboard FeedNPlay: {created}")
 
     except Exception as e:
-        print(f"[ERROR] Erro ao regenerar dashboard FeedNPlay: {e}")
-        import traceback
-        traceback.print_exc()
+        _record_failure("dashboard FeedNPlay", e)
 
 
 def main() -> None:
-    """Executa regeneraÃ§Ã£o completa de todos os HTMLs."""
+    """Executa regeneração completa de todos os HTMLs. Sai com código 1 se o dia de referência
+    for inválido ou se alguma secção/artefacto falhar (ver _print_summary)."""
+    _configure_utf8_output()
     print("\n" + "=" * 60)
     print("REGENERANDO TODOS OS HTMLS DA DASHBOARD")
     print("=" * 60 + "\n")
-    
+
+    if not _validate_reference_day():
+        print("[ERROR] Dia de referência inválido para pelo menos um feed GTFS - nada foi regenerado.")
+        sys.exit(1)
+
     # Regenerar em ordem
     regenerate_population_htmls()
     regenerate_overlap_htmls()
@@ -498,11 +589,9 @@ def main() -> None:
     regenerate_presentation_dashboard()
     regenerate_feednplay_dashboard()
 
-    print("\n" + "=" * 60)
-    print("[SUCCESS] REGENERAÃ‡ÃƒO CONCLUÃDA!")
-    print("=" * 60)
-    print("\n[INFO] Todos os ficheiros HTML foram atualizados em outputs/")
-    print("[INFO] Abrir: file:///path/para/projeto/outputs/dashboard.html\n")
+    exit_code = _print_summary()
+    print("[INFO] Ver: python -m http.server 8000 (raiz do repo) -> http://localhost:8000/outputs/dashboard.html")
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

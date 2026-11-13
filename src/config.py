@@ -16,6 +16,32 @@ USE_FIXED_REFERENCE_DAY: bool = True
 REACHABILITY_REFERENCE_DAY: str | None = "2026-05-11"
 REACHABILITY_REFERENCE_TIME: str | None = "08:20:00"
 
+# Feriados (ver gtfs_processing/gtfs_probe._active_service_ids): os feeds GTFS deste projeto não
+# marcam os feriados em calendar_dates.txt, por isso sem isto um feriado a uma 6ª feira era
+# avaliado com o horário de dia útil. Com FERIADOS_COMO_DOMINGO=True, nesses dias usa-se o
+# serviço de domingo ("Domingos e Feriados") - exceto se o próprio feed já tiver uma exceção em
+# calendar_dates.txt para essa data (aí manda o feed). Os feriados móveis são calculados a partir
+# da Páscoa de cada ano (offset em dias), por isso não é preciso atualizar esta lista todos os anos.
+FERIADOS_COMO_DOMINGO: bool = True
+FERIADOS_FIXOS_MMDD: tuple[str, ...] = (
+    "01-01",  # Ano Novo
+    "04-25",  # Dia da Liberdade
+    "05-01",  # Dia do Trabalhador
+    "06-10",  # Dia de Portugal
+    "08-15",  # Assunção de Nossa Senhora
+    "10-05",  # Implantação da República
+    "11-01",  # Todos os Santos
+    "12-01",  # Restauração da Independência
+    "12-08",  # Imaculada Conceição
+    "12-25",  # Natal
+    "07-04",  # Feriado municipal de Coimbra (Rainha Santa Isabel)
+)
+FERIADOS_MOVEIS_OFFSET_PASCOA: tuple[int, ...] = (
+    -2,  # Sexta-feira Santa
+    0,  # Domingo de Páscoa
+    60,  # Corpo de Deus
+)
+
 # Minutos de caminhada para considerar uma paragem/segmento SMTUC "perto" de uma paragem Metrobus -
 # fonte única de todo o overlap espacial (overlap_pct, candidatos temporais, eventos); não
 # duplicar esta constante. Usado como `walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN`.
@@ -45,6 +71,13 @@ OUTPUTS_INTEGRATION_DIR = "outputs/integration"
 OUTPUTS_OVERLAP_LINES_MAP = "outputs/overlap/overlap_lines_map.html"
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
+
+# Frequência média das linhas (coluna avg_freq_min / "Frequência média (min)" nos dashboards), ver
+# overlap_db._line_avg_frequency_min: no dia de referência, por sentido, mediana dos intervalos
+# entre passagens numa paragem de referência dentro desta janela horária [início, fim); o valor da
+# linha é a média dos sentidos. A janela evita que os buracos da noite/madrugada distorçam o valor.
+FREQUENCY_WINDOW_START_H = 7
+FREQUENCY_WINDOW_END_H = 20
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"
 DEFAULT_BGRI_LAYER = "BGRI2021_0603"
 DEFAULT_OUTPUT_GAP_CSV = "outputs/population/bgri_transport_gap.csv"
