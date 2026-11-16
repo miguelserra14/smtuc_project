@@ -6,11 +6,15 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 |---|---|
 | `sintetico.csv` | **Antes** (D0.2, 2026-11-16): SMTUC Ep212 + Metro **sintético** fase 1 |
 | `sintetico_fase2.csv` | Metro sintético da fase 2 (slide da fase 2; sem esperas da 54) |
-| `oficial_fase1.csv` | **Depois** (D1 passo 4, 2026-11-16): SMTUC Ep212 + **GTFS oficial** do Metro (fase 1). É a linha de base atual (`test_snapshot_metrics.py`) |
+| `oficial_fase1.csv` | **Depois** (D1 passo 4, 2026-11-16): SMTUC Ep212 + **GTFS oficial** do Metro (fase 1), ainda com os desvios da 54 do sintético (−11 / −10) e o critério de busca antigo |
 | `diff_sintetico_vs_oficial_fase1.csv` | Todas as diferenças entre os dois (305 números) |
+| `oficial_fase1_desvios.csv` | O mesmo com os desvios **decididos** (−10 / 0) e o critério novo. É a linha de base atual (`test_snapshot_metrics.py`) |
+| `diff_oficial_fase1_vs_desvios.csv` | Diferenças da decisão dos desvios (26 números: só as propostas e a busca) |
 | `busca_fase_54_sintetico.csv` | Busca de desvio da 54 no sintético, com transbordo a pé (passo 0.2: −11 / −9) |
 | `busca_fase_54_sintetico_sem_transbordo.csv` | Idem com a regra antiga (transbordo 0): reproduz os −16 / −8 originais |
-| `busca_fase_54_oficial_fase1.csv` | Busca de desvio da 54 com o Metro oficial |
+| `busca_fase_54_oficial_fase1.csv` | Busca de desvio da 54 com o Metro oficial, critério antigo (−20..+20 nas duas propostas) |
+| `busca_fase_54_oficial_fase1_alargada_40.csv` | Idem de −40 a +40: mostra os ótimos espúrios fora de meio ciclo (−28 / +28) |
+| `busca_fase_54_oficial_fase1_meio_ciclo.csv` | Busca com o critério **atual** (meio ciclo; sem regressões e menor espera total): −10 / 0 |
 
 Para reproduzir: `python scripts/snapshot_metrics.py diff reports/metricas/sintetico.csv reports/metricas/oficial_fase1.csv`.
 
@@ -47,4 +51,18 @@ Verificação independente no ficheiro bruto oficial: 291 viagens por dia útil;
 | Otimizado (mesmas viagens) | −11: 3 melhorados / 1 regressão | −11: **2 / 2** (soma 50,2); −10: 1 / 0 (soma 50,2) |
 | Melhorado (2.º autocarro, 20 min) | −9: 3 / 1; −10: 2 / 0 | −18: **3 / 1** (soma 39,4); −20: 2 / 0 (soma 34,7) |
 
-Os desvios do config (−11 / −10) **ainda são os do sintético**, à espera de decisão (`test_config_shifts_match_documented_properties` está como xfail).
+## Decisão dos desvios (2026-11-16)
+
+O critério de busca mudou:
+
+- **Antes:** mais sentidos melhorados primeiro, com −20..+20 nas duas propostas.
+- **Agora:** a busca fica em meio ciclo de cada proposta (±20 no otimizado, ±10 no melhorado). Escolhe-se o desvio que **não piora nenhum sentido**, com a menor espera total, e em empate o mais pequeno.
+
+Com o critério antigo, os desvios grandes ganhavam por efeito de borda (a 1.ª ou a última viagem do dia a entrar ou sair) e aceitavam piorar um sentido para melhorar outro.
+
+| Proposta | Desvio | Efeito (mediana, min) | Soma |
+|---|---|---|---|
+| Otimizado (mesmas viagens) | **−10** (era −11) | Portagem metro→autocarro 26,0 → 25,2; os outros 3 sentidos iguais | 50,2 |
+| Melhorado (2.º autocarro, 20 min) | **0** (era −10) | Portagem metro→autocarro 26,0 → 15,0; os outros 3 sentidos iguais | 40,0 |
+
+Com a regra antiga do transbordo (0 min), os desvios seriam −13 / −3.

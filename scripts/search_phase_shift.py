@@ -2,18 +2,25 @@
 
 Reproduz o raciocínio documentado em config.LINE_54_OPTIMIZED_PHASE_SHIFT_MIN /
 LINE_54_MELHORADO_PHASE_SHIFT_MIN (o script original que deu -16 / -8 não estava no repositório):
-para cada desvio de -20 a +20 min, desloca as passagens da linha 54 e mede os 4 sentidos de
+para cada desvio dentro de MEIO CICLO da proposta, desloca as passagens da linha 54 e mede os 4 sentidos de
 transbordo em simultâneo (Portagem e Portela, metro->autocarro e autocarro->metro) - um desvio
 da 54 mexe nos dois nós ao mesmo tempo, por isso não se pode otimizar cada sentido isolado.
 
-  otimizado: mesmas viagens, ciclo de 40 min, só desloca a partida.
-  melhorado: 2º autocarro no ciclo (40 -> 20 min, +1 autocarro/motorista), mais o desvio.
+  otimizado: mesmas viagens, ciclo de 40 min, só desloca a partida -> desvios de -20 a +20.
+  melhorado: 2º autocarro no ciclo (40 -> 20 min, +1 autocarro/motorista), mais o desvio
+             -> desvios de -10 a +10.
+
+Meio ciclo porque um desvio maior repete o mesmo padrão de passagens deslocado de um ciclo: a
+única diferença passa a ser a 1ª/última viagem do dia a entrar ou sair, o que dava "ótimos"
+espúrios (com o metro oficial, -28 no melhorado e +28 no otimizado numa busca de -40 a +40).
 
 Métrica por sentido: espera mediana (min) entre a chegada e a partida apanhada, já com o
 transbordo a pé (config.TRANSFER_BUFFER_MIN + distância real) - ver
 overlap.transit.compute_transfer_waits. Um sentido "melhora" se a mediana descer e "regride" se
-subir face ao horário atual. Escolha: mais sentidos melhorados, depois menos regressões, depois
-menor soma de medianas, depois o desvio de menor módulo (mexer menos no horário atual).
+subir face ao horário atual. Escolha (decidida a 2026-11-16, D1 passo 4): menos regressões
+(o desvio não pode piorar nenhum sentido), depois menor soma de medianas (menor espera total),
+depois o desvio de menor módulo (mexer menos no horário atual). O critério anterior punha à frente
+"mais sentidos melhorados", o que aceitava piorar um sentido para melhorar outro.
 
 Os resultados dependem do horário do Metrobus (dataset metrobus em config.DATASET_DIRS). Sempre que os dados mudarem
 (ex.: feeds oficiais AGIT), correr de novo e atualizar o config:
@@ -101,11 +108,28 @@ def sense_metrics(df: pd.DataFrame) -> dict[str, float]:
     }
 
 
-def search(schedules: dict[str, pd.DataFrame], shifts: range) -> pd.DataFrame:
+# Ciclo de cada proposta (min): a busca cobre meio ciclo para cada lado.
+CYCLE_MIN = {"otimizado": 40, "melhorado": 20}
+
+
+def default_shifts(variant: str) -> range:
+    half = CYCLE_MIN[variant] // 2
+    return range(-half, half + 1)
+
+
+def rank_key(df: pd.DataFrame) -> list[tuple]:
+    """Menos regressões, depois menor espera total, depois desvio mais pequeno (e o negativo em
+    caso de empate exato, só para o resultado ser determinístico)."""
+    return list(zip(df["regressoes"], df["soma_medianas"], df["shift_min"].abs(), df["shift_min"]))
+
+
+def search(schedules: dict[str, pd.DataFrame], shifts: range | None = None) -> pd.DataFrame:
+    """`shifts=None` (por omissão): meio ciclo de cada proposta (default_shifts). Um `range`
+    explícito aplica-se às duas propostas (só para explorar)."""
     base = {sense: sense_metrics(df) for sense, df in schedules.items()}
     rows = []
     for variant in ("otimizado", "melhorado"):
-        for shift in shifts:
+        for shift in (shifts if shifts is not None else default_shifts(variant)):
             row: dict[str, object] = {"variant": variant, "shift_min": shift}
             improved = regressed = 0
             total = 0.0
@@ -121,7 +145,7 @@ def search(schedules: dict[str, pd.DataFrame], shifts: range) -> pd.DataFrame:
             row.update({"melhorados": improved, "regressoes": regressed, "soma_medianas": round(total, 2)})
             rows.append(row)
     out = pd.DataFrame(rows)
-    out["_rank_key"] = list(zip(-out["melhorados"], out["regressoes"], out["soma_medianas"], out["shift_min"].abs()))
+    out["_rank_key"] = rank_key(out)
     return out, base
 
 
@@ -132,8 +156,9 @@ def best(results: pd.DataFrame, variant: str) -> pd.Series:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--min", type=int, default=-20, dest="lo")
-    parser.add_argument("--max", type=int, default=20, dest="hi")
+    parser.add_argument("--min", type=int, default=None, dest="lo",
+                        help="explorar: desvio mínimo para as DUAS propostas (por omissão, meio ciclo de cada uma)")
+    parser.add_argument("--max", type=int, default=None, dest="hi", help="explorar: desvio máximo (ver --min)")
     parser.add_argument("--csv", type=Path, default=None, help="grava a tabela completa neste CSV")
     parser.add_argument("--top", type=int, default=5)
     parser.add_argument(
@@ -150,7 +175,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.sem_transbordo:
         print("[AVISO] --sem-transbordo: regra antiga, transbordo = 0 min (ligações fisicamente impossíveis contam)")
         schedules = {k: v.drop(columns=["target_transfer_min", "trigger_transfer_min"], errors="ignore") for k, v in schedules.items()}
-    results, base = search(schedules, range(args.lo, args.hi + 1))
+    if (args.lo is None) != (args.hi is None):
+        parser.error("--min e --max usam-se juntos")
+    explicit = range(args.lo, args.hi + 1) if args.lo is not None else None
+    if explicit is not None:
+        print(f"[AVISO] intervalo explícito {args.lo}..{args.hi} nas duas propostas (fora de meio ciclo há ótimos espúrios)")
+    results, base = search(schedules, explicit)
 
     print("\nHorário atual (espera mediana, min):")
     for sense, m in base.items():

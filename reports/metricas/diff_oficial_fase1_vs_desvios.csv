@@ -1,0 +1,31 @@
+section,key,metric,before,after,delta,delta_pct,status
+meta,parametros,LINE_54_MELHORADO_PHASE_SHIFT_MIN,-10,0,10.0,100.0,mudou
+meta,parametros,LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,-11,-10,1.0,9.090909090909092,mudou
+meta,snapshot,commit,012178d+alterações,37ab85b+alterações,,,mudou
+meta,snapshot,fase,oficial_fase1,oficial_fase1_desvios,,,mudou
+esperas_54,Portagem bus→metro | melhorado,cov10,100,95.2381,-4.761899999999997,-4.761899999999997,mudou
+esperas_54,Portagem bus→metro | melhorado,shift_min,-10,0,10.0,100.0,mudou
+esperas_54,Portagem bus→metro | otimizado,cov10,95.2381,100,4.761899999999997,4.999994750000259,mudou
+esperas_54,Portagem bus→metro | otimizado,median,3,2,-1.0,-33.33333333333333,mudou
+esperas_54,Portagem bus→metro | otimizado,shift_min,-11,-10,1.0,9.090909090909092,mudou
+esperas_54,Portagem metro→bus | melhorado,median,16.02,15.02,-1.0,-6.242197253433209,mudou
+esperas_54,Portagem metro→bus | melhorado,shift_min,-10,0,10.0,100.0,mudou
+esperas_54,Portagem metro→bus | otimizado,median,24.185,25.185,1.0,4.134794293983875,mudou
+esperas_54,Portagem metro→bus | otimizado,shift_min,-11,-10,1.0,9.090909090909092,mudou
+esperas_54,Portela bus→metro | melhorado,cov10,61.9048,64.2857,2.380900000000004,3.8460668639588595,mudou
+esperas_54,Portela bus→metro | melhorado,lost15,21.4286,16.6667,-4.761900000000001,-22.22217037043951,mudou
+esperas_54,Portela bus→metro | melhorado,shift_min,-10,0,10.0,100.0,mudou
+esperas_54,Portela bus→metro | otimizado,lost15,38.0952,19.0476,-19.0476,-50.0,mudou
+esperas_54,Portela bus→metro | otimizado,median,8.67,7.67,-1.0,-11.534025374855824,mudou
+esperas_54,Portela bus→metro | otimizado,shift_min,-11,-10,1.0,9.090909090909092,mudou
+esperas_54,Portela metro→bus | melhorado,shift_min,-10,0,10.0,100.0,mudou
+esperas_54,Portela metro→bus | otimizado,lost15,56.1404,77.193,21.052599999999998,37.49991093757793,mudou
+esperas_54,Portela metro→bus | otimizado,median,14.33,15.33,1.0,6.978367062107467,mudou
+esperas_54,Portela metro→bus | otimizado,shift_min,-11,-10,1.0,9.090909090909092,mudou
+busca_fase_54,melhorado,melhorados,3,1,-2.0,-66.66666666666666,mudou
+busca_fase_54,melhorado,regressoes,1,0,-1.0,-100.0,mudou
+busca_fase_54,melhorado,shift_min,-18,0,18.0,100.0,mudou
+busca_fase_54,melhorado,soma_medianas,39.38,40.02,0.6400000000000006,1.6251904520060958,mudou
+busca_fase_54,otimizado,melhorados,2,1,-1.0,-50.0,mudou
+busca_fase_54,otimizado,regressoes,2,0,-2.0,-100.0,mudou
+busca_fase_54,otimizado,shift_min,-11,-10,1.0,9.090909090909092,mudou

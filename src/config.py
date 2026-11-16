@@ -143,24 +143,23 @@ INTEGRATION_SITES: tuple[dict, ...] = (
     },
 )
 
-# Desvios de fase da linha 54 em Portela/Portagem - PROVISÓRIOS: obtidos com o feed Metrobus
-# sintético (config.DATASET_DIRS['metrobus'], sem o serviço urbano nem parte da ponta da tarde). Quando houver dados
-# oficiais (Fase 0B do roadmap), correr `scripts/search_phase_shift.py` e atualizar aqui.
-# Ambos já contam com o transbordo a pé (TRANSFER_BUFFER_MIN + distância real entre paragens);
-# sem ele (regra antiga, `--sem-transbordo`) os ótimos eram -16 e -8.
+# Desvios de fase da linha 54 em Portela/Portagem, com o GTFS OFICIAL do Metro (fase 1), decididos
+# a 2026-11-16 (D1 passo 4) com `scripts/search_phase_shift.py`: busca em meio ciclo de cada
+# proposta e escolha do desvio com a menor espera total que NÃO piora nenhum dos 4 sentidos
+# (transbordo a pé incluído). Correr de novo e atualizar aqui sempre que os horários mudarem.
+# Histórico (reports/metricas/busca_fase_54_*.csv): com o metro sintético eram -11/-10 (antes do
+# transbordo, -16/-8).
 
-# "otimizado": mesmo nº de viagens e ciclo de 40 min, só desloca a partida. -11 min é o melhor
-# compromisso da busca exaustiva (-20 a +20 min) nos 4 sentidos de transbordo: melhora 3,
-# regride ligeiramente 1 (Portela bus->metro, 14 -> 15 min de mediana); menor espera total (58 min
-# de soma de medianas, contra 75 com o antigo -16).
-LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -11.0
+# "otimizado": mesmo nº de viagens e ciclo de 40 min, só desloca a partida. -10 min melhora
+# Portagem metro->bus (26.0 -> 25.2 min de mediana) e mantém os outros 3 sentidos; soma das
+# medianas 50.2 (51.0 sem desvio). Com o metro oficial os ganhos de deslocar a 54 são pequenos:
+# Portagem bus->metro já está nos 2 min e quase todos os outros desvios pioram-no.
+LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -10.0
 
-# "melhorado": 2º autocarro no ciclo (40 -> 20 min, +1 autocarro/motorista). Com transbordo já
-# nenhum desvio melhora os 4 sentidos; -10 min é o que melhora sem NENHUMA regressão (melhora 2,
-# mantém 2) e tem a menor espera total (54). Alternativa preterida: -9 (melhora 3 mas regride
-# Portagem bus->metro de 12 para 21 min; soma 64) - o script ordena primeiro por nº de sentidos
-# melhorados, por isso lista -9 à frente; a escolha de -10 privilegia "sem regressões".
-LINE_54_MELHORADO_PHASE_SHIFT_MIN = -10.0
+# "melhorado": 2º autocarro no ciclo (40 -> 20 min, +1 autocarro/motorista), SEM desvio: só
+# dobrar a frequência leva Portagem metro->bus de 26.0 para 15.0 min sem piorar nenhum sentido
+# (soma 40.0). Preterido: -18 (critério antigo, melhora 3 mas piora Portagem bus->metro 2 -> 5 min).
+LINE_54_MELHORADO_PHASE_SHIFT_MIN = 0.0
 
 # Parede FeedNPlay (feednplay_dashboard.html) - toggles independentes: FEEDNPLAY_CLICK_TO_ADVANCE
 # liga/desliga poder clicar/tocar nas zonas ◀/▶ (o dwell fica sempre ativo); FEEDNPLAY_PREVIEW_MODE

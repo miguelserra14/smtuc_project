@@ -13,9 +13,10 @@ import pytest
 from tests.reference_data import require_reference_data
 
 ROOT = Path(__file__).resolve().parents[2]
-# Linha de base ATUAL (dados em uso). reports/metricas/sintetico.csv fica como registo do "antes"
-# (metro sintético); a diferença está em reports/metricas/diff_sintetico_vs_oficial_fase1.csv.
-BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1.csv"
+# Linha de base ATUAL (dados e desvios em uso). Registos anteriores em reports/metricas/ (ver o
+# README de lá): sintetico.csv (metro sintético) -> oficial_fase1.csv (metro oficial, desvios
+# antigos) -> oficial_fase1_desvios.csv (desvios decididos a 2026-11-16).
+BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1_desvios.csv"
 
 
 def _load_script():
@@ -164,4 +165,5 @@ def test_baseline_covers_every_section_and_known_values(current_snapshot: pd.Dat
     assert base[("linhas", "54", "avg_freq_min")] == "40"
     # Metro oficial (D1 passo 4): 26.02 = espera mediana com o transbordo de 1.40 min (era 27).
     assert base[("esperas_54", "Portagem metro→bus | atual", "median")] == "26.02"
-    assert base[("busca_fase_54", "otimizado", "shift_min")] == "-11"
+    assert base[("busca_fase_54", "otimizado", "shift_min")] == "-10"
+    assert base[("busca_fase_54", "melhorado", "shift_min")] == "0"

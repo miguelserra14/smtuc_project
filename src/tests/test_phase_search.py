@@ -36,7 +36,34 @@ def _schedule(bus: list[tuple[str, str]], metro: list[str]) -> pd.DataFrame:
     )
 
 
-def test_ranking_prefers_more_improved_then_fewer_regressions() -> None:
+def test_search_covers_half_a_cycle_per_proposal() -> None:
+    script = _load_script()
+    assert script.default_shifts("otimizado") == range(-20, 21)  # ciclo de 40 min
+    assert script.default_shifts("melhorado") == range(-10, 11)  # ciclo de 20 min (2.º autocarro)
+
+
+def test_ranking_never_accepts_a_regression_to_improve_another_sense() -> None:
+    """Critério de 2026-11-16: menos regressões primeiro, depois menor espera total. O antigo
+    ("mais sentidos melhorados" primeiro) escolhia +10 aqui, que melhora A mas piora B."""
+    script = _load_script()
+    import pandas as pd
+
+    results = pd.DataFrame(
+        [
+            {"variant": "otimizado", "shift_min": 10, "melhorados": 1, "regressoes": 1, "soma_medianas": 30.0},
+            {"variant": "otimizado", "shift_min": -5, "melhorados": 0, "regressoes": 0, "soma_medianas": 32.0},
+            {"variant": "otimizado", "shift_min": 0, "melhorados": 0, "regressoes": 0, "soma_medianas": 32.0},
+            {"variant": "otimizado", "shift_min": 3, "melhorados": 1, "regressoes": 0, "soma_medianas": 31.0},
+        ]
+    )
+    results["_rank_key"] = script.rank_key(results)
+    assert int(script.best(results, "otimizado")["shift_min"]) == 3
+    # Empate na espera total: o desvio mais pequeno (0 antes de -5).
+    results = results[results["shift_min"].isin([-5, 0])].copy()
+    assert int(script.best(results, "otimizado")["shift_min"]) == 0
+
+
+def test_ranking_finds_the_coinciding_shift() -> None:
     script = _load_script()
     # 1 só sentido: autocarro 54 de 40 em 40 a partir das 08:00, metro às 08:30 e 09:10.
     # Desvio 0 -> espera 10 min; -10 -> autocarros às 08:30/09:10, espera 0 (sem colunas de
@@ -58,15 +85,18 @@ METRICAS = ROOT / "reports" / "metricas"
 
 
 def _recorded(name: str) -> pd.DataFrame:
+    """Tabela gravada, ordenada com o critério ANTIGO (mais sentidos melhorados primeiro) com que
+    os desvios históricos foram escolhidos."""
     df = pd.read_csv(METRICAS / name)
     df["_rank_key"] = list(zip(-df["melhorados"], df["regressoes"], df["soma_medianas"], df["shift_min"].abs()))
     return df
 
 
 def test_recorded_synthetic_search_reproduces_original_shifts() -> None:
-    """Registo do "antes" (metro SINTÉTICO, regra antiga sem transbordo): o script reproduzia os
-    -16/-8 originais. Gravado a 2026-11-16 em reports/metricas/ antes de trocar para o oficial;
-    o sintético deixou de ser o dataset "metrobus", por isso verifica-se a tabela gravada."""
+    """Registo do "antes" (metro SINTÉTICO, regra antiga sem transbordo, critério antigo): o
+    script reproduzia os -16/-8 originais. Gravado a 2026-11-16 em reports/metricas/ antes de
+    trocar para o oficial; o sintético deixou de ser o dataset "metrobus", por isso
+    verifica-se a tabela gravada."""
     script = _load_script()
     results = _recorded("busca_fase_54_sintetico_sem_transbordo.csv")
     opt, mel = script.best(results, "otimizado"), script.best(results, "melhorado")
@@ -78,44 +108,36 @@ def test_recorded_synthetic_search_reproduces_original_shifts() -> None:
 
 @pytest.mark.integration
 def test_transfer_rule_changes_the_optimum(tmp_path: Path) -> None:
-    """Metro OFICIAL (D1 passo 4): com o transbordo a pé o ótimo "otimizado" é -11; com a regra
-    antiga (transbordo 0) seria -13."""
+    """Metro OFICIAL (D1 passo 4): com o transbordo a pé os desvios escolhidos são -10 / 0; com a
+    regra antiga (transbordo 0 = ligações fisicamente impossíveis contam) seriam -13 / -3."""
     require_reference_data("smtuc", "metrobus")  # valores calibrados para estes feeds
     script = _load_script()
     schedules = script.load_schedules(tmp_path)
-    results, base = script.search(schedules, range(-20, 21))
+    results, base = script.search(schedules)
     assert base["Portagem metro→bus"]["median"] == pytest.approx(26.02, abs=0.005)
     assert base["Portagem bus→metro"]["median"] == 2.0  # vaivéns urbanos a cada ~7 min
-    assert int(script.best(results, "otimizado")["shift_min"]) == -11
+    assert (int(script.best(results, "otimizado")["shift_min"]), int(script.best(results, "melhorado")["shift_min"])) == (-10, 0)
     old_rule = {k: v.drop(columns=["target_transfer_min", "trigger_transfer_min"]) for k, v in schedules.items()}
-    old_results, _ = script.search(old_rule, range(-20, 21))
-    assert int(script.best(old_results, "otimizado")["shift_min"]) == -13
+    old_results, _ = script.search(old_rule)
+    assert (int(script.best(old_results, "otimizado")["shift_min"]), int(script.best(old_results, "melhorado")["shift_min"])) == (-13, -3)
 
 
 @pytest.mark.integration
-@pytest.mark.xfail(
-    strict=True,
-    reason="AGUARDA DECISÃO: desvios da 54 ainda os do sintético (-11/-10); com o metro oficial a "
-    "busca dá -11 (2 melhor./2 regr.) e -18 (3/1) - ver reports/metricas/busca_fase_54_oficial_fase1.csv",
-)
 def test_config_shifts_match_documented_properties(tmp_path: Path) -> None:
-    """Os valores em config.py (e o comentário que os justifica) batem certo com a busca: o
-    otimizado é o 1º do ranking (3 melhorados, 1 regressão) e o melhorado é o desvio sem nenhuma
-    regressão com menor espera total. Se os dados mudarem, este teste falha (ou salta) e lembra
-    que é preciso correr scripts/search_phase_shift.py de novo."""
-    require_reference_data("smtuc", "metrobus")  # -16/-8 e -11/-10 calibrados para estes feeds
+    """Os desvios em config.py (e o comentário que os justifica) são os que a busca escolhe:
+    em meio ciclo, nenhum sentido piora e a espera total é a menor. Se os dados mudarem, este
+    teste falha (ou salta) e lembra que é preciso correr scripts/search_phase_shift.py de novo."""
+    require_reference_data("smtuc", "metrobus")  # calibrado para o metro oficial (D1 passo 4)
     from config import LINE_54_MELHORADO_PHASE_SHIFT_MIN, LINE_54_OPTIMIZED_PHASE_SHIFT_MIN
 
     script = _load_script()
-    results, _ = script.search(script.load_schedules(tmp_path), range(-20, 21))
-
-    opt = script.best(results, "otimizado")
-    assert int(opt["shift_min"]) == int(LINE_54_OPTIMIZED_PHASE_SHIFT_MIN)
-    assert (int(opt["melhorados"]), int(opt["regressoes"])) == (3, 1)
-
-    mel = results[results["variant"] == "melhorado"]
-    no_regression = mel[mel["regressoes"] == 0]
-    chosen = mel[mel["shift_min"] == int(LINE_54_MELHORADO_PHASE_SHIFT_MIN)].iloc[0]
-    assert int(chosen["regressoes"]) == 0 and int(chosen["melhorados"]) >= 1
-    assert chosen["soma_medianas"] == no_regression["soma_medianas"].min()
-    assert chosen["soma_medianas"] == mel["soma_medianas"].min()  # e menor espera total de todos
+    results, _ = script.search(script.load_schedules(tmp_path))
+    for variant, configured, expected in (
+        ("otimizado", LINE_54_OPTIMIZED_PHASE_SHIFT_MIN, (1, 0, 50.19)),  # Portagem metro->bus 26.0 -> 25.2
+        ("melhorado", LINE_54_MELHORADO_PHASE_SHIFT_MIN, (1, 0, 40.02)),  # Portagem metro->bus 26.0 -> 15.0
+    ):
+        chosen = script.best(results, variant)
+        assert int(chosen["shift_min"]) == int(configured), variant
+        assert (int(chosen["melhorados"]), int(chosen["regressoes"]), float(chosen["soma_medianas"])) == expected, variant
+        sub = results[results["variant"] == variant]
+        assert chosen["soma_medianas"] == sub[sub["regressoes"] == 0]["soma_medianas"].min()

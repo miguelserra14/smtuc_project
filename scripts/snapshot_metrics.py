@@ -148,7 +148,7 @@ def _section_waits(snap: Snapshot, workdir: Path, with_search: bool) -> None:
                 snap.add("esperas_54", f"{sense} | {variant}", metric, m[metric])
             snap.add("esperas_54", f"{sense} | {variant}", "shift_min", shift)
     if with_search:
-        results, _ = search.search(schedules, range(-20, 21))
+        results, _ = search.search(schedules)  # meio ciclo de cada proposta, critério do script
         for variant in ("otimizado", "melhorado"):
             best = search.best(results, variant)
             for metric in ("shift_min", "melhorados", "regressoes", "soma_medianas"):
