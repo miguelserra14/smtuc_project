@@ -5,7 +5,9 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | Ficheiro | O que é |
 |---|---|
 | `sintetico.csv` | **Antes** (D0.2, 2026-11-16): SMTUC Ep212 + Metro **sintético** fase 1 |
-| `sintetico_fase2.csv` | Metro sintético da fase 2 (slide da fase 2; sem esperas da 54) |
+| `sintetico_fase2.csv` | Metro sintético da fase 2 com o SMTUC Ep212 a 2026-05-11 (slide da fase 2 até à D2.7; sem esperas da 54) |
+| `oficial_fase2.csv` | **Fase 2 oficial** (D2.7): SMTUC Ep225 + Metro NeTEx AGIT a 2026-11-09, cenário `fase2`, com as esperas da 54 |
+| `diff_sintetico_fase2_vs_oficial_fase2.csv` | Diferenças do slide da fase 2 ao trocar o sintético pelo oficial |
 | `oficial_fase1.csv` | **Depois** (D1 passo 4, 2026-11-16): SMTUC Ep212 + **GTFS oficial** do Metro (fase 1), ainda com os desvios da 54 do sintético (−11 / −10) e o critério de busca antigo |
 | `diff_sintetico_vs_oficial_fase1.csv` | Todas as diferenças entre os dois (305 números) |
 | `oficial_fase1_desvios.csv` | O mesmo com os desvios **decididos** (−10 / 0) e o critério novo |
@@ -89,3 +91,11 @@ Busca na fase 2 oficial (`busca_fase_54_fase2_oficial.csv`):
 - **Otimizado −10:** melhora 3 dos 4 sentidos sem piorar nenhum (soma das medianas 49,5 → 48,6).
 - **Melhorado 0:** nenhum desvio evita piorar um sentido; o 0 é o de menor espera total (38,0).
 - **No `antes`:** a busca daria 0 / −10. O −10 do otimizado só perde lá 0,1 min num sentido.
+
+## Metro sintético → oficial na fase 2 (D2.7, 2026-11-16)
+
+Mudam o metro (NeTEx oficial), o SMTUC (Ep225) e o dia (2026-11-09). Os números do slide da fase 2 passam a ser oficiais:
+- **Overlap temporal:** 82,6 % → 97,8 % dos candidatos espaciais.
+- **Overlap espacial:** estações em overlap 88 → 94 e linhas SMTUC com overlap 94 → 86. A extensão em overlap fica igual (338 km). O salto face aos 104 km da fase 1 vem da rede da fase 2 (Baixa, Coimbra B) e já existia no sintético.
+- **Isócronas e população:** o tempo médio ponderado a partir do estádio passa de 37,9 para 35,7 min; as partidas por dia sobem 1,5 %.
+- **Esperas da 54** (novas no slide): Portagem metro→autocarro 19,0 min e autocarro→metro 4,5 min; Portela 19,8 e 6,3 min (mediana).

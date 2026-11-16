@@ -126,14 +126,14 @@ def test_transfer_rule_changes_the_optimum(tmp_path: Path) -> None:
 @pytest.mark.integration
 def test_config_shifts_match_documented_properties(tmp_path: Path) -> None:
     """Os desvios em config.py (e o comentário que os justifica) são os que a busca escolhe na
-    REDE DA FASE 2 (cenário fase2_oficial, decidido a 2026-11-16): em meio ciclo, menos regressões
+    REDE DA FASE 2 (cenário fase2, decidido a 2026-11-16): em meio ciclo, menos regressões
     e depois a menor espera total. Se os dados mudarem, este teste salta e lembra que é preciso
     correr scripts/search_phase_shift.py --cenario ... de novo."""
     require_reference_data("smtuc_atual", "metro_fase2_oficial")
     from config import LINE_54_MELHORADO_PHASE_SHIFT_MIN, LINE_54_OPTIMIZED_PHASE_SHIFT_MIN
 
     script = _load_script()
-    results, _ = script.search(script.load_schedules(tmp_path, scenario="fase2_oficial"))
+    results, _ = script.search(script.load_schedules(tmp_path, scenario="fase2"))
     for variant, configured, expected in (
         ("otimizado", LINE_54_OPTIMIZED_PHASE_SHIFT_MIN, (3, 0, 48.59)),
         ("melhorado", LINE_54_MELHORADO_PHASE_SHIFT_MIN, (2, 1, 38.03)),

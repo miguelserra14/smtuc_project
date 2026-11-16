@@ -32,8 +32,8 @@ MAX_SPEED_KMH = 120.0
 MAX_SAME_TIME_DISTANCE_M = 1000.0
 
 KNOWN_ISSUES: dict[tuple[str, str], str] = {
-    ("metrobus_fase2", "velocidade"): "sintético: 4 paragens da Lousã com coordenadas erradas (troços a ~320 km/h)",
-    ("metrobus_fase2", "horas"): "sintético: Casal de Santo António -> Serpins, 1077 m com a mesma hora (0 s)",
+    # Vazio desde a D2.7: os sintéticos (com velocidades de ~320 km/h e troços de 1077 m a 0 s)
+    # foram arquivados em data/_arquivo/sintetico/.
 }
 
 DATASETS = sorted(config.DATASET_DIRS)

@@ -304,7 +304,7 @@ def _trips_on(gtfs, day: date) -> tuple[list[str], int]:
 def test_official_metro_phase2_control_numbers() -> None:
     g = _real("metro_fase2_oficial")
     assert sorted(g.routes["route_short_name"].astype(str)) == ["S1", "S2", "U1", "U2", "U3"]
-    assert _trips_on(g, date(2026, 11, 9)) == (["11"], 452)  # dia de referência do cenário fase2_oficial
+    assert _trips_on(g, date(2026, 11, 9)) == (["11"], 452)  # dia de referência do cenário fase2
     # Feriados que o Metro não codifica -> serviço de domingo pela regra do projeto.
     for holiday in (date(2026, 10, 5), date(2026, 12, 8), date(2026, 12, 25)):
         assert _trips_on(g, holiday) == (["1"], 225)

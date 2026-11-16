@@ -98,7 +98,7 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
         "label": "Overlap (Fase 2)",
         "kind": "overlap",
         "description": "O mesmo overlap e isócronas, mas já com a extensão da fase 2 do Metrobus (Aeminium + ramais Coimbra B/República, inauguração prevista em setembro).",
-        "note": "Dados provisórios (data/metrobus_fase2, ainda não é o feed oficial) - serve para antecipar como o overlap e a cobertura mudam quando a fase 2 abrir, enquanto o resto da apresentação usa os dados atuais (pré-fase 2).",
+        "note": "Dados oficiais: Metro Mondego (NeTEx de 11/11/2026; fase 2 em operação desde 10/09/2026) e SMTUC (horário Ep225, desde 18/09/2026), num dia útil de referência a 09/11/2026 - o resto da apresentação usa a rede antes da fase 2. Dados: AGIT / dados.gov.pt (CC BY 4.0).",
         "iframes": [
             {
                 "title": "Reachability e overlap temporal (fase 2)",

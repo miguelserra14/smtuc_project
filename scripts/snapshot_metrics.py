@@ -5,7 +5,7 @@ Para cada troca de dados (Fase D: metro oficial, fase 2, SIT) ou refatoração d
 de se descobrir nos slides.
 
     python scripts/snapshot_metrics.py snapshot sintetico                       # cenário por omissão
-    python scripts/snapshot_metrics.py snapshot sintetico_fase2 --cenario fase2  # feeds + dia do cenário
+    python scripts/snapshot_metrics.py snapshot oficial_fase2 --cenario fase2   # feeds + dia do cenário
     python scripts/snapshot_metrics.py snapshot teste --metro outro_metro       # cenário com outro feed
     python scripts/snapshot_metrics.py diff reports/metricas/sintetico.csv reports/metricas/metro_2025.csv
     python scripts/snapshot_metrics.py diff A.csv B.csv --check                 # exit 1 se algo mudou
@@ -401,7 +401,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_snap = sub.add_parser("snapshot", help="calcula e grava reports/metricas/<fase>.csv")
-    p_snap.add_argument("fase", help="nome do snapshot (ex.: sintetico, metro_2025, fase2_oficial)")
+    p_snap.add_argument("fase", help="nome do snapshot (ex.: sintetico, oficial_fase1_d24, oficial_fase2)")
     p_snap.add_argument("--cenario", default=None, help="cenário de config.SCENARIOS (feeds + dia/hora; por omissão o DEFAULT_SCENARIO)")
     p_snap.add_argument("--smtuc", default=None, help="troca o SMTUC do cenário (nome lógico em config.DATASET_DIRS)")
     p_snap.add_argument("--metro", default=None, help="troca o metro do cenário (nome lógico em config.DATASET_DIRS)")

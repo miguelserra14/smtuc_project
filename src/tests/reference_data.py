@@ -22,13 +22,13 @@ from gtfs_processing.fingerprint import feed_fingerprint
 ROOT = Path(__file__).resolve().parents[2]
 
 REFERENCE_FINGERPRINTS: dict[str, str] = {
-    # smtuc / metrobus_fase2 calibrados a 2026-11-13. "metrobus" passou a ser o GTFS OFICIAL do Metro
+    # smtuc calibrado a 2026-11-13 (o metro sintético da fase 2, 90417259ec9abc60, foi arquivado
+    # na D2.7 em data/_arquivo/sintetico/metro_fase2). "metrobus" passou a ser o GTFS OFICIAL do Metro
     # (fase 1) a 2026-11-16 (D1 passo 4) - valores revistos à mão contra o ficheiro bruto (291
     # viagens por dia útil; 62/57 chegadas a Portagem/Portela = PDFs oficiais). O sintético antigo
     # (b3f7170e307f7cc3) está em data/_arquivo/sintetico/metro_fase1.
     "smtuc": "864ee5237cafc617",
     "metrobus": "da23030383ae252e",
-    "metrobus_fase2": "90417259ec9abc60",
     # Fase 2 oficial (D2 passo 2, 2026-11-16), valores conferidos no ficheiro construído e nas
     # contagens da AGIT (validation.json): ver test_netex_to_gtfs.py.
     "smtuc_atual": "12aefeabe5782c22",

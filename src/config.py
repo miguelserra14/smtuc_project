@@ -83,21 +83,20 @@ FREQUENCY_WINDOW_END_H = 20
 # Feeds GTFS: nome lógico (o que o código usa: chaves de cache, impressões digitais, ids globais
 # de paragens) -> pasta em GTFS_DIR. Trocar de dados = apontar o nome para OUTRA pasta aqui; uma
 # pasta nunca é reutilizada com outro conteúdo (ver data/README.md). Resolver: gtfs.dataset_dir().
-# Os sintéticos ficam aqui só até serem substituídos pelos oficiais (D1.5/D2) e arquivados.
+# Os feeds sintéticos foram todos arquivados em data/_arquivo/sintetico/ (D1 passo 5, D2.7).
 GTFS_DIR = "data/gtfs"
 DATASET_DIRS: dict[str, str] = {
     "smtuc": "smtuc/antigo_ep212",            # SMTUC Ep212 (pré-set 2026)
     # Metro fase 1 (até 09/09/2026) OFICIAL desde a D1 passo 4: GTFS de 2025-12-19 construído de
-    # data/raw por scripts/build_feeds.py (ver PROVENANCE.json). Antes era o sintético abaixo.
+    # data/raw por scripts/build_feeds.py (ver PROVENANCE.json). Antes era um feed sintético.
     "metrobus": "metro/fase1_gtfs_20251219",
-    "metrobus_fase2": "metro/sintetico_fase2",  # SINTÉTICO, fase 2 (a substituir na D2)
-    # Fase 2 OFICIAL (D2 passo 2), construídos por scripts/build_feeds.py (ver PROVENANCE.json):
-    # SMTUC Ep225 do Município (válido 2026-09-18..2026-11-12; .txt fora do git) e Metro NeTEx da
-    # AGIT de 2026-11-11 convertido para GTFS. Só usados pelo cenário "fase2_oficial" (pré-visualização).
+    # Fase 2 OFICIAL (D2), construídos por scripts/build_feeds.py (ver PROVENANCE.json): SMTUC Ep225
+    # do Município (válido 2026-09-18..2026-11-12; .txt fora do git) e Metro NeTEx da AGIT de
+    # 2026-11-11 convertido para GTFS. Substituíram o "metrobus_fase2" sintético (D2.7).
     "smtuc_atual": "smtuc/atual_ep225",
     "metro_fase2_oficial": "metro/fase2_netex_20261111",
-    # O sintético da fase 1 foi arquivado em data/_arquivo/sintetico/ (D1 passo 5; ver o README de
-    # lá para reproduzir reports/metricas/sintetico.csv).
+    # Sintéticos arquivados em data/_arquivo/sintetico/ (ver o README de lá para reproduzir
+    # reports/metricas/sintetico.csv e sintetico_fase2.csv).
 }
 
 # Cenários de análise (D2.3; ver gtfs_processing/scenarios.py): que SMTUC e que Metro (nomes
@@ -114,26 +113,16 @@ SCENARIOS: dict[str, dict[str, str]] = {
         "reference_time": "08:20:00",
         "output_suffix": "",
     },
-    # Slide dedicado da fase 2. Ainda SINTÉTICO (metrobus_fase2) e com o SMTUC antigo no mesmo dia
-    # do "antes" - a D2 troca-o pelo SMTUC Ep225 + Metro NeTEx oficial, num dia >= 2026-09-10.
+    # Fase 2 com dados OFICIAIS (D2.7; até lá era o metro sintético com o SMTUC Ep212): slide
+    # dedicado da fase 2. 2026-11-09 é uma 2ª feira dentro dos dois feeds (Ep225 até 12/11) e
+    # depois do início do bilhete intermodal (1/10).
     "fase2": {
-        "description": "Fase 2 do Metro - SINTÉTICO (metrobus_fase2) com o SMTUC Ep212",
-        "smtuc": "smtuc",
-        "metro": "metrobus_fase2",
-        "reference_day": "2026-05-11",
-        "reference_time": "08:20:00",
-        "output_suffix": "_fase2",
-    },
-    # Fase 2 com dados OFICIAIS (D2 passo 2): ainda não alimenta nenhum slide - serve para validar
-    # os feeds e para snapshots (snapshot_metrics.py --cenario fase2_oficial). 2026-11-09 é uma
-    # 2ª feira dentro dos dois feeds (Ep225 até 12/11) e depois do início do bilhete intermodal (1/10).
-    "fase2_oficial": {
         "description": "Fase 2 do Metro (desde 10/09/2026), OFICIAL: SMTUC Ep225 + Metro NeTEx AGIT 2026-11-11",
         "smtuc": "smtuc_atual",
         "metro": "metro_fase2_oficial",
         "reference_day": "2026-11-09",
         "reference_time": "08:20:00",
-        "output_suffix": "_fase2_oficial",
+        "output_suffix": "_fase2",
     },
 }
 DEFAULT_SCENARIO = "antes"
@@ -199,7 +188,7 @@ INTEGRATION_SITES: tuple[dict, ...] = (
 # espera total dos 4 sentidos (transbordo a pé incluído). Correr de novo e atualizar aqui sempre
 # que os horários mudarem.
 # DECIDIDO a 2026-11-16 (D2.4/D2.6): um só par para todos os cenários, o ótimo da REDE DA FASE 2
-# (cenário fase2_oficial: SMTUC Ep225 + Metro NeTEx), que é para onde vai a proposta. No cenário
+# (cenário fase2: SMTUC Ep225 + Metro NeTEx), que é para onde vai a proposta. No cenário
 # "antes" (com a 38 já a contar em Portagem) a busca daria 0 / -10; o -10 otimizado só perde lá
 # 0,1 min num sentido (Portagem metro->bus 19.02 -> 19.13).
 # Histórico (reports/metricas/busca_fase_54_*.csv): metro sintético -11/-10 (sem transbordo

@@ -25,7 +25,7 @@ TWO_SCENARIOS = {
         "reference_day": "2026-05-11", "reference_time": "08:20:00", "output_suffix": "",
     },
     "b": {
-        "description": "b", "smtuc": "smtuc", "metro": "metrobus_fase2",
+        "description": "b", "smtuc": "smtuc", "metro": "metro_fase2_oficial",
         "reference_day": "2026-11-09", "reference_time": "09:00:00", "output_suffix": "_b",
     },
 }
@@ -91,7 +91,7 @@ def test_reference_days_by_dataset_collects_every_scenario(two_scenarios) -> Non
     days = reference_days_by_dataset()
     assert days["smtuc"] == {date(2026, 5, 11), date(2026, 11, 9)}
     assert days["metrobus"] == {date(2026, 5, 11)}
-    assert days["metrobus_fase2"] == {date(2026, 11, 9)}
+    assert days["metro_fase2_oficial"] == {date(2026, 11, 9)}
 
 
 class _Loaded(Exception):
@@ -116,7 +116,7 @@ def test_line_54_tables_load_the_scenario_feeds(two_scenarios, monkeypatch, tmp_
         kwargs = {"metro_towards_ref": "X"} if build is transit.build_reverse_stop_vs_metro_table else {}
         with pytest.raises(_Loaded):
             build("Portagem", "Portagem", "54", output_dir=tmp_path, scenario="b", **kwargs)
-        assert loaded == ["smtuc", "metrobus_fase2"]
+        assert loaded == ["smtuc", "metro_fase2_oficial"]
 
 
 def test_line_metrics_cache_uses_the_scenario(two_scenarios, monkeypatch, tmp_path) -> None:
@@ -137,7 +137,7 @@ def test_line_metrics_cache_uses_the_scenario(two_scenarios, monkeypatch, tmp_pa
     monkeypatch.setattr(overlap_db, "_resolve_db_path", lambda p=None: resolved.append(p) or real_resolve(p))
 
     overlap_db.build_line_metrics_db(scenario="b")
-    assert seen["smtuc_dataset"] == "smtuc" and seen["metrobus_dataset"] == "metrobus_fase2"
+    assert seen["smtuc_dataset"] == "smtuc" and seen["metrobus_dataset"] == "metro_fase2_oficial"
     assert seen["reference_day"] == date(2026, 11, 9)
     assert resolved[-1].endswith("line_metrics_db_b.csv")
 
@@ -158,7 +158,7 @@ def test_regenerate_validates_each_scenario_on_its_own_day(two_scenarios, monkey
 
     def fake_active(gtfs, day):
         checked.append((gtfs.name, day))
-        if gtfs.name == "metrobus_fase2" and day < date(2026, 9, 10):
+        if gtfs.name == "metro_fase2_oficial" and day < date(2026, 9, 10):
             raise regen.ServiceCalendarError("fora do período")
         return {"s"}
 
@@ -166,7 +166,7 @@ def test_regenerate_validates_each_scenario_on_its_own_day(two_scenarios, monkey
     assert regen._validate_reference_day() is True
     assert set(checked) == {
         ("smtuc", date(2026, 5, 11)), ("metrobus", date(2026, 5, 11)),
-        ("smtuc", date(2026, 11, 9)), ("metrobus_fase2", date(2026, 11, 9)),
+        ("smtuc", date(2026, 11, 9)), ("metro_fase2_oficial", date(2026, 11, 9)),
     }
 
     # Um cenário com o dia fora do período de um dos seus feeds faz falhar a validação.

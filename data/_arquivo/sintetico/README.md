@@ -33,4 +33,16 @@ Verificado a 2026-11-16: com o código atual, os números que só dependem dos d
 
 `fix_metrobus_scrambled_trips.py`: correção única, já aplicada, de viagens baralhadas nos dois feeds sintéticos. Os caminhos que usa já não existem, por isso não volta a correr.
 
-A fase 2 sintética (`data/gtfs/metro/sintetico_fase2/`, ainda usada no slide da fase 2) e o seu gerador (`scripts/generate_metrobus_extension.py`) vêm para aqui na D2.7.
+`generate_metrobus_extension.py`: gerador da fase 2 sintética (arquivado na D2.7). Escrevia em `data/metrobus/`, que já não existe, por isso também não volta a correr.
+
+## `metro_fase2/`: Metro fase 2 sintético (arquivado a 2026-11-16, D2.7)
+
+Foi o dataset `metrobus_fase2`, usado no slide da fase 2 com o SMTUC Ep212 a 2026-05-11. Substituído pelo Metro oficial (NeTEx da AGIT convertido, `data/gtfs/metro/fase2_netex_20261111/`) com o SMTUC Ep225 a 2026-11-09: cenário `fase2` de `config.SCENARIOS`.
+
+Defeitos conhecidos:
+- a topologia da fase 2 foi inventada;
+- quatro paragens da Lousã têm coordenadas erradas (~320 km/h);
+- Casal de Santo António → Serpins: 1077 m a 0 s;
+- o calendário foi copiado do SMTUC.
+
+Impressão digital: `90417259ec9abc60`. Números calculados com ele: `reports/metricas/sintetico_fase2.csv`. Diferenças para o oficial: `reports/metricas/diff_sintetico_fase2_vs_oficial_fase2.csv`.

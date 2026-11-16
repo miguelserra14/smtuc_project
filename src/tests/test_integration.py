@@ -237,7 +237,7 @@ def test_phase2_portela_node_finds_line_54_leaving_from_parque_2(tmp_path: Path)
     require_reference_data("smtuc_atual", "metro_fase2_oficial")
     df = build_line_stop_vs_metro_table(
         metro_stop_ref="Portela", bus_stop_ref="Portela do Mondego", line_number="54",
-        metro_origin_ref="Portagem", bus_origin_ref="Portagem", output_dir=tmp_path, scenario="fase2_oficial",
+        metro_origin_ref="Portagem", bus_origin_ref="Portagem", output_dir=tmp_path, scenario="fase2",
     )
     assert (df["bus_time"] != "").sum() == 21
     assert (df["date"] == "2026-11-09").all()
