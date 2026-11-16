@@ -90,6 +90,8 @@ DATASET_DIRS: dict[str, str] = {
     "smtuc": "smtuc/antigo_ep212",            # SMTUC Ep212 (pré-set 2026)
     "metrobus": "metro/sintetico_fase1",      # SINTÉTICO, fase 1 (a substituir na D1.5)
     "metrobus_fase2": "metro/sintetico_fase2",  # SINTÉTICO, fase 2 (a substituir na D2)
+    # Oficial, construído de data/raw por scripts/build_feeds.py (ver PROVENANCE.json da pasta).
+    "metro_fase1_oficial": "metro/fase1_gtfs_20251219",  # Metro até 09/09/2026
 }
 
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"

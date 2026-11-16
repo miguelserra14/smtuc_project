@@ -1,0 +1,69 @@
+{
+ "pasta": "data/gtfs/metro/fase1_gtfs_20251219",
+ "descricao": "Metro Mondego fase 1 (até 09/09/2026): GTFS oficial exportado a 2025-12-19 (dados.gov.pt, CC BY 4.0)",
+ "origem": {
+  "ficheiro": "data/raw/dados-gov/metro-mondego-gtfs/20260817-153951-d08309cb/20251219-export-gtfs.zip",
+  "sha256": "784b6b6d5639731410a7f44887d0995f4aa7266eb3e7cde1b9a251fe9979cf75",
+  "versao": "20260817-153951-d08309cb",
+  "url": "https://dados.gov.pt/s/resources/metro-mondego/20260817-153951-d08309cb/20251219-export-gtfs.zip",
+  "verificacoes_no_download": "sha1+tamanho=catalogo;identidade"
+ },
+ "ignorados_do_zip": [
+  "[Content_Types].xml"
+ ],
+ "transformacoes": [
+  {
+   "passo": "remover paragens técnicas",
+   "padrao_nome": "PC\\d+",
+   "motivo": "PC1-PC8 são pontos técnicos do traçado sem serviço a passageiros, mas o feed não os marca (pickup_type/drop_off_type = 0); sem isto contavam como paragens na cobertura e nas isócronas",
+   "paragens_removidas": [
+    "PC1",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8"
+   ],
+   "passagens_removidas": 1638
+  },
+  {
+   "passo": "estender validade do calendário",
+   "de": "20251231",
+   "para": "20260909",
+   "servicos": [
+    "1",
+    "2",
+    "3"
+   ],
+   "motivo": "O feed só cobre 2025-11-01..2025-12-31. O horário de dez/2025 foi verificado igual, minuto a minuto, aos PDFs oficiais de horários (criados a 2025-12-22, ainda publicados a 2026-09-06: data/raw/manual/metro-mondego-horarios-pdf/2025-12-22/) e vigorou até à fase 2 (dias úteis desde 2026-09-10). Feriados de 2026 não codificados: o feed não tem calendar_dates e config.FERIADOS_COMO_DOMINGO trata-os."
+  },
+  {
+   "passo": "trocar route_short_name/route_long_name",
+   "route_id": "3606",
+   "antes": [
+    "Serpins - Portagem",
+    "S1"
+   ],
+   "depois": [
+    "S1",
+    "Serpins - Portagem"
+   ],
+   "motivo": "No feed o nome curto e o longo vêm trocados (short='Serpins - Portagem', long='S1')."
+  }
+ ],
+ "ficheiros": {
+  "agency.txt": "74c232f2229d1e11f347c22fb6bd5e5a76b6b6a4e09fea5dd9715584e9f9503c",
+  "calendar.txt": "2d915f95e72c7fbd57c9f977c5e5a2748edcfc1717305c5211ee1bfab6b0a78d",
+  "calendar_dates.txt": "aaa66bee57e81ca0cd63d4afe576f993aba0441428a79cf6fe5c58721e39421f",
+  "routes.txt": "16ee84d079e572f075a692c01cba522e4c44fafffe7fc2f3870fe5b59a2a6791",
+  "shapes.txt": "4fb6c63f87cd8ea8786cadd7178f70fe4eab606845c6b50886136fbce4e28f36",
+  "stop_times.txt": "6bb3042da467f3f24d8493f486165475229ba3d1ba3f9bd2b5a3a2dbade0c64a",
+  "stops.txt": "b1de709701f0957bfe4bb3b96d43f155819a0ec1f6025f18e8c433a21011e53c",
+  "trips.txt": "04697cdb8c329058f605b579d978e9b6a9f667d227f198d36612c4321581b134"
+ },
+ "impressao_digital": "da23030383ae252e",
+ "construido_por": "scripts/build_feeds.py",
+ "commit": "b99d0b7"
+}

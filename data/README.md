@@ -10,6 +10,7 @@ Os feeds estão em `gtfs/` e o código chama-os pelo nome lógico de `config.DAT
 |---|---|---|---|---|
 | `gtfs/smtuc/antigo_ep212/` | SMTUC **Ep212** (`Ep212_Prg1@20260305`), cenário "antes" | GTFS do SMTUC/Município (versão exata e data do download não registadas; o catálogo já não tem esta versão) | 2026-03-09 a 2027-03-09 | tudo |
 | `gtfs/metro/sintetico_fase1/` | Metro **SINTÉTICO** fase 1, feito à mão a partir de PDFs | não oficial (ver `docs/integracao_dados_agit/README.md`, secção 1) | `calendar.txt` copiado do SMTUC | tudo; substituído na D1 |
+| `gtfs/metro/fase1_gtfs_20251219/` | Metro **oficial** fase 1 (nome lógico `metro_fase1_oficial`), construído por `scripts/build_feeds.py` a partir de `raw/dados-gov/metro-mondego-gtfs/`: sem PC1-PC8, calendário estendido até 2026-09-09, nomes da rota destrocados (ver `PROVENANCE.json`) | AGIT / dados.gov.pt, CC BY 4.0 | 2025-11-01 a 2026-09-09 | ainda não usado (D1.5) |
 | `gtfs/metro/sintetico_fase2/` | Metro **SINTÉTICO** fase 2, topologia inventada | não oficial | idem | slide da fase 2; substituído na D2 |
 | `dadospopulacaoBGRI/` | BGRI 2021 (subsecções estatísticas) do concelho de Coimbra | INE, Censos 2021 | 2021 | população, isócronas |
 | `points_of_interest.csv` | polos de emprego e locais concorridos | pesquisa manual (`src/population/points_of_interest.py`) | — | população (camada POI) |
@@ -42,7 +43,7 @@ python scripts/fetch_feeds.py registar FICH --fonte manual/<nome> --versao <AAAA
 
 ## Próximas pastas (D1/D2)
 
-Geradas a partir de `raw/`, com `PROVENANCE.json`: `gtfs/metro/fase1_gtfs_20251219/` (D1), `gtfs/smtuc/atual_ep225/` e `gtfs/metro/fase2_netex_<data>/` (D2). Os sintéticos vão para `_arquivo/sintetico/` quando deixarem de ser usados.
+Geradas a partir de `raw/` por `scripts/build_feeds.py`, com `PROVENANCE.json`: `gtfs/smtuc/atual_ep225/` e `gtfs/metro/fase2_netex_<data>/` (D2). Uma pasta construída nunca é alterada: `python scripts/build_feeds.py --verificar` confirma que cada uma é exatamente o que o build produz. Os sintéticos vão para `_arquivo/sintetico/` quando deixarem de ser usados.
 
 Atenção a duas coisas:
 - nos feeds SMTUC antigos o `route_id` "54" é a linha 5F; a linha procura-se sempre pelo `route_short_name`;

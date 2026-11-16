@@ -1,0 +1,29 @@
+stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station,stop_timezone,wheelchair_boarding
+233,cbr_mm026,Portagem,,40.2075260000000000,-8.4306540000000000,,,,,Europe/Lisbon,0
+234,cbr_mm025,Parque,,40.2037530000000000,-8.4251160000000000,,,,,Europe/Lisbon,0
+235,cbr_mm024,Colégios,,40.1984700000000000,-8.4208030000000000,,,,,Europe/Lisbon,0
+236,cbr_mm023,Arregaça,,40.1995660000000000,-8.4169730000000000,,,,,Europe/Lisbon,0
+237,cbr_mm022,Norton de Matos,,40.2012980000000000,-8.4109590000000000,,,,,Europe/Lisbon,0
+238,cbr_mm021,São José,,40.2015660000000000,-8.4072230000000000,,,,,Europe/Lisbon,0
+239,cbr_mm020,Solum,,40.2048880000000000,-8.4050200000000000,,,,,Europe/Lisbon,0
+240,cbr_mm019,Fernando Namora,,40.2039890000000000,-8.4009000000000000,,,,,Europe/Lisbon,0
+241,cbr_mm018,Casa Branca,,40.2007190000000000,-8.3999150000000000,,,,,Europe/Lisbon,0
+242,cbr_mm017,Vale das Flores,,40.1954440000000000,-8.3980460000000000,,,,,Europe/Lisbon,0
+243,cbr_mm043,Alto de São João,,40.1926010000000000,-8.3996670000000000,,,,,Europe/Lisbon,0
+244,cbr_mm015,Portela,,40.1868320000000000,-8.3993550000000000,,,,,Europe/Lisbon,0
+245,cbr_mm014,Quinta da Ponte,,40.1818390000000000,-8.3931250000000000,,,,,Europe/Lisbon,0
+246,cbr_mm013,Ceira,,40.1728650000000000,-8.3933650000000000,,,,,Europe/Lisbon,0
+247,cbr_mm012,Sobral de Ceira,,40.1644190000000000,-8.3873480000000000,,,,,Europe/Lisbon,0
+248,mcv_mm011,Vale de Açor,,40.1564470000000000,-8.3740710000000000,,,,,Europe/Lisbon,0
+249,mcv_mm010,Trémoa,,40.1354810000000000,-8.3576280000000000,,,,,Europe/Lisbon,0
+250,mcv_mm009,Moinhos,,40.1151860000000000,-8.3572210000000000,,,,,Europe/Lisbon,0
+251,mcv_mm008,Lobazes,,40.1044260000000000,-8.3521920000000000,,,,,Europe/Lisbon,0
+252,mcv_mm007,Miranda do Corvo,,40.0895690000000000,-8.3325150000000000,,,,,Europe/Lisbon,0
+253,mcv_mm006,Corvo,,40.0934770000000000,-8.3219100000000000,,,,,Europe/Lisbon,0
+254,lsa_mm005,Padrão,,40.1063490000000000,-8.3003560000000000,,,,,Europe/Lisbon,0
+255,lsa_mm004,Meiral,,40.1062360000000000,-8.2679510000000000,,,,,Europe/Lisbon,0
+256,lsa_mm003,Lousã - Parque de Exposições,,40.1108340000000000,-8.2490160000000000,,,,,Europe/Lisbon,0
+257,lsa_mm002,Lousã - Estação,,40.1185180000000000,-8.2476870000000000,,,,,Europe/Lisbon,0
+258,lsa_mm001,Casal do Espírito Santo,,40.1265660000000000,-8.2393610000000000,,,,,Europe/Lisbon,0
+259,lsa_mm042,Casal de Santo António,,40.1552450000000000,-8.2163390000000000,,,,,Europe/Lisbon,0
+260,lsa_mm000,Serpins,,40.1557700000000000,-8.2100090000000000,,,,,Europe/Lisbon,0

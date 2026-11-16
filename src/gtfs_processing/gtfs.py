@@ -112,7 +112,7 @@ def load_gtfs(source_dir: Optional[str] = None, dataset: str = "nd") -> GTFSData
         missing_list = ", ".join(f"{name}.txt" for name in missing)
         warning_key = (str(source), missing_list)
         if warning_key not in _MISSING_OPTIONAL_WARNED:
-            print(f"Arquivos GTFS opcionais em falta: {missing_list}")
+            print(f"Arquivos GTFS opcionais em falta ou sem linhas: {missing_list}")
             _MISSING_OPTIONAL_WARNED.add(warning_key)
 
     st = frames["stop_times"]
