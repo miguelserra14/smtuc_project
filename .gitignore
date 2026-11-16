@@ -12,3 +12,10 @@ scripts/.feednplay_logs/
 # Modelos públicos: src/config_local.example.py, scripts/local_settings.example.ps1
 src/config_local.py
 scripts/local_settings.ps1
+
+# GTFS do Município (licença não especificada no dados.gov.pt): só o sha256 vai para o git, em
+# data/raw/MANIFEST.csv; cada máquina descarrega o ficheiro com scripts/fetch_feeds.py.
+data/raw/municipio-coimbra/smtuc-gtfs/
+
+# Documento pessoal guardado por engano na pasta de dados - nunca versionar (mover para fora do repo).
+data/metrobus_fase2/multiusos2627.pdf

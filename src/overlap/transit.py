@@ -433,15 +433,23 @@ def _resolve_bus_arrival_events(
             )
         )
 
+    # A linha identifica-se pelo número público (route_short_name). O route_id só serve quando o
+    # feed não tem números públicos nenhuns: nos feeds SMTUC antigos o route_id "54" é a linha 5F
+    # (Pedrulha-Portagem) e a 54 verdadeira tem route_id 684/685 - recorrer ao route_id quando o
+    # número não existe apanhava a linha errada em silêncio (ex.: Ep202, que ainda não tinha a 54).
+    short_names = routes["route_short_name"].str.strip()
+    use_route_id = not short_names.replace({"nan": "", "None": ""}).astype(bool).any()
+    match_col = routes["route_id"].str.strip() if use_route_id else short_names
+
     bus_events: list[dict[str, str]] = []
-    matched_any_line = False
+    missing = [v for v in line_values if not (match_col == v).any()]
+    if missing:
+        raise ValueError(
+            f"Linha(s) não encontrada(s) no feed: {', '.join(missing)} (procuradas em "
+            f"{'route_id' if use_route_id else 'route_short_name'})"
+        )
     for line_val in line_values:
-        route_ids = routes[routes["route_short_name"].str.strip() == line_val]["route_id"].drop_duplicates().tolist()
-        if not route_ids:
-            route_ids = routes[routes["route_id"].str.strip() == line_val]["route_id"].drop_duplicates().tolist()
-        if not route_ids:
-            continue
-        matched_any_line = True
+        route_ids = routes[match_col == line_val]["route_id"].drop_duplicates().tolist()
 
         line_trips = all_bus_trips[all_bus_trips["route_id"].isin(route_ids)]
         if line_trips.empty:
@@ -469,9 +477,6 @@ def _resolve_bus_arrival_events(
         for ev in line_events:
             ev["stop_id"] = str(line_target_stop_id)
         bus_events.extend(line_events)
-
-    if not matched_any_line:
-        raise ValueError(f"Linha(s) não encontrada(s): {line_label}")
 
     bus_events = sorted(bus_events, key=lambda ev: (_hhmmss_to_seconds(str(ev["time"])), str(ev["line"])))
     return bus_events, line_label, line_slug

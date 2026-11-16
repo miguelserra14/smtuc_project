@@ -1,0 +1,2 @@
+# data/raw/ é imutável e verificado por sha256 (data/raw/MANIFEST.csv): sem conversão de quebras de linha.
+data/raw/** -text
