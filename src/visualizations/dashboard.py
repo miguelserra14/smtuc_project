@@ -7,7 +7,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from config import FEEDNPLAY_CLICK_TO_ADVANCE, FEEDNPLAY_PREVIEW_BASE_FONT_PX, FEEDNPLAY_PREVIEW_MODE
+from config import (
+    FEEDNPLAY_CLICK_TO_ADVANCE,
+    FEEDNPLAY_PREVIEW_BASE_FONT_PX,
+    FEEDNPLAY_PREVIEW_MODE,
+    LINE_METRICS_DB_PATH,
+)
+from gtfs_processing.scenarios import scenario_output_path
 
 from .presentation_content import PRESENTATION_TABS
 
@@ -283,19 +289,23 @@ def create_master_dashboard_html(
     return str(output_path)
 
 
-# Slides de kind "overlap" -> ficheiro de métricas próprio (ver _default_presentation_tabs).
-# Por omissão (qualquer id não listado aqui) usa-se o cache "atual" (dados antigos, pré-fase 2) -
-# só o slide dedicado da fase 2 precisa de apontar para o seu próprio cache (dados novos).
-_OVERLAP_TAB_METRICS_PATH = {
-    "overlap_fase2": "outputs/overlap/line_metrics_db_fase2.csv",
+# Slides de kind "overlap" -> cenário (config.SCENARIOS) cujo cache de métricas mostram (ver
+# _default_presentation_tabs). Por omissão (qualquer id não listado aqui) usa-se o cenário por
+# omissão (dados antigos, pré-fase 2) - só o slide dedicado da fase 2 aponta para o seu. O caminho
+# do cache sai do sufixo do cenário, o mesmo que o regenerate grava.
+_OVERLAP_TAB_SCENARIO = {
+    "overlap_fase2": "fase2",
 }
-_DEFAULT_OVERLAP_METRICS_PATH = "outputs/overlap/line_metrics_db.csv"
+
+
+def _overlap_tab_metrics_path(tab_id: str) -> str:
+    return scenario_output_path(LINE_METRICS_DB_PATH, _OVERLAP_TAB_SCENARIO.get(tab_id))
 
 
 def _default_presentation_tabs() -> list[dict[str, Any]]:
     """Devolve os dados dos slides da apresentação - texto vem de `presentation_content.py`,
     exceto "stats" nos slides de kind "overlap", calculado aqui em tempo real a partir do cache
-    de métricas de linha (ver `_OVERLAP_TAB_METRICS_PATH` - há mais do que um slide "overlap"
+    de métricas de linha (ver `_OVERLAP_TAB_SCENARIO` - há mais do que um slide "overlap"
     desde que o slide dedicado à fase 2 existe, cada um com o seu próprio cache/dataset, por
     isso a escolha é por `id`, não só por `kind`). `deepcopy` evita mutar a lista partilhada ao
     nível do módulo entre chamadas sucessivas (ex.: presentation_dashboard.html e
@@ -303,7 +313,7 @@ def _default_presentation_tabs() -> list[dict[str, Any]]:
     tabs = copy.deepcopy(PRESENTATION_TABS)
     for tab in tabs:
         if tab.get("kind") == "overlap":
-            metrics_path = _OVERLAP_TAB_METRICS_PATH.get(str(tab.get("id")), _DEFAULT_OVERLAP_METRICS_PATH)
+            metrics_path = _overlap_tab_metrics_path(str(tab.get("id")))
             tab["stats"] = _load_overlap_stats(metrics_path)
     return tabs
 

@@ -18,6 +18,7 @@ from config import (
     TEMPORAL_OVERLAP_MAX_MIN,
     WALK_SPEED_M_MIN,
 )
+from gtfs_processing.scenarios import DEFAULT_DATASETS, DEFAULT_METRO_DATASET, DEFAULT_SMTUC_DATASET
 from overlap.overlap_db import (
     build_line_metrics_db,
     load_line_metrics_db,
@@ -36,8 +37,8 @@ def _filter_numeric_bus_lines(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def line_overlap_top(
-    smtuc_dataset: str = "smtuc",
-    metrobus_dataset: str = "metrobus",
+    smtuc_dataset: str = DEFAULT_SMTUC_DATASET,
+    metrobus_dataset: str = DEFAULT_METRO_DATASET,
     top_n: int = OVERLAP_TABLE_TOP_N,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
 ) -> pd.DataFrame:
@@ -60,8 +61,8 @@ def line_low_overlap_near_stadium_top(
     radius_m: float = STADIUM_RADIUS_M,
     min_radius_extension_pct: float = STADIUM_MIN_EXTENSION_PCT,
     top_n: int = OVERLAP_TABLE_TOP_N,
-    smtuc_dataset: str = "smtuc",
-    metrobus_dataset: str = "metrobus",
+    smtuc_dataset: str = DEFAULT_SMTUC_DATASET,
+    metrobus_dataset: str = DEFAULT_METRO_DATASET,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
 ) -> pd.DataFrame:
     base = build_line_metrics_db(
@@ -194,8 +195,8 @@ def _normalize_line_value(raw_line: object) -> str | None:
 
 def compute_temporal_overlaps_for_db(
     metrics_df: pd.DataFrame,
-    smtuc_dataset: str = "smtuc",
-    metrobus_dataset: str = "metrobus",
+    smtuc_dataset: str = DEFAULT_SMTUC_DATASET,
+    metrobus_dataset: str = DEFAULT_METRO_DATASET,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     temporal_overlap_max_min: float = TEMPORAL_OVERLAP_MAX_MIN,
 ) -> pd.DataFrame:
@@ -354,8 +355,8 @@ def compute_temporal_overlaps_for_db(
 
 def temporal_overlap_events_for_metrics(
     metrics_df: pd.DataFrame,
-    smtuc_dataset: str = "smtuc",
-    metrobus_dataset: str = "metrobus",
+    smtuc_dataset: str = DEFAULT_SMTUC_DATASET,
+    metrobus_dataset: str = DEFAULT_METRO_DATASET,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     temporal_overlap_max_min: float = TEMPORAL_OVERLAP_MAX_MIN,
     spatial_overlap_walk_min: float = SPATIAL_OVERLAP_WALK_MIN,
@@ -914,7 +915,7 @@ def compute_bgri_reachability_now(
     merged_bgri,
     origin_lat: float = STADIUM_COORD[0],
     origin_lon: float = STADIUM_COORD[1],
-    datasets: tuple[str, ...] = ("smtuc", "metrobus"),
+    datasets: tuple[str, ...] = DEFAULT_DATASETS,
     day_str: str | None = None,
     time_str: str | None = None,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,

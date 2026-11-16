@@ -15,6 +15,7 @@ from population._common import (
     resolve_path,
 )
 from config import CATCHMENT_M, DEFAULT_BGRI_GPKG_PATH, DEFAULT_BGRI_LAYER, DEFAULT_OUTPUT_GAP_CSV, UNDERSERVED_TOP_N
+from gtfs_processing.scenarios import DEFAULT_DATASETS
 try:
     import geopandas as gpd
 except Exception:  # pragma: no cover - optional dependency guard
@@ -60,7 +61,7 @@ def _departures_per_stop_for_day(dataset: str, day: date) -> pd.DataFrame:
 def compute_bgri_population_transport_gap(
     day_str: str,
     catchment_m: float = CATCHMENT_M,
-    datasets: Tuple[str, ...] = ("smtuc", "metrobus"),
+    datasets: Tuple[str, ...] = DEFAULT_DATASETS,
     bgri_gpkg_path: str = DEFAULT_BGRI_GPKG_PATH,
     bgri_layer: str = DEFAULT_BGRI_LAYER,
     population_col: str = "N_INDIVIDUOS",
@@ -156,7 +157,7 @@ def compute_poi_transport_gap(
     day_str: str,
     points_df: pd.DataFrame,
     catchment_m: float = CATCHMENT_M,
-    datasets: Tuple[str, ...] = ("smtuc", "metrobus"),
+    datasets: Tuple[str, ...] = DEFAULT_DATASETS,
 ) -> pd.DataFrame:
     """Mesma mecânica de `compute_bgri_population_transport_gap`, mas para pontos de
     interesse (polos de emprego/locais concorridos, ver `population/points_of_interest.py`)
@@ -227,7 +228,7 @@ def top_bgri_underserved(
     day_str: str,
     top_n: int = UNDERSERVED_TOP_N,
     catchment_m: float = CATCHMENT_M,
-    datasets: Tuple[str, ...] = ("smtuc", "metrobus"),
+    datasets: Tuple[str, ...] = DEFAULT_DATASETS,
     bgri_gpkg_path: str = DEFAULT_BGRI_GPKG_PATH,
     bgri_layer: str = DEFAULT_BGRI_LAYER,
     population_col: str = "N_INDIVIDUOS",

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Optional
 import pandas as pd
 
 from config import STADIUM_RADIUS_M, CATCHMENT_M, DEFAULT_OUTPUT_GAP_CSV
+from gtfs_processing.scenarios import DEFAULT_DATASETS
 from population._common import (
     create_stadium_point,
     ensure_crs,
@@ -81,7 +82,7 @@ def load_and_prepare_bgri(gpkg_path: str, layer: str = "BGRI2021_0603") -> gpd.G
 def compute_underserved_zones(
     day_str: str,
     catchment_m: float = CATCHMENT_M,
-    datasets: tuple = ("smtuc", "metrobus"),
+    datasets: tuple = DEFAULT_DATASETS,
     bgri_gpkg_path: Optional[str] = None,
     bgri_layer: str = "BGRI2021_0603",
     population_col: str = "N_INDIVIDUOS",
@@ -140,7 +141,7 @@ def compute_underserved_zones(
 def compute_poi_underservice(
     day_str: str,
     catchment_m: float = CATCHMENT_M,
-    datasets: tuple = ("smtuc", "metrobus"),
+    datasets: tuple = DEFAULT_DATASETS,
 ) -> pd.DataFrame:
     """Carrega os pontos de interesse de confiança boa/média e calcula o `poi_underservice_score`
     de cada um (ver `operations_population.compute_poi_transport_gap`).

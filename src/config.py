@@ -9,12 +9,11 @@ REACHABILITY_MAX_BOARDING_WALK_MIN = 10.0
 REACHABILITY_MAX_TRANSFER_WALK_MIN = 5.0
 REACHABILITY_MAX_TRANSFERS = 2
 
-# Dia/hora de referência partilhados por TODAS as visualizações com horários GTFS, resolvidos via
-# resolve_reference_day() (overlap/transit.py). USE_FIXED_REFERENCE_DAY=True usa o dia/hora fixos
-# abaixo (reprodutível); False usa o dia útil mais próximo de "hoje" (dinâmico).
+# Dia/hora de referência: um por cenário (SCENARIOS, mais abaixo), resolvidos via
+# gtfs_processing.scenarios.scenario_reference_day() (= overlap.transit.resolve_reference_day()).
+# USE_FIXED_REFERENCE_DAY=True usa o dia/hora fixos de cada cenário (reprodutível); False usa o dia
+# útil mais próximo de "hoje" em todos os cenários (dinâmico - só serve com feeds em vigor hoje).
 USE_FIXED_REFERENCE_DAY: bool = True
-REACHABILITY_REFERENCE_DAY: str | None = "2026-05-11"
-REACHABILITY_REFERENCE_TIME: str | None = "08:20:00"
 
 # Feriados (ver gtfs_processing/gtfs_probe._active_service_ids): os feeds GTFS deste projeto não
 # marcam os feriados em calendar_dates.txt, por isso sem isto um feriado a uma 6ª feira era
@@ -95,6 +94,33 @@ DATASET_DIRS: dict[str, str] = {
     # O sintético da fase 1 foi arquivado em data/_arquivo/sintetico/ (D1 passo 5; ver o README de
     # lá para reproduzir reports/metricas/sintetico.csv).
 }
+
+# Cenários de análise (D2.3; ver gtfs_processing/scenarios.py): que SMTUC e que Metro (nomes
+# lógicos de DATASET_DIRS) se comparam, em que dia/hora de referência, e o sufixo dos ficheiros
+# gerados (outputs/overlap/line_metrics_db<sufixo>.csv, overlap_*<sufixo>.html, ...). O cenário
+# por omissão tem sufixo vazio. Cada cenário tem o SEU dia: as redes antes e depois da fase 2 não
+# têm nenhum dia em comum (Ep212 + Metro fase 1 até 09/09/2026; Ep225 + Metro fase 2 depois).
+SCENARIOS: dict[str, dict[str, str]] = {
+    "antes": {
+        "description": "Antes da fase 2 do Metro: SMTUC Ep212 + Metro fase 1 (GTFS oficial 2025-12-19)",
+        "smtuc": "smtuc",
+        "metro": "metrobus",
+        "reference_day": "2026-05-11",
+        "reference_time": "08:20:00",
+        "output_suffix": "",
+    },
+    # Slide dedicado da fase 2. Ainda SINTÉTICO (metrobus_fase2) e com o SMTUC antigo no mesmo dia
+    # do "antes" - a D2 troca-o pelo SMTUC Ep225 + Metro NeTEx oficial, num dia >= 2026-09-10.
+    "fase2": {
+        "description": "Fase 2 do Metro - SINTÉTICO (metrobus_fase2) com o SMTUC Ep212",
+        "smtuc": "smtuc",
+        "metro": "metrobus_fase2",
+        "reference_day": "2026-05-11",
+        "reference_time": "08:20:00",
+        "output_suffix": "_fase2",
+    },
+}
+DEFAULT_SCENARIO = "antes"
 
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"
 DEFAULT_BGRI_LAYER = "BGRI2021_0603"
@@ -179,10 +205,10 @@ Regenerar tudo (sai com código 1 se alguma secção falhar):
 Servir e ver no browser (a partir da raiz do repo):
     python -m http.server 8000
 
-Nota: todas as datas mostradas nas visualizações vêm de resolve_reference_day(), controlada por
-USE_FIXED_REFERENCE_DAY acima - por omissão (True) usam o dia fixo REACHABILITY_REFERENCE_DAY;
-com a flag a False usam o dia útil mais próximo de "hoje". Um dia fora do período coberto pelos
-feeds GTFS faz o regenerate abortar (ServiceCalendarError).
+Nota: todas as datas mostradas nas visualizações vêm de resolve_reference_day(scenario=...),
+controlada por USE_FIXED_REFERENCE_DAY acima - por omissão (True) cada cenário usa o seu dia fixo
+(SCENARIOS[...]["reference_day"]); com a flag a False usam o dia útil mais próximo de "hoje". Um
+dia fora do período coberto por um feed do cenário faz o regenerate abortar (ServiceCalendarError).
 
 http://localhost:8000/outputs/dashboard.html
 http://localhost:8000/outputs/mockups_dashboard.html

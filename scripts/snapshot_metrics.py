@@ -4,8 +4,9 @@ Para cada troca de dados (Fase D: metro oficial, fase 2, SIT) ou refatoração d
 4/5), tira-se um snapshot ANTES e outro DEPOIS e compara-se: o que mudou fica explícito em vez
 de se descobrir nos slides.
 
-    python scripts/snapshot_metrics.py snapshot sintetico                       # smtuc + metrobus
-    python scripts/snapshot_metrics.py snapshot sintetico_fase2 --metro metrobus_fase2
+    python scripts/snapshot_metrics.py snapshot sintetico                       # cenário por omissão
+    python scripts/snapshot_metrics.py snapshot sintetico_fase2 --cenario fase2  # feeds + dia do cenário
+    python scripts/snapshot_metrics.py snapshot teste --metro outro_metro       # cenário com outro feed
     python scripts/snapshot_metrics.py diff reports/metricas/sintetico.csv reports/metricas/metro_2025.csv
     python scripts/snapshot_metrics.py diff A.csv B.csv --check                 # exit 1 se algo mudou
 
@@ -25,9 +26,9 @@ Secções:
 Nada é escrito em outputs/: o cache de métricas é copiado para uma pasta temporária e as tabelas
 intermédias vão para lá. Um snapshot existente NÃO é substituído sem --force (é uma linha de base).
 
-Limitação até à D1.4: as tabelas de integração da 54 (overlap/transit.py) usam sempre os
-datasets "smtuc" e "metrobus"; com outro --metro/--smtuc as secções esperas_54/busca_fase_54
-são omitidas e isso fica registado em meta/secoes_omitidas.
+Os feeds e o dia/hora de referência vêm do cenário (--cenario, config.SCENARIOS); --smtuc/--metro
+trocam só o feed (o dia continua o do cenário). Todas as secções, incluindo as esperas da 54,
+usam o mesmo cenário.
 """
 
 from __future__ import annotations
@@ -135,11 +136,11 @@ def _load_phase_search():
     return module
 
 
-def _section_waits(snap: Snapshot, workdir: Path, with_search: bool) -> None:
+def _section_waits(snap: Snapshot, workdir: Path, with_search: bool, scenario) -> None:
     from config import LINE_54_MELHORADO_PHASE_SHIFT_MIN, LINE_54_OPTIMIZED_PHASE_SHIFT_MIN
 
     search = _load_phase_search()
-    schedules = search.load_schedules(workdir)
+    schedules = search.load_schedules(workdir, scenario=scenario)
     shifts = {"atual": 0.0, "otimizado": LINE_54_OPTIMIZED_PHASE_SHIFT_MIN, "melhorado": LINE_54_MELHORADO_PHASE_SHIFT_MIN}
     for sense, df in schedules.items():
         for variant, shift in shifts.items():
@@ -216,11 +217,13 @@ def _git_commit() -> str:
         return "desconhecido"
 
 
-def _add_meta(snap: Snapshot, phase: str, smtuc: str, metro: str, day_str: str, time_str: str) -> None:
+def _add_meta(snap: Snapshot, phase: str, smtuc: str, metro: str, day_str: str, time_str: str,
+              scenario_name: str) -> None:
     import config
     from gtfs_processing.fingerprint import feed_fingerprint
 
     snap.add("meta", "snapshot", "fase", phase)
+    snap.add("meta", "snapshot", "cenario", scenario_name)
     snap.add("meta", "snapshot", "criado_em", date.today().isoformat())
     snap.add("meta", "snapshot", "commit", _git_commit())
     snap.add("meta", "dados", "smtuc", smtuc)
@@ -243,54 +246,60 @@ def _add_meta(snap: Snapshot, phase: str, smtuc: str, metro: str, day_str: str, 
             snap.add("meta", "parametros", name, getattr(config, name))
 
 
-def _metrics_cache(smtuc: str, metro: str, workdir: Path) -> tuple[pd.DataFrame, Path]:
-    """Métricas por linha a partir de uma CÓPIA do cache publicado (reaproveita-o se ainda for
-    válido; senão recalcula na cópia) - outputs/ nunca é tocado."""
-    from config import OUTPUTS_OVERLAP_DIR
+def _metrics_cache(scenario, workdir: Path) -> tuple[pd.DataFrame, Path]:
+    """Métricas por linha a partir de uma CÓPIA do cache publicado do cenário (reaproveita-o se
+    ainda for válido - a chave do cache confere datasets, dia e parâmetros; senão recalcula na
+    cópia) - outputs/ nunca é tocado."""
+    from config import LINE_METRICS_DB_PATH
+    from gtfs_processing.scenarios import scenario_output_path
     from overlap.overlap_db import build_line_metrics_db
 
-    published_name = "line_metrics_db.csv" if metro == "metrobus" else f"line_metrics_db_{metro.removeprefix('metrobus_')}.csv"
-    published = ROOT / OUTPUTS_OVERLAP_DIR / published_name
+    published = ROOT / scenario_output_path(LINE_METRICS_DB_PATH, scenario)
     copy = workdir / "line_metrics_db.csv"
     if published.exists():
         shutil.copyfile(published, copy)
-    metrics = build_line_metrics_db(smtuc_dataset=smtuc, metrobus_dataset=metro, db_path=str(copy))
+    metrics = build_line_metrics_db(db_path=str(copy), scenario=scenario)
     return metrics, copy
 
 
-def take_snapshot(phase: str, smtuc: str = "smtuc", metro: str = "metrobus",
-                  sections: tuple[str, ...] = SECTIONS, workdir: Path | None = None) -> pd.DataFrame:
-    from config import REACHABILITY_REFERENCE_TIME
+def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None,
+                  sections: tuple[str, ...] = SECTIONS, workdir: Path | None = None,
+                  scenario: str | None = None) -> pd.DataFrame:
+    """`scenario` (config.SCENARIOS; None = o por omissão) dá os feeds e o dia/hora; `smtuc`/`metro`
+    substituem só o feed respetivo (cenário ad hoc com o mesmo dia)."""
+    import dataclasses
+
+    from gtfs_processing.scenarios import get_scenario
     from overlap.transit import resolve_reference_day
 
     unknown = set(sections) - set(SECTIONS)
     if unknown:
         raise ValueError(f"secções desconhecidas: {sorted(unknown)} (válidas: {', '.join(SECTIONS)})")
-    day_str = resolve_reference_day().isoformat()
+    sc = get_scenario(scenario)
+    sc = dataclasses.replace(sc, smtuc=smtuc or sc.smtuc, metro=metro or sc.metro)
+    smtuc, metro = sc.smtuc, sc.metro
+    day_str = resolve_reference_day(scenario=sc).isoformat()
     # Hora fixa SEMPRE (mesmo com USE_FIXED_REFERENCE_DAY=False) para o snapshot ser reprodutível.
-    time_str = REACHABILITY_REFERENCE_TIME or "08:20:00"
+    time_str = sc.reference_time
 
     snap = Snapshot()
-    _add_meta(snap, phase, smtuc, metro, day_str, time_str)
+    _add_meta(snap, phase, smtuc, metro, day_str, time_str, sc.name)
     skipped: list[str] = []
 
     with tempfile.TemporaryDirectory(prefix="snapshot_") as tmp:
         work = Path(workdir) if workdir else Path(tmp)
         if {"linhas", "overlap_resumo"} & set(sections):
             print(f"[snapshot] métricas por linha ({smtuc} + {metro})...")
-            metrics, metrics_csv = _metrics_cache(smtuc, metro, work)
+            metrics, metrics_csv = _metrics_cache(sc, work)
             if "linhas" in sections:
                 _section_lines(snap, metrics)
             if "overlap_resumo" in sections:
                 _section_overlap_summary(snap, metrics_csv)
 
         wants_waits = {"esperas_54", "busca_fase_54"} & set(sections)
-        if wants_waits and (smtuc, metro) != ("smtuc", "metrobus"):
-            skipped += sorted(wants_waits)
-            print("[snapshot] AVISO: esperas da 54 só suportam smtuc+metrobus até à D1.4 - secções omitidas")
-        elif wants_waits:
-            print("[snapshot] esperas da 54" + (" + busca de fase (-20..+20)" if "busca_fase_54" in sections else "") + "...")
-            _section_waits(snap, work, with_search="busca_fase_54" in sections)
+        if wants_waits:
+            print("[snapshot] esperas da 54" + (" + busca de fase (meio ciclo)" if "busca_fase_54" in sections else "") + "...")
+            _section_waits(snap, work, with_search="busca_fase_54" in sections, scenario=sc)
 
         if {"isocrona", "populacao"} & set(sections):
             print("[snapshot] população BGRI" + (" + isócronas do estádio" if "isocrona" in sections else "") + "...")
@@ -393,8 +402,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_snap = sub.add_parser("snapshot", help="calcula e grava reports/metricas/<fase>.csv")
     p_snap.add_argument("fase", help="nome do snapshot (ex.: sintetico, metro_2025, fase2_oficial)")
-    p_snap.add_argument("--smtuc", default="smtuc", help="nome lógico do SMTUC em config.DATASET_DIRS (por omissão: smtuc)")
-    p_snap.add_argument("--metro", default="metrobus", help="nome lógico do metro em config.DATASET_DIRS (por omissão: metrobus)")
+    p_snap.add_argument("--cenario", default=None, help="cenário de config.SCENARIOS (feeds + dia/hora; por omissão o DEFAULT_SCENARIO)")
+    p_snap.add_argument("--smtuc", default=None, help="troca o SMTUC do cenário (nome lógico em config.DATASET_DIRS)")
+    p_snap.add_argument("--metro", default=None, help="troca o metro do cenário (nome lógico em config.DATASET_DIRS)")
     p_snap.add_argument("--secoes", default=",".join(SECTIONS), help=f"lista separada por vírgulas ({','.join(SECTIONS)})")
     p_snap.add_argument("--out", type=Path, default=None, help="ficheiro de saída (por omissão reports/metricas/<fase>.csv)")
     p_snap.add_argument("--force", action="store_true", help="substitui um snapshot existente")
@@ -418,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[ERRO] {out} já existe (é uma linha de base) - usa --force para substituir", file=sys.stderr)
             return 2
         sections = tuple(s.strip() for s in args.secoes.split(",") if s.strip())
-        df = take_snapshot(args.fase, smtuc=args.smtuc, metro=args.metro, sections=sections)
+        df = take_snapshot(args.fase, smtuc=args.smtuc, metro=args.metro, sections=sections, scenario=args.cenario)
         write_snapshot(df, out, force=args.force)
         print(f"[snapshot] {int((df['section'] != 'meta').sum())} números -> {out}")
         return 0

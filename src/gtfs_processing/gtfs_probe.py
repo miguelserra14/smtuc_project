@@ -225,7 +225,7 @@ def _calendar_active_service_ids(gtfs, d: date) -> set[str]:
         raise ServiceCalendarError(
             f"Dia {d.isoformat()} fora do período coberto pelo feed GTFS "
             f"({period[0]}..{period[1]}). Atualiza os dados GTFS ou escolhe um dia de referência "
-            f"dentro do período (config.REACHABILITY_REFERENCE_DAY / USE_FIXED_REFERENCE_DAY)."
+            f"dentro do período (config.SCENARIOS[...]['reference_day'] / USE_FIXED_REFERENCE_DAY)."
         )
 
     active: set[str] = set()

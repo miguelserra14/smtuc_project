@@ -11,9 +11,7 @@ import pandas as pd
 
 from config import (
     OUTPUTS_INTEGRATION_DIR,
-    REACHABILITY_REFERENCE_DAY,
     TRANSFER_BUFFER_MIN,
-    USE_FIXED_REFERENCE_DAY,
     WALK_SPEED_M_MIN,
 )
 from gtfs_processing.gtfs import load_gtfs
@@ -24,6 +22,13 @@ from gtfs_processing.gtfs_probe import (
     _parse_day,
     _resolve_stop_id,
     _to_seconds,
+)
+from gtfs_processing.scenarios import (
+    DEFAULT_DATASETS,
+    Scenario,
+    get_scenario,
+    nearest_business_day,  # noqa: F401 - reexportado (antes vivia aqui)
+    scenario_reference_day,
 )
 
 
@@ -243,32 +248,15 @@ def _normalize_line_numbers(line_number: str | int | list[str | int] | tuple[str
     return list(dict.fromkeys(raw))
 
 
-def nearest_business_day(from_day: date | None = None) -> date:
-    """Return today if weekday, otherwise the nearest weekday (Sat->Fri, Sun->Mon)."""
-    day = from_day or date.today()
-    wd = day.weekday()
-    if wd <= 4:
-        return day
-    if wd == 5:
-        return day - timedelta(days=1)
-    return day + timedelta(days=1)
+def resolve_reference_day(day_str: str | None = None, scenario: str | Scenario | None = None) -> date:
+    """Dia de referência de um cenário (config.SCENARIOS; None = config.DEFAULT_SCENARIO) - usado
+    por todas as visualizações com horários GTFS (integração, isócronas, população, métricas).
 
-
-def resolve_reference_day(day_str: str | None = None) -> date:
-    """
-    Resolve the reference day used by every GTFS-dependent visualization (integration,
-    reachability/isochrones, population).
-
-    Any explicit day provided by callers is intentionally ignored - the shared reference day is
-    controlled by config.USE_FIXED_REFERENCE_DAY (single global switch), not by individual call
-    sites. When True, returns the fixed config.REACHABILITY_REFERENCE_DAY (reproducible, doesn't
-    depend on when the code runs). When False, returns the nearest business day to today
-    (dynamic).
-    """
-    _ = day_str  # kept for API compatibility and explicit intent
-    if USE_FIXED_REFERENCE_DAY and REACHABILITY_REFERENCE_DAY:
-        return date.fromisoformat(REACHABILITY_REFERENCE_DAY)
-    return nearest_business_day(date.today())
+    `day_str` é IGNORADO de propósito (mantido por compatibilidade): o dia não se escolhe em cada
+    chamada, vem do cenário e de config.USE_FIXED_REFERENCE_DAY - ver
+    gtfs_processing.scenarios.scenario_reference_day. Para outro dia, outro cenário."""
+    _ = day_str
+    return scenario_reference_day(scenario)
 
 
 def _towards_arrival_times_for_stop(
@@ -498,21 +486,24 @@ def build_line_stop_vs_metro_table(
     bus_origin_ref: str = "Portagem",
     output_csv_name: str | None = None,
     output_dir: str | Path | None = None,
+    scenario: str | Scenario | None = None,
 ) -> pd.DataFrame:
     """
     Gera uma tabela comparando horários de autocarro e metro numa paragem de destino.
 
     Requer apenas: nome/id da paragem de metro, nome/id da paragem de autocarro e número da linha.
-    O dia de referência é sempre o dia útil atual (ou o dia útil mais próximo).
+    Os feeds (SMTUC e Metro) e o dia de referência vêm de `scenario` (config.SCENARIOS; None = o
+    cenário por omissão).
 
     Por omissão escreve o CSV em `OUTPUTS_INTEGRATION_DIR` (o mesmo diretório partilhado usado
     pelo dashboard). Passa `output_dir` (ex.: `tmp_path` de um teste) para escrever noutro sítio
     sem afetar os ficheiros publicados.
     """
-    day = resolve_reference_day(day_str)
+    sc = get_scenario(scenario)
+    day = resolve_reference_day(day_str, scenario=sc)
 
-    gtfs_bus = _load_gtfs_cached("smtuc")
-    gtfs_metro = _load_gtfs_cached("metrobus")
+    gtfs_bus = _load_gtfs_cached(sc.smtuc)
+    gtfs_metro = _load_gtfs_cached(sc.metro)
 
     # Candidate ids para filtrar sentido (ex.: Portagem -> Portela)
     bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
@@ -629,6 +620,7 @@ def build_reverse_stop_vs_metro_table(
     bus_origin_ref: str = "Portagem",
     output_csv_name: str | None = None,
     output_dir: str | Path | None = None,
+    scenario: str | Scenario | None = None,
 ) -> pd.DataFrame:
     """
     Gera a tabela do sentido INVERSO de `build_line_stop_vs_metro_table`: em vez de "quanto
@@ -649,10 +641,11 @@ def build_reverse_stop_vs_metro_table(
     `_build_waits_table` e as funções de visualização em `visualizations/integration.py` já
     esperam, para as reutilizar sem alterações nos dois sentidos.
     """
-    day = resolve_reference_day(day_str)
+    sc = get_scenario(scenario)
+    day = resolve_reference_day(day_str, scenario=sc)
 
-    gtfs_bus = _load_gtfs_cached("smtuc")
-    gtfs_metro = _load_gtfs_cached("metrobus")
+    gtfs_bus = _load_gtfs_cached(sc.smtuc)
+    gtfs_metro = _load_gtfs_cached(sc.metro)
 
     bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
     bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
@@ -767,6 +760,7 @@ def build_metro_bus_connection_metrics(
     lost_connection_threshold_min: int = 15,
     output_csv_name: str | None = None,
     output_dir: str | Path | None = None,
+    scenario: str | Scenario | None = None,
 ) -> pd.DataFrame:
     """
     Calcula métricas de coordenação metro -> autocarro e grava um CSV em outputs/integration.
@@ -782,6 +776,7 @@ def build_metro_bus_connection_metrics(
         metro_origin_ref=metro_origin_ref,
         bus_origin_ref=bus_origin_ref,
         output_dir=output_dir,
+        scenario=scenario,
     )
 
     if schedule_df.empty:
@@ -991,7 +986,7 @@ def build_metro_bus_connection_metrics(
 
         metrics_df = pd.DataFrame(records, columns=["scope", "metric", "value", "unit", "note"])
 
-    sample_date = resolve_reference_day(day_str).strftime("%Y-%m-%d")
+    sample_date = resolve_reference_day(day_str, scenario=scenario).strftime("%Y-%m-%d")
     line_values = _normalize_line_numbers(line_number)
     line_slug = "_".join(_safe_slug(v) for v in line_values) if line_values else _safe_slug(str(line_number))
 
@@ -1106,10 +1101,13 @@ def nearest_stop_for_dataset(dataset: str, lat: float, lon: float) -> NearestSto
     return NearestStopResult(dataset=dataset, stop_id=stop_id, stop_name=stop_name, distance_m=float(dists.loc[idx]))
 
 
-def compare_nearest_network(lat: float, lon: float) -> tuple[NearestStopResult, NearestStopResult, str]:
-    smtuc = nearest_stop_for_dataset("smtuc", lat, lon)
-    metrobus = nearest_stop_for_dataset("metrobus", lat, lon)
-    winner = "smtuc" if smtuc.distance_m <= metrobus.distance_m else "metrobus"
+def compare_nearest_network(
+    lat: float, lon: float, scenario: str | Scenario | None = None
+) -> tuple[NearestStopResult, NearestStopResult, str]:
+    sc = get_scenario(scenario)
+    smtuc = nearest_stop_for_dataset(sc.smtuc, lat, lon)
+    metrobus = nearest_stop_for_dataset(sc.metro, lat, lon)
+    winner = sc.smtuc if smtuc.distance_m <= metrobus.distance_m else sc.metro
     return smtuc, metrobus, winner
 
 
@@ -1123,7 +1121,7 @@ def _collect_commute_options(
 ) -> list[pd.DataFrame]:
     rows: list[pd.DataFrame] = []
 
-    for dataset in ("smtuc", "metrobus"):
+    for dataset in DEFAULT_DATASETS:
         try:
             near_home = nearest_stop_for_dataset(dataset, home_lat, home_lon)
             near_work = nearest_stop_for_dataset(dataset, work_lat, work_lon)

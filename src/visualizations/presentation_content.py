@@ -92,7 +92,7 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
         ],
     },
     # --- Slide 4b: Overlap + Isócronas com a fase 2 ("stats" também anexado em tempo real, mas a
-    # partir de um cache próprio - ver _OVERLAP_TAB_METRICS_PATH em dashboard.py) --------------
+    # partir de um cache próprio - ver _OVERLAP_TAB_SCENARIO em dashboard.py) --------------
     {
         "id": "overlap_fase2",
         "label": "Overlap (Fase 2)",

@@ -12,6 +12,7 @@ except Exception:  # pragma: no cover - optional dependency
 import pandas as pd
 
 from config import STADIUM_COORD, STADIUM_RADIUS_M, STADIUM_MIN_EXTENSION_PCT, POINTS_OF_INTEREST_CSV
+from gtfs_processing.scenarios import DEFAULT_METRO_DATASET, DEFAULT_SMTUC_DATASET
 from gtfs_processing.gtfs import load_gtfs
 from overlap.overlap_db import _line_to_route_ids, _iter_route_direction_stop_arrays
 from visualizations.io import _write_folium_html
@@ -27,8 +28,8 @@ def _safe_center(lat: float, lon: float) -> tuple[float, float]:
 def create_overlap_lines_map(
     output_path: Path | str,
     metrics_csv: str | Path = "outputs/overlap/line_metrics_db.csv",
-    smtuc_dataset: str = "smtuc",
-    metrobus_dataset: str = "metrobus",
+    smtuc_dataset: str = DEFAULT_SMTUC_DATASET,
+    metrobus_dataset: str = DEFAULT_METRO_DATASET,
     top_n: int = 5,
     bottom_n: int = 5,
     stadium_n: int = 5,

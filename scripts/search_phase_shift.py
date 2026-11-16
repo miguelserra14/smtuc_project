@@ -22,11 +22,12 @@ subir face ao horário atual. Escolha (decidida a 2026-11-16, D1 passo 4): menos
 depois o desvio de menor módulo (mexer menos no horário atual). O critério anterior punha à frente
 "mais sentidos melhorados", o que aceitava piorar um sentido para melhorar outro.
 
-Os resultados dependem do horário do Metrobus (dataset metrobus em config.DATASET_DIRS). Sempre que os dados mudarem
-(ex.: feeds oficiais AGIT), correr de novo e atualizar o config:
+Os resultados dependem dos horários do cenário (feeds e dia em config.SCENARIOS; por omissão o
+DEFAULT_SCENARIO). Sempre que os dados mudarem (ex.: feeds oficiais AGIT), correr de novo e
+atualizar o config:
 
     PYTHONPATH="src;." python scripts/search_phase_shift.py            # Windows (Git Bash)
-    python scripts/search_phase_shift.py --csv outputs/integration/phase_search.csv
+    python scripts/search_phase_shift.py --cenario fase2 --csv outputs/integration/phase_search.csv
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ from config import (  # noqa: E402
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
     TRANSFER_BUFFER_MIN,
 )
+from gtfs_processing.scenarios import Scenario, get_scenario, scenario_names  # noqa: E402
 from overlap.transit import (  # noqa: E402
     build_line_stop_vs_metro_table,
     build_reverse_stop_vs_metro_table,
@@ -68,17 +70,18 @@ def _lines(site: dict) -> str | list[str]:
     return value if isinstance(value, str) else list(value)
 
 
-def load_schedules(output_dir: Path) -> dict[str, pd.DataFrame]:
-    """As 4 tabelas atuais (2 nós x 2 sentidos), escritas num diretório temporário."""
+def load_schedules(output_dir: Path, scenario: str | Scenario | None = None) -> dict[str, pd.DataFrame]:
+    """As 4 tabelas atuais (2 nós x 2 sentidos) do cenário (None = o por omissão), escritas num
+    diretório temporário."""
     out: dict[str, pd.DataFrame] = {}
     for s in INTEGRATION_SITES:
         out[f"{s['name']} metro→bus"] = build_line_stop_vs_metro_table(
             s["metro_stop_ref"], s["bus_stop_ref"], _lines(s), metro_origin_ref=s["metro_origin_ref"],
-            bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir,
+            bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir, scenario=scenario,
         )
         out[f"{s['name']} bus→metro"] = build_reverse_stop_vs_metro_table(
             s["bus_stop_ref"], s["metro_stop_ref"], _lines(s), metro_towards_ref=s["reverse_metro_towards_ref"],
-            bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir,
+            bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir, scenario=scenario,
         )
     return out
 
@@ -161,6 +164,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max", type=int, default=None, dest="hi", help="explorar: desvio máximo (ver --min)")
     parser.add_argument("--csv", type=Path, default=None, help="grava a tabela completa neste CSV")
     parser.add_argument("--top", type=int, default=5)
+    parser.add_argument("--cenario", default=None, choices=scenario_names(),
+                        help="cenário de config.SCENARIOS (feeds + dia de referência); por omissão o DEFAULT_SCENARIO")
     parser.add_argument(
         "--sem-transbordo", action="store_true",
         help="regra antiga (transbordo = 0 min) - só para comparar/reproduzir os valores originais",
@@ -169,9 +174,13 @@ def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
-    print(f"Dia de referência: {resolve_reference_day().isoformat()} | margem de transbordo: {TRANSFER_BUFFER_MIN} min")
+    sc = get_scenario(args.cenario)
+    print(
+        f"Cenário: {sc.name} ({sc.smtuc} + {sc.metro}) | dia de referência: "
+        f"{resolve_reference_day(scenario=sc).isoformat()} | margem de transbordo: {TRANSFER_BUFFER_MIN} min"
+    )
     with tempfile.TemporaryDirectory() as tmp:
-        schedules = load_schedules(Path(tmp))
+        schedules = load_schedules(Path(tmp), scenario=sc)
     if args.sem_transbordo:
         print("[AVISO] --sem-transbordo: regra antiga, transbordo = 0 min (ligações fisicamente impossíveis contam)")
         schedules = {k: v.drop(columns=["target_transfer_min", "trigger_transfer_min"], errors="ignore") for k, v in schedules.items()}

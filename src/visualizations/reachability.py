@@ -20,10 +20,10 @@ def create_overlap_reachability_map(
         raise ImportError("folium não está disponível para gerar visualizações de mapa")
 
     # Nota: NÃO usar resolve_reference_day(day_str) aqui - essa função ignora
-    # deliberadamente o argumento recebido e devolve sempre o dia útil mais próximo de hoje
-    # (ver docstring em overlap/transit.py), o que reescrevia silenciosamente qualquer dia de
-    # referência fixo escolhido pelo chamador (ex.: REACHABILITY_REFERENCE_DAY em config.py) de
-    # volta para "hoje" só na legenda, apesar dos dados terem sido calculados para o dia certo.
+    # deliberadamente o argumento recebido e devolve o dia do cenário por omissão (ver
+    # docstring em overlap/transit.py), o que reescrevia silenciosamente o dia escolhido pelo
+    # chamador (ex.: o dia de outro cenário, config.SCENARIOS) só na legenda, apesar dos dados
+    # terem sido calculados para o dia certo.
     ref_day_str = day_str
 
     def _add_mouse_origin_marker(map_obj: object) -> None:

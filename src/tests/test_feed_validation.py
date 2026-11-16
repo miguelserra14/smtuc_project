@@ -6,7 +6,7 @@ Regras (limites calibrados a 2026-11-16 nos feeds reais):
 - horas válidas (HH:MM:SS, >= 24h permitido) e que nunca recuam dentro de uma viagem;
 - velocidade entre paragens consecutivas <= 120 km/h (SMTUC: máx. 62; Metro oficial: máx. 46);
 - duas paragens seguidas com a MESMA hora a mais de 1000 m = erro (SMTUC: máx. 571 m, horas ao minuto);
-- o período de serviço cobre o dia de referência;
+- o período de serviço cobre o dia de referência de cada cenário que usa o feed;
 - feeds construídos por scripts/build_feeds.py: ficheiros iguais ao PROVENANCE.json (nada mexido à mão)
   e sem paragens técnicas PC1-PC8.
 
@@ -136,11 +136,15 @@ def test_speeds_are_plausible(dataset: str) -> None:
 @pytest.mark.integration
 @pytest.mark.parametrize("dataset", _params("periodo"))
 def test_service_period_covers_reference_day(dataset: str) -> None:
-    from overlap.transit import resolve_reference_day
+    """O período do feed cobre o dia de referência de CADA cenário que o usa (config.SCENARIOS)."""
+    from gtfs_processing.scenarios import reference_days_by_dataset
 
+    days = reference_days_by_dataset().get(dataset)
+    if not days:
+        pytest.skip(f"{dataset}: não é usado por nenhum cenário de config.SCENARIOS")
     start, end = feed_service_period(_feed(dataset))
-    day = int(resolve_reference_day().strftime("%Y%m%d"))
-    assert start <= day <= end, f"{dataset}: período {start}..{end} não cobre o dia de referência {day}"
+    outside = sorted(d.isoformat() for d in days if not start <= int(d.strftime("%Y%m%d")) <= end)
+    assert not outside, f"{dataset}: período {start}..{end} não cobre o(s) dia(s) de referência {outside}"
 
 
 def test_official_metro_feeds_are_built_with_provenance() -> None:

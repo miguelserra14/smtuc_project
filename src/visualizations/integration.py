@@ -14,6 +14,7 @@ from overlap.transit import (
     compute_transfer_waits,
     resolve_reference_day,
 )
+from gtfs_processing.scenarios import Scenario, get_scenario
 
 try:
     import plotly.express as px
@@ -562,9 +563,14 @@ def generate_connection_visualizations(
     phase_shift_line: str = "54",
     melhorado_phase_shift_min: float | None = None,
     reverse_metro_towards_ref: str | None = None,
+    scenario: str | Scenario | None = None,
 ) -> dict[str, str]:
     """
     Gera visualizacoes de coordenacao metro -> autocarro e grava HTML em outputs/integration.
+
+    `scenario` (config.SCENARIOS; None = o cenário por omissão) escolhe os feeds e o dia de
+    referência; um cenário com sufixo de saídas grava na subpasta `<output_subdir><sufixo>` para
+    não pisar o cenário por omissão.
 
     `phase_shift_min` (opcional): se indicado, gera também uma proposta de horário otimizado -
     desloca só os horários de `phase_shift_line` por `phase_shift_min` minutos (mesmo número de
@@ -587,8 +593,9 @@ def generate_connection_visualizations(
         raise ImportError("plotly nao esta disponivel para gerar visualizacoes")
 
     out_root_base = Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+    sc = get_scenario(scenario)
     if output_subdir:
-        out_root = out_root_base / str(output_subdir)
+        out_root = out_root_base / f"{output_subdir}{sc.output_suffix}"
     else:
         stop_ref_norm = str(metro_stop_ref).strip().lower()
         if "portagem" in stop_ref_norm:
@@ -611,6 +618,7 @@ def generate_connection_visualizations(
         metro_origin_ref=metro_origin_ref,
         bus_origin_ref=bus_origin_ref,
         output_dir=atual_dir,
+        scenario=sc,
     )
     metrics_df = build_metro_bus_connection_metrics(
         metro_stop_ref=metro_stop_ref,
@@ -620,10 +628,11 @@ def generate_connection_visualizations(
         metro_origin_ref=metro_origin_ref,
         bus_origin_ref=bus_origin_ref,
         output_dir=atual_dir,
+        scenario=sc,
     )
 
-    # Always bind displayed date to the shared nearest-business-day policy.
-    sample_date = resolve_reference_day().strftime("%Y-%m-%d")
+    # Data mostrada = dia de referência do cenário (o mesmo das tabelas acima).
+    sample_date = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
     line_display = _line_display(line_number)
     prefix = output_prefix or f"l{_safe_slug(line_display)}"
 
@@ -690,6 +699,7 @@ def generate_connection_visualizations(
             day_str=day_str,
             bus_origin_ref=bus_origin_ref,
             output_dir=atual_dir,
+            scenario=sc,
         )
         apply_optimization_rev = phase_shift_min is not None
         schedule_df_rev_opt = (

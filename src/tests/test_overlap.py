@@ -18,9 +18,8 @@ from config import (
     STADIUM_RADIUS_M,
     OUTPUTS_OVERLAP_DIR,
     WORK_COORD,
-    REACHABILITY_REFERENCE_TIME,
-    USE_FIXED_REFERENCE_DAY,
 )
+from gtfs_processing.scenarios import scenario_reference_time
 
 from overlap.transit import (
     commute_options_for_datetime,
@@ -257,11 +256,10 @@ def test_overlap_reachability_map_now(tmp_path: Path) -> None:
     _require_dataset("smtuc")
     _require_dataset("metrobus")
 
-    # Dia partilhado por toda a app via a variável global USE_FIXED_REFERENCE_DAY
-    # (config.py) - ver docstring de resolve_reference_day(). A hora só se fixa junto com o
-    # dia; com a flag desligada usa-se "agora" (time_str=None), tal como o dia fica dinâmico.
+    # Dia/hora do cenário por omissão (config.SCENARIOS + USE_FIXED_REFERENCE_DAY) - ver
+    # resolve_reference_day(). Com o dia dinâmico a hora é "agora" (time_str=None).
     day_str = resolve_reference_day().strftime("%Y-%m-%d")
-    time_str = REACHABILITY_REFERENCE_TIME if USE_FIXED_REFERENCE_DAY else None
+    time_str = scenario_reference_time()
 
     merged = compute_underserved_zones(
         day_str=day_str,

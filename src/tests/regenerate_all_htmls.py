@@ -46,8 +46,6 @@ from src.config import (
     OUTPUTS_INTEGRATION_DIR,
     STADIUM_COORD,
     REACHABILITY_MAX_TRANSFERS,
-    REACHABILITY_REFERENCE_TIME,
-    USE_FIXED_REFERENCE_DAY,
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
     LINE_54_MELHORADO_PHASE_SHIFT_MIN,
     INTEGRATION_SITES,
@@ -59,6 +57,12 @@ from gtfs_processing.gtfs_probe import (
     _active_service_ids,
     feed_service_period,
     is_public_holiday,
+)
+from gtfs_processing.scenarios import (
+    get_scenario,
+    scenario_names,
+    scenario_output_path,
+    scenario_reference_time,
 )
 
 # Registo do que correu mal / foi saltado durante a execução, para o resumo final e o exit code.
@@ -122,34 +126,33 @@ def _print_summary() -> int:
     return 1 if _FAILURES else 0
 
 
-# Todos os feeds GTFS que alguma secção deste script avalia contra o dia de referência.
-_REFERENCE_DAY_DATASETS = ("smtuc", "metrobus", "metrobus_fase2")
-
-
 def _validate_reference_day() -> bool:
-    """Confirma, ANTES de gerar qualquer HTML, que o dia de referência pode ser avaliado em todos
-    os feeds (dentro do período de cada calendário, service_id ligáveis às trips). Sem isto, um
-    dia fora do período só rebentava a meio, secção a secção, e cada secção engolia o erro.
-    Devolve False (e explica porquê) se algum feed falhar; feeds ausentes são só avisados."""
-    day = resolve_reference_day()
-    holiday_note = " (feriado - avaliado como domingo)" if is_public_holiday(day) else ""
-    print(f"[INFO] Dia de referência: {day.isoformat()} ({day.strftime('%A')}){holiday_note}")
+    """Confirma, ANTES de gerar qualquer HTML, que o dia de referência de CADA cenário
+    (config.SCENARIOS) pode ser avaliado nos feeds desse cenário (dentro do período de cada
+    calendário, service_id ligáveis às trips). Sem isto, um dia fora do período só rebentava a
+    meio, secção a secção, e cada secção engolia o erro. Devolve False (e explica porquê) se algum
+    feed falhar; feeds ausentes são só avisados."""
     ok = True
-    for dataset in _REFERENCE_DAY_DATASETS:
-        if not _require_dataset(dataset):
-            continue
-        gtfs = _load_gtfs_cached(dataset)
-        period = feed_service_period(gtfs)
-        try:
-            services = _active_service_ids(gtfs, day)
-        except ServiceCalendarError as exc:
-            print(f"[ERROR] {dataset}: {exc}")
-            ok = False
-            continue
-        n_trips = int(gtfs.trips["service_id"].astype(str).isin(services).sum())
-        print(f"[INFO] {dataset}: período {period}, serviços ativos {sorted(services)}, {n_trips}/{len(gtfs.trips)} viagens")
-        if n_trips == 0:
-            print(f"[WARNING] {dataset}: nenhuma viagem ativa em {day.isoformat()} - as visualizações deste feed ficarão vazias.")
+    for name in scenario_names():
+        sc = get_scenario(name)
+        day = resolve_reference_day(scenario=sc)
+        holiday_note = " (feriado - avaliado como domingo)" if is_public_holiday(day) else ""
+        print(f"[INFO] Cenário {name}: dia de referência {day.isoformat()} ({day.strftime('%A')}){holiday_note}")
+        for dataset in sc.datasets:
+            if not _require_dataset(dataset):
+                continue
+            gtfs = _load_gtfs_cached(dataset)
+            period = feed_service_period(gtfs)
+            try:
+                services = _active_service_ids(gtfs, day)
+            except ServiceCalendarError as exc:
+                print(f"[ERROR] {name}/{dataset}: {exc}")
+                ok = False
+                continue
+            n_trips = int(gtfs.trips["service_id"].astype(str).isin(services).sum())
+            print(f"[INFO]   {dataset}: período {period}, serviços ativos {sorted(services)}, {n_trips}/{len(gtfs.trips)} viagens")
+            if n_trips == 0:
+                print(f"[WARNING] {name}/{dataset}: nenhuma viagem ativa em {day.isoformat()} - as visualizações deste feed ficarão vazias.")
     return ok
 
 
@@ -184,11 +187,10 @@ def regenerate_population_htmls() -> None:
         return
     
     try:
-        # Mesmo dia de referência ("nearest weekday") usado por overlap/integração, para que
-        # todos os dashboards gerados na mesma execução reflitam o mesmo dia de serviço GTFS -
-        # antes usava-se _next_monday (sempre a próxima segunda), divergindo silenciosamente do
-        # dia usado pelas restantes secções.
-        day_str = resolve_reference_day().strftime("%Y-%m-%d")
+        # Cenário por omissão: os mesmos feeds e o mesmo dia de referência do overlap e da
+        # integração, para todos os dashboards da mesma execução refletirem o mesmo dia de serviço.
+        sc = get_scenario()
+        day_str = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
 
         print(f"[INFO] Usando data: {day_str}")
         
@@ -197,11 +199,11 @@ def regenerate_population_htmls() -> None:
         merged = compute_underserved_zones(
             day_str=day_str,
             catchment_m=CATCHMENT_M,
-            datasets=("smtuc", "metrobus"),
+            datasets=sc.datasets,
             bgri_gpkg_path=str(gpkg),
             bgri_layer="BGRI2021_0603",
             population_col="N_INDIVIDUOS",
-            output_csv_path=f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap.csv",
+            output_csv_path=scenario_output_path(f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap.csv", sc),
         )
         
         out_dir = _project_root() / OUTPUTS_POPULATION_DIR
@@ -216,7 +218,7 @@ def regenerate_population_htmls() -> None:
         # points_of_interest.py) para os painéis de índice de subserviço. Falha graciosamente:
         # sem isto os painéis ficam exatamente como antes, sem o botão "Com POI"/"Sem POI".
         try:
-            poi_df = compute_poi_underservice(day_str=day_str, catchment_m=CATCHMENT_M)
+            poi_df = compute_poi_underservice(day_str=day_str, catchment_m=CATCHMENT_M, datasets=sc.datasets)
         except Exception as e:
             _record_warning("população", f"camada de pontos de interesse não calculada: {e}")
             poi_df = None
@@ -252,30 +254,30 @@ def regenerate_overlap_htmls() -> None:
         # coisa que o leia diretamente do disco (_load_overlap_stats, create_overlap_lines_map).
         # load_line_metrics_db valida a assinatura dos dados/parâmetros e só recalcula se algo
         # mudou - não regenera do zero em cada execução.
+        sc = get_scenario()
         print("[INFO] Verificando cache de métricas de linha (line_metrics_db)...")
-        load_line_metrics_db()
+        load_line_metrics_db(scenario=sc)
 
-        day_str = resolve_reference_day().strftime("%Y-%m-%d")
+        day_str = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
 
-        # Dia do mapa de isócronas: day_str já reflete a variável global USE_FIXED_REFERENCE_DAY
-        # (via resolve_reference_day()), a mesma usada pela integração e pela população - não
-        # reintroduzir aqui um fallback próprio, senão o mapa deixa de acompanhar a flag global.
-        # A hora só faz sentido fixá-la junto com o dia (REACHABILITY_REFERENCE_TIME): com a
-        # flag desligada usa-se "agora", tal como o dia passa a ser dinâmico.
+        # Dia/hora do mapa de isócronas = os do cenário (scenario_reference_time: a hora fixa do
+        # cenário com USE_FIXED_REFERENCE_DAY, "agora" com o dia dinâmico) - os mesmos da
+        # integração e da população; não reintroduzir aqui um fallback próprio.
         reach_day_str = day_str
-        reach_time_str = REACHABILITY_REFERENCE_TIME if USE_FIXED_REFERENCE_DAY else None
+        reach_time_str = scenario_reference_time(sc)
         print(f"[INFO] Isócronas: usando data/hora de referência {reach_day_str} {reach_time_str or '(agora)'}")
 
         # Computar zonas subservidas como base
         print("[INFO] Computando reachability...")
-        merged = compute_underserved_zones(day_str=reach_day_str)
+        merged = compute_underserved_zones(day_str=reach_day_str, datasets=sc.datasets)
 
         # Computar reachability a partir do estádio
         reach_gdf = compute_bgri_reachability_now(
             merged_bgri=merged,
             origin_lat=STADIUM_COORD[0],
             origin_lon=STADIUM_COORD[1],
+            datasets=sc.datasets,
             day_str=reach_day_str,
             time_str=reach_time_str,
             max_transfers=REACHABILITY_MAX_TRANSFERS,
@@ -371,84 +373,92 @@ def regenerate_overlap_htmls() -> None:
 
 
 def regenerate_overlap_fase2_htmls() -> None:
-    """Regenera os 2 HTMLs standalone (isócronas + mapa de linhas) com os dados da fase 2
-    (dataset metrobus_fase2 - Aeminium + ramais Coimbra B/República), para o slide dedicado da
-    apresentação. Deliberadamente SEPARADO de `regenerate_overlap_htmls()`: todas as restantes
-    visualizações (incluindo o slide "Overlap" original) continuam a usar `metrobus` (dados
-    antigos, pré-fase 2) - ver `PRESENTATION_TABS` em presentation_content.py para o porquê. Usa
-    ficheiros de saída/cache PRÓPRIOS (sufixo `_fase2`) para não pisar os da versão antiga."""
+    """Slide dedicado da fase 2 da apresentação (cenário "fase2" de config.SCENARIOS) - ver
+    `regenerate_overlap_scenario_htmls`."""
+    regenerate_overlap_scenario_htmls("fase2")
+
+
+def regenerate_overlap_scenario_htmls(scenario: str) -> None:
+    """Regenera os 2 HTMLs standalone (isócronas + mapa de linhas) de um cenário que não é o por
+    omissão, para o seu slide dedicado. Deliberadamente SEPARADO de `regenerate_overlap_htmls()`:
+    as restantes visualizações (incluindo o slide "Overlap" original) usam o cenário por omissão -
+    ver `PRESENTATION_TABS` em presentation_content.py. Os feeds, o dia/hora de referência e o
+    sufixo dos ficheiros de saída/cache (ex.: `_fase2`) vêm do cenário, para não pisar os do
+    cenário por omissão."""
+    sc = get_scenario(scenario)
+    section = f"overlap {scenario}"
     print("\n" + "=" * 60)
-    print("[INFO] Regenerando HTMLs de Overlap (fase 2 - slide dedicado)...")
+    print(f"[INFO] Regenerando HTMLs de Overlap (cenário {scenario} - slide dedicado)...")
     print("=" * 60)
 
-    if not _require_dataset("metrobus_fase2"):
-        _record_skip("overlap fase 2", "dataset metrobus_fase2 não disponível")
+    missing = [d for d in sc.datasets if not _require_dataset(d)]
+    if missing:
+        _record_skip(section, f"dataset {', '.join(missing)} não disponível")
         return
 
     try:
         _require_geo_stack()
         gpkg = _require_bgri_data()
     except Exception as e:
-        _record_skip("overlap fase 2", f"geostack/BGRI não disponível: {e}")
+        _record_skip(section, f"geostack/BGRI não disponível: {e}")
         return
 
     try:
         out_dir = _project_root() / "outputs" / "overlap"
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        print("[INFO] Verificando cache de métricas de linha (fase 2)...")
-        load_line_metrics_db(
-            db_path=f"{out_dir}/line_metrics_db_fase2.csv",
-            metrobus_dataset="metrobus_fase2",
-        )
+        print(f"[INFO] Verificando cache de métricas de linha ({scenario})...")
+        metrics_csv = scenario_output_path(f"{out_dir.as_posix()}/line_metrics_db.csv", sc)
+        load_line_metrics_db(db_path=metrics_csv, scenario=sc)
 
-        day_str = resolve_reference_day().strftime("%Y-%m-%d")
-        reach_time_str = REACHABILITY_REFERENCE_TIME if USE_FIXED_REFERENCE_DAY else None
-        print(f"[INFO] Isócronas (fase 2): usando data/hora de referência {day_str} {reach_time_str or '(agora)'}")
+        day_str = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
+        reach_time_str = scenario_reference_time(sc)
+        print(f"[INFO] Isócronas ({scenario}): usando data/hora de referência {day_str} {reach_time_str or '(agora)'}")
 
-        print("[INFO] Computando reachability (fase 2)...")
-        merged_fase2 = compute_underserved_zones(
+        print(f"[INFO] Computando reachability ({scenario})...")
+        merged_sc = compute_underserved_zones(
             day_str=day_str,
             catchment_m=CATCHMENT_M,
-            datasets=("smtuc", "metrobus_fase2"),
+            datasets=sc.datasets,
             bgri_gpkg_path=str(gpkg),
             bgri_layer="BGRI2021_0603",
             population_col="N_INDIVIDUOS",
-            output_csv_path=f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap_fase2.csv",
+            output_csv_path=scenario_output_path(f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap.csv", sc),
         )
-        reach_gdf_fase2 = compute_bgri_reachability_now(
-            merged_bgri=merged_fase2,
+        reach_gdf_sc = compute_bgri_reachability_now(
+            merged_bgri=merged_sc,
             origin_lat=STADIUM_COORD[0],
             origin_lon=STADIUM_COORD[1],
-            datasets=("smtuc", "metrobus_fase2"),
+            datasets=sc.datasets,
             day_str=day_str,
             time_str=reach_time_str,
             max_transfers=REACHABILITY_MAX_TRANSFERS,
         )
-        selected_time = str(reach_gdf_fase2["reach_time"].iloc[0]) if not reach_gdf_fase2.empty else "00:00:00"
+        selected_time = str(reach_gdf_sc["reach_time"].iloc[0]) if not reach_gdf_sc.empty else "00:00:00"
 
-        print("[INFO] Gerando mapa de reachability (fase 2)...")
-        fig_map_fase2 = create_overlap_reachability_map(
-            reach_gdf=reach_gdf_fase2,
+        print(f"[INFO] Gerando mapa de reachability ({scenario})...")
+        fig_map_sc = create_overlap_reachability_map(
+            reach_gdf=reach_gdf_sc,
             origin_lat=STADIUM_COORD[0],
             origin_lon=STADIUM_COORD[1],
             day_str=day_str,
             time_str=selected_time,
         )
-        reachability_html_fase2 = out_dir / "overlap_reachability_now_fase2.html"
-        _write_folium_html(fig_map_fase2, reachability_html_fase2)
-        print(f"[SUCCESS] Mapa de reachability (fase 2): {reachability_html_fase2}")
+        reachability_html = Path(scenario_output_path(out_dir / "overlap_reachability_now.html", sc))
+        _write_folium_html(fig_map_sc, reachability_html)
+        print(f"[SUCCESS] Mapa de reachability ({scenario}): {reachability_html}")
 
-        lines_map_html_fase2 = out_dir / "overlap_lines_map_fase2.html"
+        lines_map_html = Path(scenario_output_path(out_dir / "overlap_lines_map.html", sc))
         created = create_overlap_lines_map(
-            output_path=lines_map_html_fase2,
-            metrics_csv=f"{out_dir}/line_metrics_db_fase2.csv",
-            metrobus_dataset="metrobus_fase2",
+            output_path=lines_map_html,
+            metrics_csv=metrics_csv,
+            smtuc_dataset=sc.smtuc,
+            metrobus_dataset=sc.metro,
         )
-        print(f"[SUCCESS] Mapa de linhas (fase 2): {created}")
+        print(f"[SUCCESS] Mapa de linhas ({scenario}): {created}")
 
     except Exception as e:
-        _record_failure("overlap fase 2", e)
+        _record_failure(section, e)
 
 
 def regenerate_integration_htmls() -> None:
@@ -457,13 +467,14 @@ def regenerate_integration_htmls() -> None:
     print("[INFO] Regenerando HTMLs de Integração...")
     print("=" * 60)
     
-    # Verificar datasets
-    if not _require_dataset("smtuc") or not _require_dataset("metrobus"):
-        _record_skip("integração", "datasets GTFS smtuc/metrobus não disponíveis")
+    # Verificar datasets (cenário por omissão)
+    sc = get_scenario()
+    if not _require_dataset(sc.smtuc) or not _require_dataset(sc.metro):
+        _record_skip("integração", f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
         return
     
     try:
-        day_str = resolve_reference_day().strftime("%Y-%m-%d")
+        day_str = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
         
         # Nós de integração definidos uma só vez em config.INTEGRATION_SITES (também usados por
@@ -480,6 +491,7 @@ def regenerate_integration_htmls() -> None:
                     day_str=day_str,
                     phase_shift_min=LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
                     melhorado_phase_shift_min=LINE_54_MELHORADO_PHASE_SHIFT_MIN,
+                    scenario=sc.name,
                     **kwargs,
                 )
                 print(f"[SUCCESS] {label}: {results.get('combined_html', 'N/A')}")

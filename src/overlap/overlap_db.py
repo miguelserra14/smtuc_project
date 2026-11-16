@@ -22,6 +22,7 @@ from config import (
 )
 from gtfs_processing.gtfs import load_gtfs
 from gtfs_processing.gtfs_probe import _active_service_ids
+from gtfs_processing.scenarios import Scenario, get_scenario, scenario_output_path
 
 # Versão do cálculo guardada no cache (line_metrics_db.csv). Incrementar SEMPRE que a fórmula de
 # alguma coluna mudar: a assinatura dos dados/parâmetros não deteta alterações de código, por isso
@@ -437,8 +438,8 @@ def _compute_line_metrics(
 
 
 def build_line_metrics_db(
-    smtuc_dataset: str = "smtuc",
-    metrobus_dataset: str = "metrobus",
+    smtuc_dataset: str | None = None,
+    metrobus_dataset: str | None = None,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     stadium_lat: float = STADIUM_COORD[0],
     stadium_lon: float = STADIUM_COORD[1],
@@ -446,14 +447,25 @@ def build_line_metrics_db(
     db_path: str | None = None,
     force_refresh: bool = False,
     reference_day: date | None = None,
+    scenario: str | Scenario | None = None,
 ) -> pd.DataFrame:
-    """Tabela de métricas por linha, cacheada em CSV. `reference_day` (por omissão o dia de
-    referência global, `resolve_reference_day()`) entra no cálculo de avg_freq_min e por isso
-    também na chave do cache, tal como LINE_METRICS_SCHEMA_VERSION e a janela de frequência."""
+    """Tabela de métricas por linha, cacheada em CSV.
+
+    `scenario` (config.SCENARIOS; None = o cenário por omissão) dá os valores que não forem
+    passados explicitamente: os datasets, o dia de referência e o ficheiro do cache
+    (LINE_METRICS_DB_PATH com o sufixo do cenário, ex.: line_metrics_db_fase2.csv). O dia entra no
+    cálculo de avg_freq_min e por isso também na chave do cache, tal como
+    LINE_METRICS_SCHEMA_VERSION e a janela de frequência."""
+    sc = get_scenario(scenario)
+    smtuc_dataset = smtuc_dataset or sc.smtuc
+    metrobus_dataset = metrobus_dataset or sc.metro
     if reference_day is None:
         from overlap.transit import resolve_reference_day
 
-        reference_day = resolve_reference_day()
+        reference_day = resolve_reference_day(scenario=sc)
+    if db_path is None:
+        # Lido na chamada (não na importação): os testes trocam overlap_db.LINE_METRICS_DB_PATH.
+        db_path = scenario_output_path(LINE_METRICS_DB_PATH, sc)
     csv_path = _resolve_db_path(db_path)
     csv_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -536,14 +548,16 @@ def build_line_metrics_db(
 
 def load_line_metrics_db(
     db_path: str | None = None,
-    smtuc_dataset: str = "smtuc",
-    metrobus_dataset: str = "metrobus",
+    smtuc_dataset: str | None = None,
+    metrobus_dataset: str | None = None,
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     stadium_lat: float = STADIUM_COORD[0],
     stadium_lon: float = STADIUM_COORD[1],
     radius_m: float = STADIUM_RADIUS_M,
+    scenario: str | Scenario | None = None,
 ) -> pd.DataFrame:
     return build_line_metrics_db(
+        scenario=scenario,
         smtuc_dataset=smtuc_dataset,
         metrobus_dataset=metrobus_dataset,
         walk_speed_m_min=walk_speed_m_min,
