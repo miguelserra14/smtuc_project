@@ -11,13 +11,9 @@ from gtfs_processing.gtfs_probe import _active_service_ids
 DATASETS = ["smtuc", "metrobus"]
 
 def _dataset_dir(dataset: str) -> Path:
-    root = Path(__file__).resolve().parents[2]
-    # tenta primeiro data/gtfs/<dataset>, depois data/<dataset>
-    p1 = root / "data" / dataset
-    p2 = root / "data" / dataset
-    if p1.exists():
-        return p1
-    return p2
+    from gtfs_processing.gtfs import dataset_dir
+
+    return dataset_dir(dataset)
 
 
 def _require_dataset(dataset: str) -> Path:

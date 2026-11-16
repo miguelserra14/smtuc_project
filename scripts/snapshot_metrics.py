@@ -225,9 +225,13 @@ def _add_meta(snap: Snapshot, phase: str, smtuc: str, metro: str, day_str: str, 
     snap.add("meta", "snapshot", "commit", _git_commit())
     snap.add("meta", "dados", "smtuc", smtuc)
     snap.add("meta", "dados", "metro", metro)
+    from gtfs_processing.gtfs import dataset_dir
+
     # Pelo papel (smtuc/metro) e não pelo nome do dataset, para o diff mostrar "mudou" ao trocar de feed.
     for role, dataset in (("smtuc", smtuc), ("metro", metro)):
-        snap.add("meta", "dados", f"impressao_digital_{role}", feed_fingerprint(ROOT / "data" / dataset) or "ausente")
+        folder = dataset_dir(dataset, ROOT)
+        snap.add("meta", "dados", f"pasta_{role}", folder.relative_to(ROOT).as_posix())
+        snap.add("meta", "dados", f"impressao_digital_{role}", feed_fingerprint(folder) or "ausente")
     snap.add("meta", "dados", "dia_referencia", day_str)
     snap.add("meta", "dados", "hora_isocrona", time_str)
     for name in (
@@ -389,8 +393,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p_snap = sub.add_parser("snapshot", help="calcula e grava reports/metricas/<fase>.csv")
     p_snap.add_argument("fase", help="nome do snapshot (ex.: sintetico, metro_2025, fase2_oficial)")
-    p_snap.add_argument("--smtuc", default="smtuc", help="dataset SMTUC em data/ (por omissão: smtuc)")
-    p_snap.add_argument("--metro", default="metrobus", help="dataset do metro em data/ (por omissão: metrobus)")
+    p_snap.add_argument("--smtuc", default="smtuc", help="nome lógico do SMTUC em config.DATASET_DIRS (por omissão: smtuc)")
+    p_snap.add_argument("--metro", default="metrobus", help="nome lógico do metro em config.DATASET_DIRS (por omissão: metrobus)")
     p_snap.add_argument("--secoes", default=",".join(SECTIONS), help=f"lista separada por vírgulas ({','.join(SECTIONS)})")
     p_snap.add_argument("--out", type=Path, default=None, help="ficheiro de saída (por omissão reports/metricas/<fase>.csv)")
     p_snap.add_argument("--force", action="store_true", help="substitui um snapshot existente")

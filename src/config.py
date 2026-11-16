@@ -81,6 +81,17 @@ LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 # linha é a média dos sentidos. A janela evita que os buracos da noite/madrugada distorçam o valor.
 FREQUENCY_WINDOW_START_H = 7
 FREQUENCY_WINDOW_END_H = 20
+# Feeds GTFS: nome lógico (o que o código usa: chaves de cache, impressões digitais, ids globais
+# de paragens) -> pasta em GTFS_DIR. Trocar de dados = apontar o nome para OUTRA pasta aqui; uma
+# pasta nunca é reutilizada com outro conteúdo (ver data/README.md). Resolver: gtfs.dataset_dir().
+# Os sintéticos ficam aqui só até serem substituídos pelos oficiais (D1.5/D2) e arquivados.
+GTFS_DIR = "data/gtfs"
+DATASET_DIRS: dict[str, str] = {
+    "smtuc": "smtuc/antigo_ep212",            # SMTUC Ep212 (pré-set 2026)
+    "metrobus": "metro/sintetico_fase1",      # SINTÉTICO, fase 1 (a substituir na D1.5)
+    "metrobus_fase2": "metro/sintetico_fase2",  # SINTÉTICO, fase 2 (a substituir na D2)
+}
+
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"
 DEFAULT_BGRI_LAYER = "BGRI2021_0603"
 DEFAULT_OUTPUT_GAP_CSV = "outputs/population/bgri_transport_gap.csv"
@@ -127,7 +138,7 @@ INTEGRATION_SITES: tuple[dict, ...] = (
 )
 
 # Desvios de fase da linha 54 em Portela/Portagem - PROVISÓRIOS: obtidos com o feed Metrobus
-# sintético (data/metrobus, sem o serviço urbano nem parte da ponta da tarde). Quando houver dados
+# sintético (config.DATASET_DIRS['metrobus'], sem o serviço urbano nem parte da ponta da tarde). Quando houver dados
 # oficiais (Fase 0B do roadmap), correr `scripts/search_phase_shift.py` e atualizar aqui.
 # Ambos já contam com o transbordo a pé (TRANSFER_BUFFER_MIN + distância real entre paragens);
 # sem ele (regra antiga, `--sem-transbordo`) os ótimos eram -16 e -8.

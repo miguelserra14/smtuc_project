@@ -155,8 +155,9 @@ def _validate_reference_day() -> bool:
 
 def _require_dataset(dataset: str) -> Path:
     """Verifica se um dataset GTFS está disponível."""
-    root = _project_root()
-    d = root / "data" / dataset
+    from gtfs_processing.gtfs import dataset_dir
+
+    d = dataset_dir(dataset, _project_root())
     required = ["routes.txt", "trips.txt", "stops.txt", "stop_times.txt"]
     if not d.exists() or any(not (d / f).exists() for f in required):
         print(f"[WARNING] Dataset GTFS inválido/incompleto: {d}")
@@ -371,7 +372,7 @@ def regenerate_overlap_htmls() -> None:
 
 def regenerate_overlap_fase2_htmls() -> None:
     """Regenera os 2 HTMLs standalone (isócronas + mapa de linhas) com os dados da fase 2
-    (data/metrobus_fase2 - Aeminium + ramais Coimbra B/República), para o slide dedicado da
+    (dataset metrobus_fase2 - Aeminium + ramais Coimbra B/República), para o slide dedicado da
     apresentação. Deliberadamente SEPARADO de `regenerate_overlap_htmls()`: todas as restantes
     visualizações (incluindo o slide "Overlap" original) continuam a usar `metrobus` (dados
     antigos, pré-fase 2) - ver `PRESENTATION_TABS` em presentation_content.py para o porquê. Usa

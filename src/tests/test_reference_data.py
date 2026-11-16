@@ -7,11 +7,18 @@ from pathlib import Path
 
 import pytest
 
+import config
 import tests.reference_data as ref
 
 
+@pytest.fixture(autouse=True)
+def _fake_datasets(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Os feeds falsos "x"/"y" resolvem-se como os reais: config.DATASET_DIRS -> data/gtfs/<pasta>."""
+    monkeypatch.setattr(config, "DATASET_DIRS", {**config.DATASET_DIRS, "x": "falso/x", "y": "falso/y"})
+
+
 def _feed(root: Path, name: str, trips: bytes = b"route_id,service_id,trip_id\nR,WD,T1\n") -> Path:
-    folder = root / "data" / name
+    folder = root / config.GTFS_DIR / "falso" / name
     folder.mkdir(parents=True)
     (folder / "trips.txt").write_bytes(trips)
     (folder / "stops.txt").write_bytes(b"stop_id,stop_name\nA,Alfa\n")

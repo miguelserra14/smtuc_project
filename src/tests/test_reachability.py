@@ -146,7 +146,9 @@ _SNIPPET = (
 
 @pytest.mark.integration
 def test_real_reachability_is_deterministic_across_hash_seeds() -> None:
-    if not (_ROOT / "data" / "smtuc" / "trips.txt").exists():
+    from gtfs_processing.gtfs import dataset_dir
+
+    if not (dataset_dir("smtuc") / "trips.txt").exists():
         pytest.skip("dados GTFS não disponíveis")
     outputs = set()
     for seed in ("0", "1", "7"):

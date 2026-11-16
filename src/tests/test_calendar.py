@@ -251,11 +251,10 @@ def test_empty_trips_gives_empty_set() -> None:
 # Integração: feeds reais em data/ (read-only)
 # --------------------------------------------------------------------------------------------
 
-_DATA = Path(__file__).resolve().parents[2] / "data"
-
-
 def _real(dataset: str):
-    if not (_DATA / dataset / "trips.txt").exists():
+    from gtfs_processing.gtfs import dataset_dir
+
+    if not (dataset_dir(dataset) / "trips.txt").exists():
         pytest.skip(f"dataset {dataset} não disponível")
     from overlap.overlap_db import _load_gtfs_cached
 

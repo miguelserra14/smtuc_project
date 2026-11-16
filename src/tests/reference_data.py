@@ -30,9 +30,15 @@ REFERENCE_FINGERPRINTS: dict[str, str] = {
 
 
 def dataset_fingerprint(dataset: str) -> str | None:
-    """sha256 (16 hex) dos ficheiros principais de data/<dataset>, com as quebras de linha
+    """sha256 (16 hex) dos ficheiros principais da pasta do dataset (gtfs.dataset_dir), com as quebras de linha
     normalizadas (CRLF/LF não muda a impressão digital). None se o dataset não existir."""
-    return feed_fingerprint(ROOT / "data" / dataset)
+    from gtfs_processing.gtfs import dataset_dir
+
+    try:
+        folder = dataset_dir(dataset, ROOT)
+    except KeyError:
+        return None
+    return feed_fingerprint(folder)
 
 
 def require_reference_data(*datasets: str) -> None:

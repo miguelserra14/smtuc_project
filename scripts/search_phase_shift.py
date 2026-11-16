@@ -15,7 +15,7 @@ overlap.transit.compute_transfer_waits. Um sentido "melhora" se a mediana descer
 subir face ao horário atual. Escolha: mais sentidos melhorados, depois menos regressões, depois
 menor soma de medianas, depois o desvio de menor módulo (mexer menos no horário atual).
 
-Os resultados dependem do horário do Metrobus em data/metrobus. Sempre que os dados mudarem
+Os resultados dependem do horário do Metrobus (dataset metrobus em config.DATASET_DIRS). Sempre que os dados mudarem
 (ex.: feeds oficiais AGIT), correr de novo e atualizar o config:
 
     PYTHONPATH="src;." python scripts/search_phase_shift.py            # Windows (Git Bash)

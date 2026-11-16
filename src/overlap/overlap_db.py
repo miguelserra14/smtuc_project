@@ -305,11 +305,12 @@ def _atomic_write_csv(df: pd.DataFrame, path: Path) -> None:
 
 
 def _dataset_signature(dataset: str) -> str:
-    # Recursive on purpose: load_gtfs()/_find_gtfs_dir() accept the dataset's GTFS files sitting
-    # in a nested subfolder (e.g. data/smtuc/some_export/routes.txt), not just directly under
-    # data/{dataset}/. A non-recursive glob here would never detect changes in that layout.
-    folder = _project_root() / "data" / dataset
-    txt_files = sorted(folder.rglob("*.txt")) if folder.exists() else []
+    # Mesma pasta que load_gtfs() lê (gtfs.dataset_dir); os .txt estão diretamente nela (sem
+    # subpastas - _find_gtfs_dir deixou de as aceitar).
+    from gtfs_processing.gtfs import dataset_dir
+
+    folder = dataset_dir(dataset, _project_root())
+    txt_files = sorted(folder.glob("*.txt")) if folder.exists() else []
     raw = "|".join(
         f"{p.relative_to(folder).as_posix()}:{p.stat().st_size}:{p.stat().st_mtime_ns}"
         for p in txt_files

@@ -637,7 +637,7 @@ def build_reverse_stop_vs_metro_table(
 
     `metro_route_id` (opcional): restringe a pesquisa a uma única rota do Metrobus antes de
     filtrar por sentido. Necessário desde que o feed passou a ter mais do que uma rota (fase 2 -
-    ramais Aeminium->Coimbra B / Aeminium->República, ver data/metrobus/routes.txt): sem isto,
+    ramais Aeminium->Coimbra B / Aeminium->República, ver routes.txt do dataset metrobus): sem isto,
     `direction_id` deixa de identificar sem ambiguidade "a viagem que continua para Serpins" -
     outras rotas também têm viagens com o mesmo `direction_id` em Portagem, mas que TERMINAM aí
     (vindas de um ramal), não que dali partem. Omitir mantém o comportamento anterior (todas as

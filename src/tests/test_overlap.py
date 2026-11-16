@@ -89,8 +89,9 @@ def _format_overlap_table(df: pd.DataFrame, include_radius: bool = False) -> pd.
 
 
 def _dataset_dir(dataset: str) -> Path:
-    root = Path(__file__).resolve().parents[2]
-    return root / "data" / dataset
+    from gtfs_processing.gtfs import dataset_dir
+
+    return dataset_dir(dataset)
 
 
 def _require_dataset(dataset: str) -> Path:

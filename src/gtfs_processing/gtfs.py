@@ -59,20 +59,26 @@ def _looks_like_gtfs_folder(folder: Path) -> bool:
     return folder.exists() and folder.is_dir() and all((folder / f).exists() for f in REQUIRED_FILES)
 
 
+def dataset_dir(dataset: str, root: Path | None = None) -> Path:
+    """Pasta do feed `dataset` (nome lógico -> config.DATASET_DIRS, relativo a config.GTFS_DIR).
+    Fonte ÚNICA do caminho de um dataset: carregamento, assinatura da cache, impressões digitais,
+    snapshots e regenerate passam todos por aqui. Nome desconhecido = erro (sem adivinhar pastas)."""
+    from config import DATASET_DIRS, GTFS_DIR
+
+    if dataset not in DATASET_DIRS:
+        raise KeyError(f"dataset GTFS desconhecido: {dataset!r} (conhecidos: {', '.join(sorted(DATASET_DIRS))}; ver config.DATASET_DIRS)")
+    root = Path(root) if root is not None else Path(__file__).resolve().parents[2]
+    return root / GTFS_DIR / DATASET_DIRS[dataset]
+
+
 def _find_gtfs_dir(dataset: str, root: Path) -> Path:
-    candidates = [
-        root / "data" / dataset,  # ex.: data/metrobus
-    ]
-
-    for base in candidates:
-        if _looks_like_gtfs_folder(base):
-            return base
-        if base.exists() and base.is_dir():
-            for sub in sorted(p for p in base.rglob("*") if p.is_dir()):
-                if _looks_like_gtfs_folder(sub):
-                    return sub
-
-    raise FileNotFoundError(f"Dataset GTFS não encontrado/incompleto: {dataset}")
+    # Os ficheiros têm de estar DIRETAMENTE na pasta do dataset. Antes procurava-se recursivamente
+    # e aceitava-se a 1ª subpasta com GTFS: com cópias/exports lá dentro lia-se o feed errado em
+    # silêncio.
+    folder = dataset_dir(dataset, root)
+    if _looks_like_gtfs_folder(folder):
+        return folder
+    raise FileNotFoundError(f"Dataset GTFS não encontrado/incompleto: {dataset} (esperado em {folder})")
 
 
 def _resolve_source_dir(source_dir: Optional[str], dataset: str) -> Path:
@@ -161,12 +167,13 @@ def _main() -> None:
     parser = argparse.ArgumentParser(description="GTFS utilitário")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_int = sub.add_parser("integrate", help="Integrar GTFS (.zip/pasta) para data/")
+    p_int = sub.add_parser("integrate", help="Integrar GTFS (.zip/pasta) numa pasta de data/gtfs/")
     p_int.add_argument("--source", required=True, help="Caminho para GTFS (.zip ou pasta)")
-    p_int.add_argument("--target", default=r"data", help="Pasta destino")
+    # Sem valor por omissão: o antigo "data" despejava os .txt na raiz de data/.
+    p_int.add_argument("--target", required=True, help="Pasta destino (ex.: data/gtfs/metro/<nova_pasta>)")
 
-    p_ins = sub.add_parser("inspect", help="Carregar GTFS já existente em data/")
-    p_ins.add_argument("--dataset", default="smtuc", help="smtuc | metrobus")
+    p_ins = sub.add_parser("inspect", help="Carregar um GTFS de config.DATASET_DIRS")
+    p_ins.add_argument("--dataset", default="smtuc", help="nome lógico (ver config.DATASET_DIRS)")
     p_ins.add_argument("--source-dir", default=None, help="Override de diretório GTFS")
 
     args = parser.parse_args()
