@@ -201,8 +201,7 @@ def _store(part: Path, final: Path) -> None:
 
 def _validation_bytes(validation: dict) -> bytes:
     """Sempre os mesmos bytes (LF, UTF-8) em qualquer sistema - write_text no Windows punha CRLF."""
-    return json.dumps(validation, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8") + b"
-"
+    return json.dumps(validation, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8") + b"\n"
 
 
 def _version_from_catalog_url(url: str) -> str:
