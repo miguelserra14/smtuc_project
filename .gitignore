@@ -16,3 +16,5 @@ scripts/local_settings.ps1
 # GTFS do Município (licença não especificada no dados.gov.pt): só o sha256 vai para o git, em
 # data/raw/MANIFEST.csv; cada máquina descarrega o ficheiro com scripts/fetch_feeds.py.
 data/raw/municipio-coimbra/smtuc-gtfs/
+# ... e o feed construído a partir dele (scripts/build_feeds.py): só o PROVENANCE.json é versionado.
+data/gtfs/smtuc/atual_ep225/*.txt

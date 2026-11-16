@@ -4,13 +4,15 @@ Estado a 2026-11-16. Quando uma pasta mudar, atualiza esta tabela no mesmo commi
 
 ## Feeds que o código lê hoje
 
-Os feeds estão em `gtfs/` e o código chama-os pelo nome lógico de `config.DATASET_DIRS`: `smtuc` → `gtfs/smtuc/antigo_ep212/`, `metrobus` → `gtfs/metro/fase1_gtfs_20251219/` (oficial), `metrobus_fase2` → `gtfs/metro/sintetico_fase2/` (sintético, até à D2).
+Os feeds estão em `gtfs/` e o código chama-os pelo nome lógico de `config.DATASET_DIRS`: `smtuc` → `gtfs/smtuc/antigo_ep212/`, `metrobus` → `gtfs/metro/fase1_gtfs_20251219/` (oficial), `metrobus_fase2` → `gtfs/metro/sintetico_fase2/` (sintético, até à D2). Que feeds se comparam, e em que dia, está em `config.SCENARIOS` (`antes`, `fase2` = slide sintético, `fase2_oficial`).
 
 | Pasta | O que é | Origem | Validade | Usado em |
 |---|---|---|---|---|
 | `gtfs/smtuc/antigo_ep212/` | SMTUC **Ep212** (`Ep212_Prg1@20260305`), cenário "antes" | GTFS do SMTUC/Município (versão exata e data do download não registadas; o catálogo já não tem esta versão) | 2026-03-09 a 2027-03-09 | tudo |
 | `gtfs/metro/fase1_gtfs_20251219/` | Metro **oficial** fase 1 (nome lógico `metrobus`), construído por `scripts/build_feeds.py` a partir de `raw/dados-gov/metro-mondego-gtfs/`: sem PC1-PC8, calendário estendido até 2026-09-09, nomes da rota destrocados (ver `PROVENANCE.json`) | AGIT / dados.gov.pt, CC BY 4.0 | 2025-11-01 a 2026-09-09 | tudo (dataset `metrobus` desde a D1 passo 4) |
 | `gtfs/metro/sintetico_fase2/` | Metro **SINTÉTICO** fase 2, topologia inventada | não oficial | idem | slide da fase 2; substituído na D2 |
+| `gtfs/smtuc/atual_ep225/` | SMTUC **Ep225** (`Ep225_Prog1@202609182223`, nome lógico `smtuc_atual`), construído por `scripts/build_feeds.py` de `raw/municipio-coimbra/smtuc-gtfs/` sem transformações. **Só o `PROVENANCE.json` é versionado** (licença por esclarecer): numa máquina nova, `fetch_feeds.py` e depois `build_feeds.py` reconstroem os `.txt` e confirmam que são os registados | Município de Coimbra (= origem do NeTEx SMTUC da AGIT) | 2026-09-18 a 2026-11-12 | cenário `fase2_oficial` (pré-visualização) |
+| `gtfs/metro/fase2_netex_20261111/` | Metro **oficial** fase 2 (nome lógico `metro_fase2_oficial`): NeTEx da AGIT de 2026-11-11 convertido por `gtfs_processing/netex_to_gtfs.py`; contagens iguais às `counts.gtfs` do `validation.json` da AGIT; nomes das linhas destrocados (U1, U2, U3, S1, S2); calendário semanal sem exceções (os feriados, que o Metro não codifica, ficam para `FERIADOS_COMO_DOMINGO`); sem `shapes.txt` (o NeTEx não traz geometria) | AGIT / dados.gov.pt, CC BY 4.0 | 2026-06-13 a 2026-12-31 (dias úteis desde 2026-09-10) | cenário `fase2_oficial` (pré-visualização) |
 | `dadospopulacaoBGRI/` | BGRI 2021 (subsecções estatísticas) do concelho de Coimbra | INE, Censos 2021 | 2021 | população, isócronas |
 | `points_of_interest.csv` | polos de emprego e locais concorridos | pesquisa manual (`src/population/points_of_interest.py`) | — | população (camada POI) |
 
@@ -42,7 +44,7 @@ python scripts/fetch_feeds.py registar FICH --fonte manual/<nome> --versao <AAAA
 
 ## Próximas pastas (D1/D2)
 
-Geradas a partir de `raw/` por `scripts/build_feeds.py`, com `PROVENANCE.json`: `gtfs/smtuc/atual_ep225/` e `gtfs/metro/fase2_netex_<data>/` (D2). Uma pasta construída nunca é alterada: `python scripts/build_feeds.py --verificar` confirma que cada uma é exatamente o que o build produz. Os sintéticos vão para `_arquivo/sintetico/` quando deixarem de ser usados.
+Geradas a partir de `raw/` por `scripts/build_feeds.py`, com `PROVENANCE.json` (as da fase 2 já existem, ver acima; falta o SIT, D3). Uma pasta construída nunca é alterada: `python scripts/build_feeds.py --verificar` confirma que cada uma é exatamente o que o build produz. Os sintéticos vão para `_arquivo/sintetico/` quando deixarem de ser usados.
 
 Atenção a duas coisas:
 - nos feeds SMTUC antigos o `route_id` "54" é a linha 5F; a linha procura-se sempre pelo `route_short_name`;

@@ -1,0 +1,41 @@
+stop_id,stop_code,stop_name,stop_lat,stop_lon
+229,cbr_mm048,República (desc),40.209825,-8.419701
+230,cbr_mm047,Mercado (desc),40.211581,-8.424759
+231,cbr_mm045,Câmara (desc),40.211257,-8.429836
+232,cbr_mm032,Loja do Cidadão,40.21035,-8.432479
+233,cbr_mm026,Portagem,40.207526,-8.430654
+234,cbr_mm025,Parque,40.203753,-8.425116
+235,cbr_mm024,Colégios,40.19847,-8.420803
+236,cbr_mm023,Arregaça,40.199566,-8.416973
+237,cbr_mm022,Norton de Matos,40.201298,-8.410959
+238,cbr_mm021,São José,40.201566,-8.407223
+239,cbr_mm020,Solum,40.204888,-8.40502
+240,cbr_mm019,Fernando Namora,40.203989,-8.4009
+241,cbr_mm018,Casa Branca,40.200719,-8.399915
+242,cbr_mm017,Vale das Flores,40.195444,-8.398046
+243,cbr_mm043,Alto de São João,40.192601,-8.399667
+244,cbr_mm015,Portela,40.186832,-8.399355
+245,cbr_mm014,Quinta da Ponte,40.181839,-8.393125
+246,cbr_mm013,Ceira,40.172865,-8.393365
+247,cbr_mm012,Sobral de Ceira,40.164419,-8.387348
+248,mcv_mm011,Vale de Açor,40.156447,-8.374071
+249,mcv_mm010,Trémoa,40.135481,-8.357628
+250,mcv_mm009,Moinhos,40.115186,-8.357221
+251,mcv_mm008,Lobazes,40.104426,-8.352192
+252,mcv_mm007,Miranda do Corvo,40.089569,-8.332515
+253,mcv_mm006,Corvo,40.093477,-8.32191
+254,lsa_mm005,Padrão,40.106349,-8.300356
+255,lsa_mm004,Meiral,40.106236,-8.267951
+256,lsa_mm003,Lousã - Parque de Exposições,40.110834,-8.249016
+257,lsa_mm002,Lousã - Estação,40.118518,-8.247687
+258,lsa_mm001,Casal do Espírito Santo,40.126566,-8.239361
+259,lsa_mm042,Casal de Santo António,40.155245,-8.216339
+260,lsa_mm000,Serpins,40.15577,-8.210009
+269,cbr_mm027,Aeminium,40.209955,-8.433587
+270,cbr_mm028,Arnado,40.212903,-8.436042
+271,cbr_mm029,Açude,40.21697,-8.438565
+272,cbr_mm030,Casa do Sal,40.220424,-8.43981
+273,cbr_mm031,Coimbra B,40.224741,-8.439876
+274,cbr_mm033,Câmara (asc),40.211255,-8.42977
+275,cbr_mm034,Mercado (asc),40.211565,-8.42482
+276,cbr_mm035,República (asc),40.209594,-8.420384

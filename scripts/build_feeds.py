@@ -7,6 +7,15 @@ da pasta; data/raw/ nunca é alterado.
 
 Uma pasta construída é imutável: se já existir e o resultado do build for diferente, o script
 recusa (nunca sobrescreve) - uma versão nova vai para outra pasta (ver data/README.md).
+
+Duas origens: um zip GTFS (lido tal como está) ou um zip NeTEx da AGIT, convertido por
+gtfs_processing/netex_to_gtfs.py (D2.1). No NeTEx, a conversão só é aceite se as contagens
+(agências, linhas, serviços, paragens, viagens, horários) forem EXATAMENTE as `counts.gtfs` do
+validation.json que a AGIT publica ao lado do zip - a verificação semântica de data/README.md.
+
+Fontes não versionadas (licença por esclarecer, ex.: o GTFS do Município): o PROVENANCE.json vai
+para o git e os .txt não; numa máquina sem o bruto (scripts/fetch_feeds.py) o build é "ausente",
+não uma falha.
 """
 
 from __future__ import annotations
@@ -31,6 +40,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
 from gtfs_processing.fingerprint import feed_fingerprint  # noqa: E402
+from gtfs_processing.netex_to_gtfs import NetexError, netex_to_gtfs  # noqa: E402
 
 RAW_DIR = ROOT / "data" / "raw"
 GTFS_DIR = ROOT / "data" / "gtfs"
@@ -94,12 +104,34 @@ def swap_route_names(route_id: str, expected_short: str, reason: str) -> Callabl
     return step
 
 
+def swap_all_route_names(expected_short: dict[str, str], reason: str) -> Callable[[dict[str, Table]], dict]:
+    """Troca route_short_name <-> route_long_name em TODAS as rotas; `expected_short` (route_id ->
+    nome curto antes da troca) tem de bater exatamente com o feed, e depois da troca os nomes
+    curtos têm de ser únicos (a linha resolve-se pelo route_short_name)."""
+    def step(feed: dict[str, Table]) -> dict:
+        _, rows = feed["routes.txt"]
+        found = {r["route_id"]: r["route_short_name"] for r in rows}
+        if found != expected_short:
+            raise BuildError(f"routes.txt: nomes curtos {found} != esperados {expected_short} - o feed mudou?")
+        for r in rows:
+            r["route_short_name"], r["route_long_name"] = r["route_long_name"], r["route_short_name"]
+        after = [r["route_short_name"] for r in rows]
+        if len(set(after)) != len(after):
+            raise BuildError(f"routes.txt: nomes curtos repetidos depois da troca: {after}")
+        return {"passo": "trocar route_short_name/route_long_name em todas as rotas",
+                "depois": {r["route_id"]: [r["route_short_name"], r["route_long_name"]] for r in rows},
+                "motivo": reason}
+    return step
+
+
 @dataclass(frozen=True)
 class Build:
     target: str               # pasta relativa a data/gtfs/
     raw: str                  # ficheiro relativo a data/raw/ (tem de estar no MANIFEST.csv)
     descricao: str
     steps: tuple = field(default_factory=tuple)
+    formato: str = "gtfs"     # "gtfs" (zip GTFS) ou "netex" (zip NeTEx da AGIT -> conversor)
+    versionado: bool = True   # False: o bruto e os .txt ficam fora do git (só o PROVENANCE.json)
 
 
 BUILDS: tuple[Build, ...] = (
@@ -126,6 +158,29 @@ BUILDS: tuple[Build, ...] = (
                 "No feed o nome curto e o longo vêm trocados (short='Serpins - Portagem', long='S1').",
             ),
         ),
+    ),
+    Build(
+        target="metro/fase2_netex_20261111",
+        raw="agit/metro-mondego-netex/20261111-151447-135a5e2b/metro-mondego-netex.zip",
+        descricao="Metro Mondego fase 2 (desde 10/09/2026): NeTEx oficial da AGIT publicado a 2026-11-11, "
+                  "convertido para GTFS (CC BY 4.0, 'Dados: AGIT / dados.gov.pt')",
+        formato="netex",
+        steps=(
+            swap_all_route_names(
+                {"3605": "Vermelho", "3622": "Azul", "3623": "Verde", "3624": "Azul", "3625": "Vermelho"},
+                "No NeTEx o código da linha (U1, U2, U3, S1, S2) vem em Line/Name e a cor em Line/ShortName, "
+                "repetida (U1 e S1 = 'Azul', U2 e S2 = 'Vermelho'): como as linhas se resolvem pelo "
+                "route_short_name, sem a troca U1 e S1 eram a mesma linha. Mesma troca que no GTFS de 2025 (rota 3606).",
+            ),
+        ),
+    ),
+    Build(
+        target="smtuc/atual_ep225",
+        raw="municipio-coimbra/smtuc-gtfs/20261012-103154-263d6c74/smtuc-static-gtfs-20260918-222705-277231-3141209e.zip",
+        descricao="SMTUC Ep225 (Ep225_Prog1@202609182223, válido 2026-09-18..2026-11-12): GTFS publicado pelo "
+                  "Município de Coimbra, origem provada do NeTEx SMTUC da AGIT (sha256 = source.sha256 da validação). "
+                  "Licença não especificada no catálogo: ficheiros fora do git",
+        versionado=False,
     ),
 )
 
@@ -177,6 +232,55 @@ def _git_commit() -> str:
         return "desconhecido"
 
 
+def _read_gtfs_zip(zf: zipfile.ZipFile) -> tuple[dict[str, Table], list[str]]:
+    members = {Path(n).name: n for n in zf.namelist() if n.endswith(".txt")}
+    ignored = sorted(Path(n).name for n in zf.namelist() if not n.endswith(".txt"))
+    unknown = sorted(set(members) - set(GTFS_TXT))
+    if unknown:
+        raise BuildError(f"ficheiros .txt inesperados no zip: {unknown}")
+    return {name: _read_member(zf, members[name]) for name in members}, ignored
+
+
+def _read_netex_zip(zf: zipfile.ZipFile, raw_path: Path) -> tuple[dict[str, Table], list[str], dict]:
+    """NeTEx -> GTFS + verificação semântica contra o validation.json da AGIT (mesma pasta)."""
+    xml_members = [n for n in zf.namelist() if n.endswith(".xml")]
+    if len(xml_members) != 1:
+        raise BuildError(f"esperado 1 XML no zip NeTEx, há {xml_members}")
+    try:
+        feed, report = netex_to_gtfs(zf.read(xml_members[0]))
+    except NetexError as exc:
+        raise BuildError(f"conversão NeTEx: {exc}") from exc
+    validation_path = raw_path.with_name("validation.json")
+    if not validation_path.exists():
+        raise BuildError(f"{validation_path.name} da AGIT em falta ao lado do zip - sem ele não há verificação semântica")
+    validation = json.loads(validation_path.read_text(encoding="utf-8"))
+    expected = (validation.get("counts") or {}).get("gtfs")
+    if report["contagens"] != expected:
+        raise BuildError(f"contagens da conversão {report['contagens']} != validation.json counts.gtfs {expected}")
+    metadata = {}
+    if "metadata.jsonld" in zf.namelist():
+        meta = json.loads(zf.read("metadata.jsonld").decode("utf-8"))
+        temporal = meta.get("dcterms:temporal") or {}
+        metadata = {
+            "identificador": meta.get("dcterms:identifier"),
+            "modificado": (meta.get("dcterms:modified") or {}).get("@value"),
+            "periodo": [(temporal.get("dcat:startDate") or {}).get("@value"), (temporal.get("dcat:endDate") or {}).get("@value")],
+        }
+    conversion = {
+        "conversor": "gtfs_processing/netex_to_gtfs.py",
+        "xml": xml_members[0],
+        "metadata": metadata,
+        "verificacao_semantica": {"validation_json_sha256": _sha256(validation_path),
+                                  "releaseId_origem": (validation.get("source") or {}).get("releaseId"),
+                                  "contagens": report["contagens"], "igual_a_counts_gtfs": True},
+        "calendario": report["calendario"],
+        "meia_noite": report["meia_noite"],
+        "embarque": report["embarque"],
+    }
+    ignored = sorted(n for n in zf.namelist() if n not in xml_members)
+    return feed, ignored, conversion
+
+
 def build_into(build: Build, out_dir: Path) -> dict:
     """Constrói `build` em `out_dir` (vazio) e devolve o PROVENANCE (sem o gravar)."""
     raw_path = RAW_DIR / build.raw
@@ -185,23 +289,31 @@ def build_into(build: Build, out_dir: Path) -> dict:
     if raw_sha != manifest["sha256"]:
         raise BuildError(f"{build.raw}: sha256 {raw_sha[:16]} != MANIFEST {manifest['sha256'][:16]} (ficheiro alterado?)")
 
+    conversion = None
     with zipfile.ZipFile(raw_path) as zf:
-        members = {Path(n).name: n for n in zf.namelist() if n.endswith(".txt")}
-        ignored = sorted(Path(n).name for n in zf.namelist() if not n.endswith(".txt"))
-        unknown = sorted(set(members) - set(GTFS_TXT))
-        if unknown:
-            raise BuildError(f"ficheiros .txt inesperados no zip: {unknown}")
-        feed = {name: _read_member(zf, members[name]) for name in members}
+        if build.formato == "netex":
+            feed, ignored, conversion = _read_netex_zip(zf, raw_path)
+        elif build.formato == "gtfs":
+            feed, ignored = _read_gtfs_zip(zf)
+        else:
+            raise BuildError(f"formato desconhecido: {build.formato!r}")
 
     steps = [step(feed) for step in build.steps]
     for name, table in sorted(feed.items()):
         _write_table(out_dir / name, table, name)
-    return {
+    prov = {
         "pasta": f"data/gtfs/{build.target}",
         "descricao": build.descricao,
         "origem": {"ficheiro": f"data/raw/{build.raw}", "sha256": raw_sha, "versao": manifest["versao"],
                    "url": manifest["url"], "verificacoes_no_download": manifest["verificacoes"]},
         "ignorados_do_zip": ignored,
+    }
+    if conversion is not None:
+        prov["conversao_netex"] = conversion
+    if not build.versionado:
+        prov["versionado"] = False
+    return {
+        **prov,
         "transformacoes": steps,
         "ficheiros": {p.name: text_sha256(p) for p in sorted(out_dir.glob("*.txt"))},
         "impressao_digital": feed_fingerprint(out_dir),
@@ -216,6 +328,8 @@ def _comparable(prov: dict) -> dict:
 
 def run_build(build: Build, verify_only: bool = False) -> str:
     target = GTFS_DIR / build.target
+    if not build.versionado and not (RAW_DIR / build.raw).exists():
+        return "ausente"  # bruto fora do git e não descarregado nesta máquina (scripts/fetch_feeds.py)
     with tempfile.TemporaryDirectory(prefix="build_") as tmp:
         fresh = build_into(build, Path(tmp))
         if target.exists():
@@ -223,6 +337,16 @@ def run_build(build: Build, verify_only: bool = False) -> str:
             if not prov_path.exists():
                 raise BuildError(f"{target} existe sem PROVENANCE.json - não foi feito por este script")
             current = {p.name: text_sha256(p) for p in sorted(target.glob("*.txt"))}
+            if not current and not build.versionado:
+                # Clone novo: o PROVENANCE.json veio do git, os .txt não. Reconstrói-os, mas só se o
+                # build der exatamente o que está registado.
+                if _comparable(json.loads(prov_path.read_text(encoding="utf-8"))) != _comparable(fresh):
+                    raise BuildError(f"{target}: o build não reproduz o PROVENANCE.json registado")
+                if verify_only:
+                    raise BuildError(f"{target}: só tem PROVENANCE.json (corre sem --verificar para reconstruir os .txt)")
+                for p in Path(tmp).glob("*.txt"):
+                    shutil.copyfile(p, target / p.name)
+                return "reconstruido"
             if current != fresh["ficheiros"]:
                 raise BuildError(f"{target}: o conteúdo difere do que o build produz (alterado à mão ou o build mudou) - "
                                  "uma versão nova vai para OUTRA pasta")

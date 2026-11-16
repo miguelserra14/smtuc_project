@@ -1,0 +1,116 @@
+{
+ "pasta": "data/gtfs/metro/fase2_netex_20261111",
+ "descricao": "Metro Mondego fase 2 (desde 10/09/2026): NeTEx oficial da AGIT publicado a 2026-11-11, convertido para GTFS (CC BY 4.0, 'Dados: AGIT / dados.gov.pt')",
+ "origem": {
+  "ficheiro": "data/raw/agit/metro-mondego-netex/20261111-151447-135a5e2b/metro-mondego-netex.zip",
+  "sha256": "135a5e2b1f248b07c595db5b0c1f0e2b1a4c630db98f1a3fc3bb7c5d2eaf0db2",
+  "versao": "20261111-151447-135a5e2b",
+  "url": "https://api.planner.agit.pt/v1/datasets/metro-mondego/distributions/netex/download",
+  "verificacoes_no_download": "sha256=validacao;identidade;membros=validacao;contagens=validacao"
+ },
+ "ignorados_do_zip": [
+  "metadata.jsonld"
+ ],
+ "conversao_netex": {
+  "conversor": "gtfs_processing/netex_to_gtfs.py",
+  "xml": "netex.xml",
+  "metadata": {
+   "identificador": "urn:agit:Dataset:metro-mondego",
+   "modificado": "2026-11-11",
+   "periodo": [
+    "2026-06-10",
+    "2026-12-31"
+   ]
+  },
+  "verificacao_semantica": {
+   "validation_json_sha256": "c0ae3a2dd2369fef3aa100fea640ef17b18f3cb2292cc65d35348704e99f4d9a",
+   "releaseId_origem": "20261111T151217Z-04485ac4",
+   "contagens": {
+    "agencies": 1,
+    "routes": 5,
+    "services": 3,
+    "stopTimes": 15676,
+    "stops": 40,
+    "trips": 979
+   },
+   "igual_a_counts_gtfs": true
+  },
+  "calendario": {
+   "1": {
+    "dias": "------sun",
+    "de": "20260913",
+    "ate": "20261227",
+    "datas_ativas": 16,
+    "excecoes_acrescentadas": 0,
+    "excecoes_retiradas": 0
+   },
+   "10": {
+    "dias": "-----sat-",
+    "de": "20260613",
+    "ate": "20261226",
+    "datas_ativas": 29,
+    "excecoes_acrescentadas": 0,
+    "excecoes_retiradas": 0
+   },
+   "11": {
+    "dias": "montuewedthufri--",
+    "de": "20260910",
+    "ate": "20261231",
+    "datas_ativas": 81,
+    "excecoes_acrescentadas": 0,
+    "excecoes_retiradas": 0
+   }
+  },
+  "meia_noite": {
+   "viagens_com_day_offset": 32,
+   "viagens_que_passam_a_meia_noite": 0,
+   "viagens_noturnas_passadas_a_24h": 0,
+   "regra_noturna": "viagem sem DayOffset que começa antes das 04:00:00 = cauda da noite anterior (+24 h)"
+  },
+  "embarque": {
+   "passagens_sem_embarque": 979,
+   "passagens_sem_desembarque": 979
+  }
+ },
+ "transformacoes": [
+  {
+   "passo": "trocar route_short_name/route_long_name em todas as rotas",
+   "depois": {
+    "3605": [
+     "U2",
+     "Vermelho"
+    ],
+    "3622": [
+     "U1",
+     "Azul"
+    ],
+    "3623": [
+     "U3",
+     "Verde"
+    ],
+    "3624": [
+     "S1",
+     "Azul"
+    ],
+    "3625": [
+     "S2",
+     "Vermelho"
+    ]
+   },
+   "motivo": "No NeTEx o código da linha (U1, U2, U3, S1, S2) vem em Line/Name e a cor em Line/ShortName, repetida (U1 e S1 = 'Azul', U2 e S2 = 'Vermelho'): como as linhas se resolvem pelo route_short_name, sem a troca U1 e S1 eram a mesma linha. Mesma troca que no GTFS de 2025 (rota 3606)."
+  }
+ ],
+ "ficheiros": {
+  "agency.txt": "1f769d3d03da34350ba77b54850cafe2b2b4d8ce4095e72de99b455834c930a8",
+  "calendar.txt": "396d748747fd58394deac1c155d4b8b7fecbfbcf9b2c474284f9a3ed0ab963e0",
+  "calendar_dates.txt": "aaa66bee57e81ca0cd63d4afe576f993aba0441428a79cf6fe5c58721e39421f",
+  "feed_info.txt": "96b778b98a7fdd3a996e0441221f8d1fa9881501a0d5a0a9b8c7b12c7b81ac05",
+  "routes.txt": "9067f3e62f514fa0759e36a62e40d0992c7ddea80265d4750d95e4878dd411bf",
+  "stop_times.txt": "80263f80c449c63fbb6a0462d4250e6e6c0b97c31f25cbfade29dfa9cc8d441e",
+  "stops.txt": "48e27ff11657089e36c3d4a26737534bea290a0a791f30dad89fabce788c330d",
+  "trips.txt": "e8bff12d45bfbe7b95ed0384e17515b07d4cacc55ea1dd3cb0a96e072de154dd"
+ },
+ "impressao_digital": "d66f8a075d3e6998",
+ "construido_por": "scripts/build_feeds.py",
+ "commit": "e582886"
+}

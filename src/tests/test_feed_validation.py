@@ -158,6 +158,8 @@ def test_official_metro_feeds_are_built_with_provenance() -> None:
 def test_built_feeds_match_their_provenance(dataset: str) -> None:
     folder = dataset_dir(dataset)
     prov = json.loads((folder / "PROVENANCE.json").read_text(encoding="utf-8"))
+    if prov.get("versionado") is False and not (folder / "trips.txt").exists():
+        pytest.skip(f"{dataset}: .txt fora do git - correr scripts/fetch_feeds.py e scripts/build_feeds.py")
     # Quebras de linha normalizadas, como no build (o git converte para CRLF no checkout).
     current = {p.name: hashlib.sha256(p.read_bytes().replace(b"\r\n", b"\n")).hexdigest() for p in sorted(folder.glob("*.txt"))}
     assert current == prov["ficheiros"], "ficheiros diferentes do PROVENANCE.json - editados à mão?"

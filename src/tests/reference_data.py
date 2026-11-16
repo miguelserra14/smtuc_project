@@ -29,6 +29,10 @@ REFERENCE_FINGERPRINTS: dict[str, str] = {
     "smtuc": "864ee5237cafc617",
     "metrobus": "da23030383ae252e",
     "metrobus_fase2": "90417259ec9abc60",
+    # Fase 2 oficial (D2 passo 2, 2026-11-16), valores conferidos no ficheiro construído e nas
+    # contagens da AGIT (validation.json): ver test_netex_to_gtfs.py.
+    "smtuc_atual": "12aefeabe5782c22",
+    "metro_fase2_oficial": "d66f8a075d3e6998",
 }
 
 

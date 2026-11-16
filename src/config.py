@@ -91,6 +91,11 @@ DATASET_DIRS: dict[str, str] = {
     # data/raw por scripts/build_feeds.py (ver PROVENANCE.json). Antes era o sintético abaixo.
     "metrobus": "metro/fase1_gtfs_20251219",
     "metrobus_fase2": "metro/sintetico_fase2",  # SINTÉTICO, fase 2 (a substituir na D2)
+    # Fase 2 OFICIAL (D2 passo 2), construídos por scripts/build_feeds.py (ver PROVENANCE.json):
+    # SMTUC Ep225 do Município (válido 2026-09-18..2026-11-12; .txt fora do git) e Metro NeTEx da
+    # AGIT de 2026-11-11 convertido para GTFS. Só usados pelo cenário "fase2_oficial" (pré-visualização).
+    "smtuc_atual": "smtuc/atual_ep225",
+    "metro_fase2_oficial": "metro/fase2_netex_20261111",
     # O sintético da fase 1 foi arquivado em data/_arquivo/sintetico/ (D1 passo 5; ver o README de
     # lá para reproduzir reports/metricas/sintetico.csv).
 }
@@ -118,6 +123,17 @@ SCENARIOS: dict[str, dict[str, str]] = {
         "reference_day": "2026-05-11",
         "reference_time": "08:20:00",
         "output_suffix": "_fase2",
+    },
+    # Fase 2 com dados OFICIAIS (D2 passo 2): ainda não alimenta nenhum slide - serve para validar
+    # os feeds e para snapshots (snapshot_metrics.py --cenario fase2_oficial). 2026-11-09 é uma
+    # 2ª feira dentro dos dois feeds (Ep225 até 12/11) e depois do início do bilhete intermodal (1/10).
+    "fase2_oficial": {
+        "description": "Fase 2 do Metro (desde 10/09/2026), OFICIAL: SMTUC Ep225 + Metro NeTEx AGIT 2026-11-11",
+        "smtuc": "smtuc_atual",
+        "metro": "metro_fase2_oficial",
+        "reference_day": "2026-11-09",
+        "reference_time": "08:20:00",
+        "output_suffix": "_fase2_oficial",
     },
 }
 DEFAULT_SCENARIO = "antes"

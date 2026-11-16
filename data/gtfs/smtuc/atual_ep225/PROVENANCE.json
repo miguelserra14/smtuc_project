@@ -1,0 +1,28 @@
+{
+ "pasta": "data/gtfs/smtuc/atual_ep225",
+ "descricao": "SMTUC Ep225 (Ep225_Prog1@202609182223, válido 2026-09-18..2026-11-12): GTFS publicado pelo Município de Coimbra, origem provada do NeTEx SMTUC da AGIT (sha256 = source.sha256 da validação). Licença não especificada no catálogo: ficheiros fora do git",
+ "origem": {
+  "ficheiro": "data/raw/municipio-coimbra/smtuc-gtfs/20261012-103154-263d6c74/smtuc-static-gtfs-20260918-222705-277231-3141209e.zip",
+  "sha256": "697e4cd6f805a42f016a1b90a0dd285542f5a02306456522668564cd09baff41",
+  "versao": "20261012-103154-263d6c74",
+  "url": "https://dados.gov.pt/s/resources/gtfs-estaticos-servicos-municipalizados-de-transportes-urbanos-de-coimbra/20261012-103154-263d6c74/smtuc-static-gtfs-20260918-222705-277231-3141209e.zip",
+  "verificacoes_no_download": "sha1+tamanho=catalogo;origem_agit_smtuc=sim;identidade"
+ },
+ "ignorados_do_zip": [],
+ "versionado": false,
+ "transformacoes": [],
+ "ficheiros": {
+  "agency.txt": "babb936489b428f2bb49600c41e1251386a5f270b9bebf914d2eb9bd8485d07b",
+  "calendar.txt": "df53464dd12a0cd9a1f91ce4b88cd8fb4574119c356794a457e7df7d201f6ce5",
+  "calendar_dates.txt": "7bdc934a68937eb37dfba3c3a252d61e590fb5880ead65fa9262a542a8b6523d",
+  "feed_info.txt": "924fff8486c4e0857046aeff170be83d797f77bb321468426b865beb45a156ad",
+  "routes.txt": "10eee22d2f07acd3a59b2e10f29883dde270ae374ea11617e239e37ba120a396",
+  "shapes.txt": "7e30dd9d8ddaab143f2dac7c69e6360946483a40445114633df5ed7b72a5ae2a",
+  "stop_times.txt": "c4ce3be0a33eafc0746e89930d446a594900b24bfc1f9b2b565862f5f1224d6b",
+  "stops.txt": "a0db0effe5d4e0da873f06aeafc8884dac45e487ee7f66811a842203fb165070",
+  "trips.txt": "b2c5c823a8d46f388cc0ef06bceb8241682a83a53276d9ea82a6625fd7992aa4"
+ },
+ "impressao_digital": "12aefeabe5782c22",
+ "construido_por": "scripts/build_feeds.py",
+ "commit": "e582886"
+}
