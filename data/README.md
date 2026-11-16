@@ -4,18 +4,17 @@ Estado a 2026-11-16. Quando uma pasta mudar, atualiza esta tabela no mesmo commi
 
 ## Feeds que o código lê hoje
 
-Os feeds estão em `gtfs/` e o código chama-os pelo nome lógico de `config.DATASET_DIRS`: `smtuc` → `gtfs/smtuc/antigo_ep212/`, `metrobus` → `gtfs/metro/sintetico_fase1/`, `metrobus_fase2` → `gtfs/metro/sintetico_fase2/`.
+Os feeds estão em `gtfs/` e o código chama-os pelo nome lógico de `config.DATASET_DIRS`: `smtuc` → `gtfs/smtuc/antigo_ep212/`, `metrobus` → `gtfs/metro/fase1_gtfs_20251219/` (oficial), `metrobus_fase2` → `gtfs/metro/sintetico_fase2/` (sintético, até à D2).
 
 | Pasta | O que é | Origem | Validade | Usado em |
 |---|---|---|---|---|
 | `gtfs/smtuc/antigo_ep212/` | SMTUC **Ep212** (`Ep212_Prg1@20260305`), cenário "antes" | GTFS do SMTUC/Município (versão exata e data do download não registadas; o catálogo já não tem esta versão) | 2026-03-09 a 2027-03-09 | tudo |
-| `gtfs/metro/sintetico_fase1/` | Metro **SINTÉTICO** fase 1, feito à mão a partir de PDFs | não oficial (ver `docs/integracao_dados_agit/README.md`, secção 1) | `calendar.txt` copiado do SMTUC | tudo; substituído na D1 |
-| `gtfs/metro/fase1_gtfs_20251219/` | Metro **oficial** fase 1 (nome lógico `metro_fase1_oficial`), construído por `scripts/build_feeds.py` a partir de `raw/dados-gov/metro-mondego-gtfs/`: sem PC1-PC8, calendário estendido até 2026-09-09, nomes da rota destrocados (ver `PROVENANCE.json`) | AGIT / dados.gov.pt, CC BY 4.0 | 2025-11-01 a 2026-09-09 | ainda não usado (D1.5) |
+| `gtfs/metro/fase1_gtfs_20251219/` | Metro **oficial** fase 1 (nome lógico `metrobus`), construído por `scripts/build_feeds.py` a partir de `raw/dados-gov/metro-mondego-gtfs/`: sem PC1-PC8, calendário estendido até 2026-09-09, nomes da rota destrocados (ver `PROVENANCE.json`) | AGIT / dados.gov.pt, CC BY 4.0 | 2025-11-01 a 2026-09-09 | tudo (dataset `metrobus` desde a D1 passo 4) |
 | `gtfs/metro/sintetico_fase2/` | Metro **SINTÉTICO** fase 2, topologia inventada | não oficial | idem | slide da fase 2; substituído na D2 |
 | `dadospopulacaoBGRI/` | BGRI 2021 (subsecções estatísticas) do concelho de Coimbra | INE, Censos 2021 | 2021 | população, isócronas |
 | `points_of_interest.csv` | polos de emprego e locais concorridos | pesquisa manual (`src/population/points_of_interest.py`) | — | população (camada POI) |
 
-Sem uso no código, a arquivar: `gtfs_20deabril/` (só cabeçalhos, vazio), `gtfs_cp.zip` (GTFS da CP, sem `feed_info`) e `BGRI2021_0603.zip` (zip original do `.gpkg`).
+Arquivado: `_arquivo/sintetico/` (metro sintético da fase 1 e o script que o corrigia; ver o README de lá). Sem uso no código, a arquivar: `gtfs_20deabril/` (só cabeçalhos, vazio), `gtfs_cp.zip` (GTFS da CP, sem `feed_info`) e `BGRI2021_0603.zip` (zip original do `.gpkg`).
 
 ## `raw/`: ficheiros oficiais congelados
 

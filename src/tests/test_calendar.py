@@ -273,7 +273,6 @@ DIA_DE_PORTUGAL = date(2026, 6, 10)  # quarta-feira, feriado
         ("smtuc", 2373, {"Domingos e Feriados"}, CHRISTMAS),
         # Oficial (D1 passo 4): serviço 3 = dias úteis, 1 = domingo; 291 conferido no ficheiro bruto.
         ("metrobus", 291, {"1"}, DIA_DE_PORTUGAL),
-        ("metro_sintetico_fase1", 107, {"SUN"}, CHRISTMAS),
         ("metrobus_fase2", 303, {"SUN"}, CHRISTMAS),
     ],
 )

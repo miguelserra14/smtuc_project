@@ -92,9 +92,8 @@ DATASET_DIRS: dict[str, str] = {
     # data/raw por scripts/build_feeds.py (ver PROVENANCE.json). Antes era o sintético abaixo.
     "metrobus": "metro/fase1_gtfs_20251219",
     "metrobus_fase2": "metro/sintetico_fase2",  # SINTÉTICO, fase 2 (a substituir na D2)
-    # Sintético da fase 1, só para reproduzir os números de antes (reports/metricas/sintetico.csv);
-    # a arquivar no passo 5 da D1.
-    "metro_sintetico_fase1": "metro/sintetico_fase1",
+    # O sintético da fase 1 foi arquivado em data/_arquivo/sintetico/ (D1 passo 5; ver o README de
+    # lá para reproduzir reports/metricas/sintetico.csv).
 }
 
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"
