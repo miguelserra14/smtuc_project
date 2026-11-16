@@ -119,8 +119,10 @@ INTEGRATION_SITES: tuple[dict, ...] = (
         "output_prefix": "l54_38",
         "output_subdir": "portagem",
         "fixed_html_name": "l54_38_all.html",
-        "reverse_metro_direction_id": 1,  # Metrobus sentido Serpins, a partir de Portagem
-        "reverse_metro_route_id": "LOUSA",  # não confundir com as viagens dos ramais (fase 2)
+        # Sentido do metro apanhado no nó (bus->metro): o que passa DEPOIS em Vale das Flores =
+        # sentido Serpins. Por paragem e não por direction_id/route_id: esses códigos mudam de feed
+        # para feed (sintético: sentido 1 / rota LOUSA; GTFS oficial 2025: sentido 0 / rota 3606).
+        "reverse_metro_towards_ref": "Vale das Flores",
     },
     {
         "name": "Portela",  # Portagem -> Portela, linha 54
@@ -132,8 +134,7 @@ INTEGRATION_SITES: tuple[dict, ...] = (
         "output_prefix": "l54",
         "output_subdir": "portela",
         "fixed_html_name": "l54_all.html",
-        "reverse_metro_direction_id": 0,  # Metrobus sentido Portagem, a passar por Portela
-        "reverse_metro_route_id": "LOUSA",
+        "reverse_metro_towards_ref": "Portagem",  # sentido Portagem, a passar por Portela
     },
 )
 

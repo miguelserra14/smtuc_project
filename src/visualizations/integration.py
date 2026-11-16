@@ -561,8 +561,7 @@ def generate_connection_visualizations(
     phase_shift_min: float | None = None,
     phase_shift_line: str = "54",
     melhorado_phase_shift_min: float | None = None,
-    reverse_metro_direction_id: int | None = None,
-    reverse_metro_route_id: str | None = None,
+    reverse_metro_towards_ref: str | None = None,
 ) -> dict[str, str]:
     """
     Gera visualizacoes de coordenacao metro -> autocarro e grava HTML em outputs/integration.
@@ -577,15 +576,10 @@ def generate_connection_visualizations(
     implica +1 autocarro/motorista, ao contrário da proposta "otimizado") e desloca o conjunto
     por este valor. Ver `config.LINE_54_MELHORADO_PHASE_SHIFT_MIN`.
 
-    `reverse_metro_direction_id` (opcional): se indicado (0 ou 1, conforme `trips.direction_id`
-    do Metrobus), gera TAMBÉM o sentido inverso (bus->metro - ver
-    `build_reverse_stop_vs_metro_table`) como 3 painéis extra na mesma página, cada um com o seu
-    próprio botão Atual/Otimizado/Melhorado. Sem isto, só sai o sentido metro->bus (comportamento
-    anterior).
-
-    `reverse_metro_route_id` (opcional): passado tal e qual a `build_reverse_stop_vs_metro_table`
-    - restringe o sentido inverso a uma única rota do Metrobus (ver docstring lá para o porquê,
-    relevante desde que o feed passou a ter mais do que uma rota).
+    `reverse_metro_towards_ref` (opcional): paragem de metro que define o sentido da partida
+    apanhada no nó (ver `build_reverse_stop_vs_metro_table`); se indicada, gera TAMBÉM o sentido
+    inverso (bus->metro) como 3 painéis extra na mesma página, cada um com o seu próprio botão
+    Atual/Otimizado/Melhorado. Sem isto, só sai o sentido metro->bus.
 
     Retorna um dicionario com os caminhos dos ficheiros gerados.
     """
@@ -687,15 +681,14 @@ def generate_connection_visualizations(
 
     reverse_payload = None
     waits_df_rev: pd.DataFrame | None = None
-    if reverse_metro_direction_id is not None:
+    if reverse_metro_towards_ref is not None:
         schedule_df_rev = build_reverse_stop_vs_metro_table(
             bus_stop_ref=bus_stop_ref,
             metro_stop_ref=metro_stop_ref,
             line_number=line_number,
-            metro_direction_id=reverse_metro_direction_id,
+            metro_towards_ref=reverse_metro_towards_ref,
             day_str=day_str,
             bus_origin_ref=bus_origin_ref,
-            metro_route_id=reverse_metro_route_id,
             output_dir=atual_dir,
         )
         apply_optimization_rev = phase_shift_min is not None
@@ -779,7 +772,7 @@ def generate_connection_visualizations(
         (melhorado_dir / f"{prefix}_wt_melhorado.csv").write_text(
             _build_waits_table(schedule_df_melhorado).to_csv(index=False), encoding="utf-8"
         )
-    if reverse_metro_direction_id is not None and apply_melhorado_rev:
+    if reverse_metro_towards_ref is not None and apply_melhorado_rev:
         melhorado_dir = out_root / "melhorado"
         melhorado_dir.mkdir(parents=True, exist_ok=True)
         schedule_df_rev_melhorado.to_csv(

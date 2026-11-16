@@ -70,8 +70,8 @@ def load_schedules(output_dir: Path) -> dict[str, pd.DataFrame]:
             bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir,
         )
         out[f"{s['name']} bus→metro"] = build_reverse_stop_vs_metro_table(
-            s["bus_stop_ref"], s["metro_stop_ref"], _lines(s), metro_direction_id=s["reverse_metro_direction_id"],
-            bus_origin_ref=s["bus_origin_ref"], metro_route_id=s["reverse_metro_route_id"], output_dir=output_dir,
+            s["bus_stop_ref"], s["metro_stop_ref"], _lines(s), metro_towards_ref=s["reverse_metro_towards_ref"],
+            bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir,
         )
     return out
 

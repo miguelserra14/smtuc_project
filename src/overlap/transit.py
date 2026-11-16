@@ -271,27 +271,34 @@ def resolve_reference_day(day_str: str | None = None) -> date:
     return nearest_business_day(date.today())
 
 
-def _direction_arrival_times_for_stop(gtfs, trips: pd.DataFrame, target_stop_id: str, direction_id: int) -> list[str]:
-    """Como `_arrival_times_for_stop`, mas filtra por `trips.direction_id` em vez de exigir uma
-    paragem de origem anterior ao alvo. Necessário quando o alvo É a própria origem da viagem
-    nesse sentido (ex.: "Portagem" é stop_sequence=1 do Metrobus sentido Serpins - não há
-    nenhuma paragem "antes" na mesma viagem para filtrar por origem, ao contrário do caso
-    normal onde a paragem de origem faz sempre parte do trajeto antes do alvo)."""
-    if trips.empty or "direction_id" not in trips.columns:
-        return []
-    dir_trips = trips[trips["direction_id"].astype(str) == str(direction_id)]
-    if dir_trips.empty:
-        return []
+def _towards_arrival_times_for_stop(
+    gtfs, trips: pd.DataFrame, target_stop_id: str, towards_candidates: list[str]
+) -> list[str]:
+    """Horas de passagem em `target_stop_id` das viagens que, DEPOIS dele, passam numa paragem de
+    `towards_candidates` (o sentido define-se pelas paragens, não por `trips.direction_id`).
 
+    O espelho de `_arrival_times_for_stop` (que exige uma paragem de ORIGEM antes do alvo): aqui o
+    alvo pode ser a própria origem da viagem (ex.: "Portagem" é a 1ª paragem do Metro sentido
+    Serpins), por isso filtra-se pelo que vem a seguir. Substitui o antigo filtro por
+    direction_id + route_id, que dependia da convenção de cada feed - no feed sintético o
+    sentido 1 é "a partir de Portagem" e no GTFS oficial de 2025 é o 0 - e que trocava de
+    sentido em silêncio ao trocar de dados. Viagens que TERMINAM no alvo (ex.: ramais da fase 2)
+    não têm nada depois e ficam de fora sem precisar de filtrar a rota."""
+    if trips.empty or not towards_candidates:
+        return []
     st = gtfs.stop_times.copy()
     st["trip_id"] = st["trip_id"].astype(str)
     st["stop_id"] = st["stop_id"].astype(str)
-    st = st[st["trip_id"].isin(dir_trips["trip_id"].astype(str))]
+    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
     if st.empty:
         return []
+    st["seq"] = pd.to_numeric(st["stop_sequence"], errors="coerce")
 
-    rows = st[st["stop_id"] == str(target_stop_id)]
-    return sorted(set(rows["arrival_time"].astype(str).tolist()))
+    at_target = st[st["stop_id"] == str(target_stop_id)]
+    towards = set(str(s) for s in towards_candidates) - {str(target_stop_id)}
+    last_towards_seq = st[st["stop_id"].isin(towards)].groupby("trip_id")["seq"].max()
+    at_target = at_target[at_target["trip_id"].map(last_towards_seq) > at_target["seq"]]
+    return sorted(set(at_target["arrival_time"].astype(str).tolist()))
 
 
 def _stop_latlon(gtfs, stop_id: str) -> tuple[float, float]:
@@ -617,10 +624,9 @@ def build_reverse_stop_vs_metro_table(
     bus_stop_ref: str,
     metro_stop_ref: str,
     line_number: str | int | list[str | int] | tuple[str | int, ...],
-    metro_direction_id: int,
+    metro_towards_ref: str,
     day_str: str | None = None,
     bus_origin_ref: str = "Portagem",
-    metro_route_id: str | None = None,
     output_csv_name: str | None = None,
     output_dir: str | Path | None = None,
 ) -> pd.DataFrame:
@@ -629,19 +635,11 @@ def build_reverse_stop_vs_metro_table(
     tempo espera quem chega de metro pelo próximo autocarro", mede "quanto tempo espera quem
     chega de autocarro pela próxima partida de metro".
 
-    `metro_direction_id` identifica o sentido do Metrobus que continua a viagem a partir de
-    `metro_stop_ref` (0 ou 1, conforme `trips.direction_id`) - usa-se o sentido da viagem em vez
-    de uma paragem de origem porque nalguns casos a paragem-alvo é a própria origem da viagem
-    nesse sentido (ex.: em Portagem, sentido Serpins, não há nenhuma paragem "antes" na mesma
-    viagem para filtrar por origem - ver `_direction_arrival_times_for_stop`).
-
-    `metro_route_id` (opcional): restringe a pesquisa a uma única rota do Metrobus antes de
-    filtrar por sentido. Necessário desde que o feed passou a ter mais do que uma rota (fase 2 -
-    ramais Aeminium->Coimbra B / Aeminium->República, ver routes.txt do dataset metrobus): sem isto,
-    `direction_id` deixa de identificar sem ambiguidade "a viagem que continua para Serpins" -
-    outras rotas também têm viagens com o mesmo `direction_id` em Portagem, mas que TERMINAM aí
-    (vindas de um ramal), não que dali partem. Omitir mantém o comportamento anterior (todas as
-    rotas), correto só quando o feed tem uma única rota.
+    `metro_towards_ref` identifica o sentido do metro que continua a viagem a partir de
+    `metro_stop_ref`: só contam as viagens que passam numa paragem com este nome/id DEPOIS de
+    `metro_stop_ref` (ex.: em Portagem, "Vale das Flores" = sentido Serpins). Usa-se uma paragem
+    e não `trips.direction_id`/`route_id` porque esses códigos mudam de feed para feed (ver
+    `_towards_arrival_times_for_stop`).
 
     Devolve o MESMO esquema de colunas que `build_line_stop_vs_metro_table`
     (`bus_time`/`bus_line_passage`, `metro_time_from_origin`) mas com o conteúdo trocado, DE
@@ -659,30 +657,31 @@ def build_reverse_stop_vs_metro_table(
     bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
     bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
     metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
+    metro_towards_candidates = _matching_stop_ids(gtfs_metro, str(metro_towards_ref))
 
     if not bus_target_candidates:
         raise ValueError(f"Paragem de autocarro não encontrada: {bus_stop_ref}")
     if not metro_target_candidates:
         raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
+    if not metro_towards_candidates:
+        raise ValueError(f"Paragem de metro (sentido) não encontrada: {metro_towards_ref}")
 
     metro_services = _active_service_ids(gtfs_metro, day)
     metro_trips = gtfs_metro.trips.copy()
     metro_trips["service_id"] = metro_trips["service_id"].astype(str)
     # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
     metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
-    if metro_route_id is not None:
-        metro_trips = metro_trips[metro_trips["route_id"].astype(str) == str(metro_route_id)]
 
     metro_stop_id = _pick_best_target_stop_id(
         gtfs=gtfs_metro,
         trips=metro_trips,
         target_candidates=metro_target_candidates,
     )
-    metro_departure_times = _direction_arrival_times_for_stop(
+    metro_departure_times = _towards_arrival_times_for_stop(
         gtfs=gtfs_metro,
         trips=metro_trips,
         target_stop_id=metro_stop_id,
-        direction_id=metro_direction_id,
+        towards_candidates=metro_towards_candidates,
     )
 
     bus_events, line_label, line_slug = _resolve_bus_arrival_events(
