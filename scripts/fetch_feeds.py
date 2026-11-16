@@ -199,6 +199,12 @@ def _store(part: Path, final: Path) -> None:
     os.chmod(final, stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
 
 
+def _validation_bytes(validation: dict) -> bytes:
+    """Sempre os mesmos bytes (LF, UTF-8) em qualquer sistema - write_text no Windows punha CRLF."""
+    return json.dumps(validation, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8") + b"
+"
+
+
 def _version_from_catalog_url(url: str) -> str:
     """dados.gov.pt/s/resources/<slug>/<AAAAMMDD-HHMMSS-hash>/<ficheiro> -> AAAAMMDD-HHMMSS-hash."""
     parts = url.rstrip("/").split("/")
@@ -398,7 +404,7 @@ def process_source(src: Source, http: Http, raw_dir: Path, dry_run: bool = False
     folder = raw_dir / src.id / str(remote["version"])
     if src.kind == "agit_validacao":
         validation = remote["validation"]
-        data = json.dumps(validation, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8")
+        data = _validation_bytes(validation)
         folder.mkdir(parents=True, exist_ok=True)
         part = folder / ".validation.json.part"
         part.write_bytes(data)
@@ -452,7 +458,7 @@ def process_source(src: Source, http: Http, raw_dir: Path, dry_run: bool = False
         _store(part, final)
         if remote.get("validation"):
             vpart = folder / ".validation.json.part"
-            vpart.write_text(json.dumps(remote["validation"], ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+            vpart.write_bytes(_validation_bytes(remote["validation"]))
             _store(vpart, folder / "validation.json")
         append_manifest(raw_dir, {**row, "estado": "novo", "ficheiro": final.relative_to(raw_dir).as_posix()})
         return Result(src.id, "novo", f"versão {remote['version']} ({size / 1e6:.1f} MB)")

@@ -128,6 +128,8 @@ def test_new_api_version_is_verified_stored_read_only_and_registered(tmp_path: P
     assert len(files) == 2 and files[0].endswith("/metro-mondego-netex.zip") and files[1].endswith("/validation.json")
     zpath = tmp_path / files[0]
     assert zpath.read_bytes() == data
+    assert b"
+" not in (tmp_path / files[1]).read_bytes()  # bytes iguais em qualquer sistema
     assert not os.access(zpath, os.W_OK)  # só de leitura
     (row,) = manifest(tmp_path)
     assert row["estado"] == "novo" and row["identificador"] == AGIT_ID and row["valido_ate"] == "2026-12-31"
