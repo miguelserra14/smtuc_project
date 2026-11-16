@@ -7,13 +7,14 @@ número público, procurava no route_id e devolvia a 5F sem erro.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date
 
 import pandas as pd
 import pytest
 
 from gtfs_processing.gtfs import GTFSData
-from overlap.transit import _resolve_bus_arrival_events
+from overlap.transit import _node_stop_ids, _origin_candidates_by_line, _resolve_bus_arrival_events, bus_origin_label
 
 DAY = date(2026, 5, 11)  # segunda-feira
 
@@ -52,7 +53,7 @@ def _feed(routes: list[tuple[str, str]], with_short_names: bool = True) -> GTFSD
 
 
 def _times(gtfs: GTFSData, line) -> list[str]:
-    events, _, _ = _resolve_bus_arrival_events(gtfs, DAY, ["B"], ["A"], line)
+    events, _, _ = _resolve_bus_arrival_events(gtfs, DAY, ["B"], defaultdict(lambda: ["A"]), line)
     return [ev["time"][:5] for ev in events]
 
 
@@ -80,3 +81,44 @@ def test_any_missing_line_in_a_combination_raises() -> None:
 def test_route_id_is_used_only_when_feed_has_no_public_numbers() -> None:
     assert _times(_feed([("54", ""), ("10", "")], with_short_names=False), "54") == ["07:10"]
     assert _times(_feed([("54", "nan"), ("10", "nan")]), "10") == ["10:10"]
+
+
+# --------------------------------------------------------------------------- D2.4: nó por distância e origem por linha
+
+
+def _stops_feed() -> GTFSData:
+    gtfs = _feed([("684", "54"), ("38", "38")])
+    # C fica a ~100 m de B (como "Parque 2" e "Portagem" no Ep225); D a ~1,1 km.
+    gtfs.stops = pd.DataFrame({
+        "stop_id": ["A", "B", "C", "D"],
+        "stop_name": ["Portela", "Portagem", "Parque 2", "Santa Clara (Junta de Freguesia)"],
+        "stop_lat": [40.19, 40.20, 40.2009, 40.21],
+        "stop_lon": [-8.40, -8.43, -8.43, -8.43],
+    })
+    return gtfs
+
+
+def test_node_includes_stops_within_the_radius() -> None:
+    gtfs = _stops_feed()
+    assert _node_stop_ids(gtfs, "Portagem", radius_m=250) == ["B", "C"]
+    assert _node_stop_ids(gtfs, "Portagem", radius_m=50) == ["B"]
+    assert _node_stop_ids(gtfs, "Portagem", radius_m=0) == ["B"]
+    # Nome com parênteses: procura literal (antes era uma regex e o grupo "(...)" falhava em parte).
+    assert _node_stop_ids(gtfs, "Santa Clara (Junta de Freguesia)", radius_m=0) == ["D"]
+
+
+def test_origin_can_be_given_per_line() -> None:
+    gtfs = _stops_feed()
+    by_line = _origin_candidates_by_line(gtfs, {"54": "Portela", 38: "Santa Clara (Junta de Freguesia)"}, ["54", "38"], 0)
+    assert by_line == {"54": ["A"], "38": ["D"]}
+    assert _origin_candidates_by_line(gtfs, "Portela", ["54", "38"], 0) == {"54": ["A"], "38": ["A"]}
+    with pytest.raises(ValueError, match="Origem em falta.*38"):
+        _origin_candidates_by_line(gtfs, {"54": "Portela"}, ["54", "38"], 0)
+    assert bus_origin_label({"54": "Portela", "38": "Santa Clara"}) == "54: Portela; 38: Santa Clara"
+
+
+def test_line_with_trips_but_none_from_its_origin_raises() -> None:
+    # As viagens vão de A para B: com a origem em D (que nenhuma viagem visita) antes saía 0 em silêncio.
+    gtfs = _stops_feed()
+    with pytest.raises(ValueError, match="Linha 38: 1 viagens"):
+        _resolve_bus_arrival_events(gtfs, DAY, ["B"], {"54": ["A"], "38": ["D"]}, ["54", "38"])

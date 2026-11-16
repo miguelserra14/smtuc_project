@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from config import (
+    INTEGRATION_STOP_RADIUS_M,
     OUTPUTS_INTEGRATION_DIR,
     TRANSFER_BUFFER_MIN,
     WALK_SPEED_M_MIN,
@@ -68,10 +69,53 @@ def _matching_stop_ids(gtfs, stop_ref: str) -> list[str]:
     exact = stops[names.str.lower() == ref.lower()]["stop_id"].drop_duplicates().tolist()
     out.extend(exact)
 
-    partial = stops[names.str.contains(ref, case=False, na=False)]["stop_id"].drop_duplicates().tolist()
+    partial = stops[names.str.contains(ref, case=False, na=False, regex=False)]["stop_id"].drop_duplicates().tolist()
     out.extend(partial)
 
     return list(dict.fromkeys(str(v) for v in out))
+
+
+def _node_stop_ids(gtfs, stop_ref: str, radius_m: float = INTEGRATION_STOP_RADIUS_M) -> list[str]:
+    """Paragens de autocarro de um nó: as que correspondem a `stop_ref` (id, nome exato ou parte do
+    nome) MAIS as que ficam a <= `radius_m` de alguma delas (as primeiras vêm primeiro).
+
+    Só pelo nome, o nó dependia de como cada feed chama as paragens: no Ep225 a 54 sai de "Parque 2"
+    (a 178 m do metro de Portagem) e a 38 passa lá em vez de em "Portagem" - o filtro por nome
+    deixava o nó de Portela sem nenhuma viagem da 54, sem erro."""
+    base = _matching_stop_ids(gtfs, stop_ref)
+    if not base or not radius_m:
+        return base
+    stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].copy()
+    stops["stop_id"] = stops["stop_id"].astype(str)
+    stops = stops.dropna(subset=["stop_lat", "stop_lon"])
+    lat, lon = stops["stop_lat"].astype(float), stops["stop_lon"].astype(float)
+    near: set[str] = set()
+    for _, b in stops[stops["stop_id"].isin(base)].iterrows():
+        dist = _haversine_m(float(b["stop_lat"]), float(b["stop_lon"]), lat, lon)
+        near |= set(stops.loc[dist <= float(radius_m), "stop_id"])
+    return base + sorted(near - set(base))
+
+
+def _origin_candidates_by_line(
+    gtfs, bus_origin_ref: str | dict, line_values: list[str], radius_m: float = INTEGRATION_STOP_RADIUS_M
+) -> dict[str, list[str]]:
+    """`bus_origin_ref` = uma origem para todas as linhas (str) ou uma por linha ({linha: origem}).
+    A origem define o sentido: só contam as passagens no nó de viagens que passaram ANTES nela."""
+    if isinstance(bus_origin_ref, dict):
+        refs = {str(k).strip(): v for k, v in bus_origin_ref.items()}
+        missing = [line for line in line_values if line not in refs]
+        if missing:
+            raise ValueError(f"Origem em falta para a(s) linha(s) {', '.join(missing)} em bus_origin_ref={bus_origin_ref}")
+        return {line: _node_stop_ids(gtfs, str(refs[line]), radius_m) for line in line_values}
+    candidates = _node_stop_ids(gtfs, str(bus_origin_ref), radius_m)
+    return {line: candidates for line in line_values}
+
+
+def bus_origin_label(bus_origin_ref: str | dict) -> str:
+    """Texto da origem para tabelas/legendas: "Portagem" ou "54: Portela do Mondego; 38: Santa Clara"."""
+    if isinstance(bus_origin_ref, dict):
+        return "; ".join(f"{k}: {v}" for k, v in bus_origin_ref.items())
+    return str(bus_origin_ref)
 
 
 def _arrival_times_for_stop(
@@ -384,20 +428,22 @@ def _resolve_bus_arrival_events(
     gtfs_bus,
     day: date,
     bus_target_candidates: list[str],
-    bus_origin_candidates: list[str],
+    bus_origin_by_line: dict[str, list[str]],
     line_number: str | int | list[str | int] | tuple[str | int, ...],
 ) -> tuple[list[dict[str, str]], str, str]:
     """Resolve os eventos de chegada de autocarro (uma ou mais linhas) a uma paragem, filtrados
-    por sentido (`bus_origin_candidates`). Partilhado por `build_line_stop_vs_metro_table` e
-    `build_reverse_stop_vs_metro_table` - a mesma resolução de linha->paragem->sentido serve os
-    dois sentidos da comparação com o metro, só muda o que se faz com o resultado depois.
+    por sentido (`bus_origin_by_line`: paragens de origem de CADA linha). Partilhado por
+    `build_line_stop_vs_metro_table` e `build_reverse_stop_vs_metro_table` - a mesma resolução de
+    linha->paragem->sentido serve os dois sentidos da comparação com o metro.
 
     Devolve `(bus_events, line_label, line_slug)`. Cada linha é resolvida de forma totalmente
-    independente das outras: ao combinar várias linhas (ex. 54+38) NÃO se pode desligar o filtro
-    de origem/sentido globalmente, senão uma linha cujo percurso nem passa pela origem pedida
-    (ex. a 38 não passa em "Portela do Mondego") contaminaria a seleção da paragem física
-    correta e o sentido das restantes linhas. Uma linha sem trips no sentido pedido contribui
-    corretamente 0 eventos, em vez de eventos de sentido errado.
+    independente das outras (paragem física e sentido próprios): ao combinar várias linhas (ex.
+    54+38) uma linha não pode contaminar a escolha da paragem nem o sentido das outras.
+
+    Uma linha com viagens no dia mas NENHUMA a passar no nó depois da sua origem levanta
+    ValueError: antes contribuía 0 passagens em silêncio (a 38 "vinda de Portela", que nunca lá
+    passa; a 54 no Ep225, que sai de Parque 2) e o gráfico saía vazio ou só com outra linha. Uma
+    linha sem viagens nesse dia (dia sem serviço) continua a dar 0.
     """
     line_values = _normalize_line_numbers(line_number)
     if not line_values:
@@ -450,11 +496,12 @@ def _resolve_bus_arrival_events(
         if line_trips.empty:
             continue
 
+        line_origins = bus_origin_by_line[line_val]
         line_target_stop_id = _pick_best_target_stop_id(
             gtfs=gtfs_bus,
             trips=line_trips,
             target_candidates=bus_target_candidates,
-            origin_candidates=bus_origin_candidates,
+            origin_candidates=line_origins,
         )
         line_by_trip = {
             str(row["trip_id"]): str(route_to_line.get(str(row["route_id"]), str(row["route_id"]))).strip()
@@ -464,9 +511,15 @@ def _resolve_bus_arrival_events(
             gtfs=gtfs_bus,
             trips=line_trips,
             target_stop_id=line_target_stop_id,
-            origin_candidates=bus_origin_candidates,
+            origin_candidates=line_origins,
             line_by_trip=line_by_trip,
         )
+        if not line_events:
+            raise ValueError(
+                f"Linha {line_val}: {len(line_trips)} viagens em {day.isoformat()}, mas nenhuma passa no nó "
+                f"(paragens {bus_target_candidates[:6]}) depois da origem pedida (paragens {line_origins[:6]}) - "
+                "origem ou paragem erradas para este feed?"
+            )
         # Paragem física usada por esta linha (pode ser diferente entre linhas no mesmo nó - ex.:
         # Portagem tem várias) - necessária para o tempo de transbordo de cada passagem.
         for ev in line_events:
@@ -483,13 +536,17 @@ def build_line_stop_vs_metro_table(
     line_number: str | int | list[str | int] | tuple[str | int, ...],
     day_str: str | None = None,
     metro_origin_ref: str = "Portagem",
-    bus_origin_ref: str = "Portagem",
+    bus_origin_ref: str | dict = "Portagem",
     output_csv_name: str | None = None,
     output_dir: str | Path | None = None,
     scenario: str | Scenario | None = None,
 ) -> pd.DataFrame:
     """
     Gera uma tabela comparando horários de autocarro e metro numa paragem de destino.
+
+    `bus_origin_ref`: origem (sentido) do autocarro, uma para todas as linhas ou {linha: origem}.
+    As paragens de autocarro do nó e da origem incluem as que ficam a <=
+    config.INTEGRATION_STOP_RADIUS_M das que correspondem ao nome (ver `_node_stop_ids`).
 
     Requer apenas: nome/id da paragem de metro, nome/id da paragem de autocarro e número da linha.
     Os feeds (SMTUC e Metro) e o dia de referência vêm de `scenario` (config.SCENARIOS; None = o
@@ -506,9 +563,10 @@ def build_line_stop_vs_metro_table(
     gtfs_metro = _load_gtfs_cached(sc.metro)
 
     # Candidate ids para filtrar sentido (ex.: Portagem -> Portela)
-    bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
+    line_values = _normalize_line_numbers(line_number)
+    bus_origin_by_line = _origin_candidates_by_line(gtfs_bus, bus_origin_ref, line_values)
     metro_origin_candidates = _matching_stop_ids(gtfs_metro, str(metro_origin_ref))
-    bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
+    bus_target_candidates = _node_stop_ids(gtfs_bus, str(bus_stop_ref))
     metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
 
     if not bus_target_candidates:
@@ -531,7 +589,7 @@ def build_line_stop_vs_metro_table(
     )
 
     bus_events, line_label, line_slug = _resolve_bus_arrival_events(
-        gtfs_bus, day, bus_target_candidates, bus_origin_candidates, line_number
+        gtfs_bus, day, bus_target_candidates, bus_origin_by_line, line_number
     )
     bus_times = [ev["time"] for ev in bus_events]
     bus_lines = [ev["line"] for ev in bus_events]
@@ -617,7 +675,7 @@ def build_reverse_stop_vs_metro_table(
     line_number: str | int | list[str | int] | tuple[str | int, ...],
     metro_towards_ref: str,
     day_str: str | None = None,
-    bus_origin_ref: str = "Portagem",
+    bus_origin_ref: str | dict = "Portagem",
     output_csv_name: str | None = None,
     output_dir: str | Path | None = None,
     scenario: str | Scenario | None = None,
@@ -647,8 +705,8 @@ def build_reverse_stop_vs_metro_table(
     gtfs_bus = _load_gtfs_cached(sc.smtuc)
     gtfs_metro = _load_gtfs_cached(sc.metro)
 
-    bus_origin_candidates = _matching_stop_ids(gtfs_bus, str(bus_origin_ref))
-    bus_target_candidates = _matching_stop_ids(gtfs_bus, str(bus_stop_ref))
+    bus_origin_by_line = _origin_candidates_by_line(gtfs_bus, bus_origin_ref, _normalize_line_numbers(line_number))
+    bus_target_candidates = _node_stop_ids(gtfs_bus, str(bus_stop_ref))
     metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
     metro_towards_candidates = _matching_stop_ids(gtfs_metro, str(metro_towards_ref))
 
@@ -678,7 +736,7 @@ def build_reverse_stop_vs_metro_table(
     )
 
     bus_events, line_label, line_slug = _resolve_bus_arrival_events(
-        gtfs_bus, day, bus_target_candidates, bus_origin_candidates, line_number
+        gtfs_bus, day, bus_target_candidates, bus_origin_by_line, line_number
     )
     # (hora, paragem) únicos: com várias linhas, a mesma hora pode chegar a paragens diferentes,
     # cada uma com o seu tempo de transbordo até ao metro.
@@ -732,7 +790,7 @@ def build_reverse_stop_vs_metro_table(
                 "bus_time": metro_departure_times[i] if i < len(metro_departure_times) else "",
                 "metro_stop": str(bus_stop_ref),
                 "metro_time_from_origin": bus_arrival_times[i] if i < len(bus_arrival_times) else "",
-                "origin_ref": str(bus_origin_ref),
+                "origin_ref": bus_origin_label(bus_origin_ref),
                 "date": day.strftime("%Y-%m-%d"),
                 # Transbordo desta paragem de autocarro -> metro (alinhado com metro_time_from_origin,
                 # que nesta tabela invertida guarda as chegadas de autocarro).
@@ -755,7 +813,7 @@ def build_metro_bus_connection_metrics(
     line_number: str | int | list[str | int] | tuple[str | int, ...],
     day_str: str | None = None,
     metro_origin_ref: str = "Portagem",
-    bus_origin_ref: str = "Portagem",
+    bus_origin_ref: str | dict = "Portagem",
     coverage_thresholds_min: tuple[int, ...] = (5, 10, 15),
     lost_connection_threshold_min: int = 15,
     output_csv_name: str | None = None,

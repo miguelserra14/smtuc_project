@@ -108,36 +108,39 @@ def test_recorded_synthetic_search_reproduces_original_shifts() -> None:
 
 @pytest.mark.integration
 def test_transfer_rule_changes_the_optimum(tmp_path: Path) -> None:
-    """Metro OFICIAL (D1 passo 4): com o transbordo a pé os desvios escolhidos são -10 / 0; com a
-    regra antiga (transbordo 0 = ligações fisicamente impossíveis contam) seriam -13 / -3."""
+    """Cenário "antes" (metro oficial fase 1, com a 38 a contar em Portagem desde a D2.4): com o
+    transbordo a pé a busca escolheria 0 / -10; com a regra antiga (transbordo 0 = ligações
+    fisicamente impossíveis contam) seriam -13 / +7."""
     require_reference_data("smtuc", "metrobus")  # valores calibrados para estes feeds
     script = _load_script()
-    schedules = script.load_schedules(tmp_path)
+    schedules = script.load_schedules(tmp_path, scenario="antes")
     results, base = script.search(schedules)
-    assert base["Portagem metro→bus"]["median"] == pytest.approx(26.02, abs=0.005)
-    assert base["Portagem bus→metro"]["median"] == 2.0  # vaivéns urbanos a cada ~7 min
-    assert (int(script.best(results, "otimizado")["shift_min"]), int(script.best(results, "melhorado")["shift_min"])) == (-10, 0)
+    assert base["Portagem metro→bus"]["median"] == pytest.approx(19.02, abs=0.005)  # 54 + 38 (antes só a 54: 26.02)
+    assert base["Portagem bus→metro"]["median"] == 4.0
+    assert (int(script.best(results, "otimizado")["shift_min"]), int(script.best(results, "melhorado")["shift_min"])) == (0, -10)
     old_rule = {k: v.drop(columns=["target_transfer_min", "trigger_transfer_min"]) for k, v in schedules.items()}
     old_results, _ = script.search(old_rule)
-    assert (int(script.best(old_results, "otimizado")["shift_min"]), int(script.best(old_results, "melhorado")["shift_min"])) == (-13, -3)
+    assert (int(script.best(old_results, "otimizado")["shift_min"]), int(script.best(old_results, "melhorado")["shift_min"])) == (-13, 7)
 
 
 @pytest.mark.integration
 def test_config_shifts_match_documented_properties(tmp_path: Path) -> None:
-    """Os desvios em config.py (e o comentário que os justifica) são os que a busca escolhe:
-    em meio ciclo, nenhum sentido piora e a espera total é a menor. Se os dados mudarem, este
-    teste falha (ou salta) e lembra que é preciso correr scripts/search_phase_shift.py de novo."""
-    require_reference_data("smtuc", "metrobus")  # calibrado para o metro oficial (D1 passo 4)
+    """Os desvios em config.py (e o comentário que os justifica) são os que a busca escolhe na
+    REDE DA FASE 2 (cenário fase2_oficial, decidido a 2026-11-16): em meio ciclo, menos regressões
+    e depois a menor espera total. Se os dados mudarem, este teste salta e lembra que é preciso
+    correr scripts/search_phase_shift.py --cenario ... de novo."""
+    require_reference_data("smtuc_atual", "metro_fase2_oficial")
     from config import LINE_54_MELHORADO_PHASE_SHIFT_MIN, LINE_54_OPTIMIZED_PHASE_SHIFT_MIN
 
     script = _load_script()
-    results, _ = script.search(script.load_schedules(tmp_path))
+    results, _ = script.search(script.load_schedules(tmp_path, scenario="fase2_oficial"))
     for variant, configured, expected in (
-        ("otimizado", LINE_54_OPTIMIZED_PHASE_SHIFT_MIN, (1, 0, 50.19)),  # Portagem metro->bus 26.0 -> 25.2
-        ("melhorado", LINE_54_MELHORADO_PHASE_SHIFT_MIN, (1, 0, 40.02)),  # Portagem metro->bus 26.0 -> 15.0
+        ("otimizado", LINE_54_OPTIMIZED_PHASE_SHIFT_MIN, (3, 0, 48.59)),
+        ("melhorado", LINE_54_MELHORADO_PHASE_SHIFT_MIN, (2, 1, 38.03)),
     ):
         chosen = script.best(results, variant)
         assert int(chosen["shift_min"]) == int(configured), variant
         assert (int(chosen["melhorados"]), int(chosen["regressoes"]), float(chosen["soma_medianas"])) == expected, variant
         sub = results[results["variant"] == variant]
-        assert chosen["soma_medianas"] == sub[sub["regressoes"] == 0]["soma_medianas"].min()
+        assert chosen["regressoes"] == sub["regressoes"].min()
+        assert chosen["soma_medianas"] == sub[sub["regressoes"] == chosen["regressoes"]]["soma_medianas"].min()

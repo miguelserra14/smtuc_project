@@ -555,7 +555,7 @@ def generate_connection_visualizations(
     line_number: str | int | list[str | int] | tuple[str | int, ...],
     day_str: str | None = None,
     metro_origin_ref: str = "Portagem",
-    bus_origin_ref: str = "Portagem",
+    bus_origin_ref: str | dict = "Portagem",
     output_prefix: str | None = None,
     output_subdir: str | None = None,
     fixed_html_name: str | None = None,

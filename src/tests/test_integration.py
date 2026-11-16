@@ -169,12 +169,14 @@ def test_lines_54_38_portagem_bus_vs_metro_from_portela(tmp_path: Path) -> None:
         line_number=("54", "38"),
         day_str="2026-04-20",
         metro_origin_ref="Portela",
-        bus_origin_ref="Portela do Mondego",
+        bus_origin_ref={"54": "Portela do Mondego", "38": "Santa Clara (Junta de Freguesia)"},
         output_dir=tmp_path,
     )
 
     assert not df.empty
     assert (df["bus_line"] == "54+38").all()
+    # Cada linha com a sua origem: as duas contribuem (antes a 38 dava 0 passagens em silêncio).
+    assert set(df.loc[df["bus_time"] != "", "bus_line_passage"]) == {"54", "38"}
     assert (df["origin_ref"].str.lower() == "portela").all()
     assert (df["date"] == expected_day).all()
 
@@ -210,3 +212,32 @@ def test_master_dashboard_html(tmp_path: Path) -> None:
     assert "integration/portela/l54_all.html" in html_text
     assert "population/bgri.html" in html_text
     assert "overlap/overlap_reachability_now.html" in html_text
+
+
+@pytest.mark.integration
+def test_line_that_never_passes_the_node_from_its_origin_raises(tmp_path: Path) -> None:
+    """A 38 nunca vem de Portela do Mondego: com essa origem, antes contribuía 0 passagens sem
+    aviso (o nó "54+38" era só a 54). Agora é um erro que diz qual linha e que paragens."""
+    _require_dataset("smtuc")
+    _require_dataset("metrobus")
+    with pytest.raises(ValueError, match="Linha 38"):
+        build_line_stop_vs_metro_table(
+            metro_stop_ref="Portagem", bus_stop_ref="Portagem", line_number=("54", "38"),
+            metro_origin_ref="Portela", bus_origin_ref="Portela do Mondego", output_dir=tmp_path,
+        )
+
+
+@pytest.mark.integration
+def test_phase2_portela_node_finds_line_54_leaving_from_parque_2(tmp_path: Path) -> None:
+    """No Ep225 a 54 sai de "Parque 2" (a 178 m do metro de Portagem) e não passa na paragem
+    "Portagem": só pelo nome, o nó de Portela ficava sem nenhuma viagem. Com as paragens do nó por
+    distância (config.INTEGRATION_STOP_RADIUS_M) voltam as 21 passagens."""
+    from tests.reference_data import require_reference_data
+
+    require_reference_data("smtuc_atual", "metro_fase2_oficial")
+    df = build_line_stop_vs_metro_table(
+        metro_stop_ref="Portela", bus_stop_ref="Portela do Mondego", line_number="54",
+        metro_origin_ref="Portagem", bus_origin_ref="Portagem", output_dir=tmp_path, scenario="fase2_oficial",
+    )
+    assert (df["bus_time"] != "").sum() == 21
+    assert (df["date"] == "2026-11-09").all()

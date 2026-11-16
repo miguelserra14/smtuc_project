@@ -187,7 +187,7 @@ def _require_data() -> None:
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("site_name, expected_transfer", [("Portela", 2.42), ("Portagem", 1.40)])
+@pytest.mark.parametrize("site_name, expected_transfer", [("Portela", [2.42]), ("Portagem", [1.40, 3.23])])
 def test_real_sites_transfer_and_no_impossible_connections(tmp_path: Path, site_name: str, expected_transfer: float) -> None:
     _require_data()
     from config import INTEGRATION_SITES
@@ -203,8 +203,9 @@ def test_real_sites_transfer_and_no_impossible_connections(tmp_path: Path, site_
         s["bus_stop_ref"], s["metro_stop_ref"], lines, metro_towards_ref=s["reverse_metro_towards_ref"],
         bus_origin_ref=s["bus_origin_ref"], output_dir=tmp_path,
     )
-    assert fwd["target_transfer_min"].dropna().unique().tolist() == [expected_transfer]
-    assert rev["trigger_transfer_min"].dropna().unique().tolist() == [expected_transfer]
+    # Portagem: 54 na paragem 504 (32 m do metro) e 38 na "Portagem (Parque Manuel Braga)" -> 3.23 min.
+    assert sorted(fwd["target_transfer_min"].dropna().unique().tolist()) == expected_transfer
+    assert sorted(rev["trigger_transfer_min"].dropna().unique().tolist()) == expected_transfer
 
     for df in (fwd, rev):
         waits = _build_waits_table(df)
@@ -220,4 +221,4 @@ def test_real_sites_transfer_and_no_impossible_connections(tmp_path: Path, site_
     median_metric = float(metrics.loc[(metrics.scope == "overall") & (metrics.metric == "wait_median_min"), "value"].iloc[0])
     assert median_metric == pytest.approx(float(_build_waits_table(fwd)["wait_min"].median()))
     walk = float(metrics.loc[metrics.metric == "transfer_walk_median_min", "value"].iloc[0])
-    assert walk == pytest.approx(expected_transfer)
+    assert expected_transfer[0] <= walk <= expected_transfer[-1]

@@ -8,7 +8,11 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `sintetico_fase2.csv` | Metro sintético da fase 2 (slide da fase 2; sem esperas da 54) |
 | `oficial_fase1.csv` | **Depois** (D1 passo 4, 2026-11-16): SMTUC Ep212 + **GTFS oficial** do Metro (fase 1), ainda com os desvios da 54 do sintético (−11 / −10) e o critério de busca antigo |
 | `diff_sintetico_vs_oficial_fase1.csv` | Todas as diferenças entre os dois (305 números) |
-| `oficial_fase1_desvios.csv` | O mesmo com os desvios **decididos** (−10 / 0) e o critério novo. É a linha de base atual (`test_snapshot_metrics.py`) |
+| `oficial_fase1_desvios.csv` | O mesmo com os desvios **decididos** (−10 / 0) e o critério novo |
+| `oficial_fase1_d24.csv` | D2.4 (mesmos dados): a 38 conta em Portagem com origem própria (Santa Clara) e as paragens do nó incluem as que ficam a ≤ 250 m. É a linha de base atual (`test_snapshot_metrics.py`) |
+| `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
+| `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
+| `busca_fase_54_fase2_oficial.csv` | Busca de desvio na rede da **fase 2 oficial** (cenário `fase2_oficial`): −10 / 0, os valores adotados |
 | `diff_oficial_fase1_vs_desvios.csv` | Diferenças da decisão dos desvios (26 números: só as propostas e a busca) |
 | `busca_fase_54_sintetico.csv` | Busca de desvio da 54 no sintético, com transbordo a pé (passo 0.2: −11 / −9) |
 | `busca_fase_54_sintetico_sem_transbordo.csv` | Idem com a regra antiga (transbordo 0): reproduz os −16 / −8 originais |
@@ -66,3 +70,22 @@ Com o critério antigo, os desvios grandes ganhavam por efeito de borda (a 1.ª 
 | Melhorado (2.º autocarro, 20 min) | **0** (era −10) | Portagem metro→autocarro 26,0 → 15,0; os outros 3 sentidos iguais | 40,0 |
 
 Com a regra antiga do transbordo (0 min), os desvios seriam −13 / −3.
+
+## D2.4 e D2.6: linha 38 e desvios na rede da fase 2 (2026-11-16)
+
+Decisões do utilizador:
+- A 38 fica no nó de Portagem com **origem própria**. Antes partilhava a origem da 54 ("Portela do Mondego"), onde nunca passa, e contribuía 0 passagens. Agora conta no sentido Santa Clara → Polo II, que chega a Portagem vindo da margem esquerda, como a 54 vinda de Portela: 14 passagens por dia útil, com 3,23 min de transbordo a pé.
+- Em Portagem, autocarro→metro continua a contar **só o sentido Vale das Flores/Serpins** (o da fase 1), mesmo na fase 2.
+- **Um só par de desvios** para todos os cenários: −10 / 0, o ótimo da rede da fase 2.
+
+Efeito no `antes` (`diff_oficial_fase1_desvios_vs_d24.csv`):
+- Portagem metro→autocarro passa de 26,0 para 19,0 min de mediana, porque a 38 junta passagens à 54.
+- Portagem autocarro→metro passa de 2 para 4 min, porque as chegadas da 38 são na paragem do Parque Manuel Braga, mais longe.
+- Portela não muda.
+
+Uma linha com viagens no dia que nunca passa no nó depois da sua origem passa a ser um **erro**. Antes contribuía 0 passagens sem aviso.
+
+Busca na fase 2 oficial (`busca_fase_54_fase2_oficial.csv`):
+- **Otimizado −10:** melhora 3 dos 4 sentidos sem piorar nenhum (soma das medianas 49,5 → 48,6).
+- **Melhorado 0:** nenhum desvio evita piorar um sentido; o 0 é o de menor espera total (38,0).
+- **No `antes`:** a busca daria 0 / −10. O −10 do otimizado só perde lá 0,1 min num sentido.

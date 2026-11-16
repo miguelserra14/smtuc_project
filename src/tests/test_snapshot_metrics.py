@@ -15,8 +15,9 @@ from tests.reference_data import require_reference_data
 ROOT = Path(__file__).resolve().parents[2]
 # Linha de base ATUAL (dados e desvios em uso). Registos anteriores em reports/metricas/ (ver o
 # README de lá): sintetico.csv (metro sintético) -> oficial_fase1.csv (metro oficial, desvios
-# antigos) -> oficial_fase1_desvios.csv (desvios decididos a 2026-11-16).
-BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1_desvios.csv"
+# antigos) -> oficial_fase1_desvios.csv (desvios decididos a 2026-11-16) -> oficial_fase1_d24.csv
+# (D2.4: a 38 conta em Portagem com origem própria; nós por distância).
+BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1_d24.csv"
 
 
 def _load_script():
@@ -163,7 +164,10 @@ def test_baseline_covers_every_section_and_known_values(current_snapshot: pd.Dat
     # Frequências verificadas à mão (passo 0.1; SMTUC, não mudaram com o metro oficial).
     assert base[("linhas", "7", "avg_freq_min")] == "20"
     assert base[("linhas", "54", "avg_freq_min")] == "40"
-    # Metro oficial (D1 passo 4): 26.02 = espera mediana com o transbordo de 1.40 min (era 27).
-    assert base[("esperas_54", "Portagem metro→bus | atual", "median")] == "26.02"
-    assert base[("busca_fase_54", "otimizado", "shift_min")] == "-10"
-    assert base[("busca_fase_54", "melhorado", "shift_min")] == "0"
+    # D2.4: 54 + 38 (cada uma com a sua origem) em Portagem -> 19.02 (só a 54: 26.02; sintético 27).
+    assert base[("esperas_54", "Portagem metro→bus | atual", "median")] == "19.02"
+    assert base[("esperas_54", "Portela metro→bus | atual", "median")] == "15.33"  # Portela não muda
+    # A busca no cenário "antes" daria 0 / -10; os desvios adotados (-10 / 0) vêm da fase 2.
+    assert base[("busca_fase_54", "otimizado", "shift_min")] == "0"
+    assert base[("busca_fase_54", "melhorado", "shift_min")] == "-10"
+    assert base[("esperas_54", "Portagem metro→bus | otimizado", "shift_min")] == "-10"

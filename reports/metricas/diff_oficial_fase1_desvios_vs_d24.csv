@@ -1,0 +1,23 @@
+section,key,metric,before,after,delta,delta_pct,status
+meta,snapshot,cenario,,antes,,,novo
+meta,snapshot,commit,37ab85b+alterações,3280c04+alterações,,,mudou
+meta,snapshot,fase,oficial_fase1_desvios,oficial_fase1_d24,,,mudou
+esperas_54,Portagem bus→metro | atual,cov10,90.4762,94.2857,3.8095,4.21049955678952,mudou
+esperas_54,Portagem bus→metro | atual,median,2,4,2.0,100.0,mudou
+esperas_54,Portagem bus→metro | melhorado,cov10,95.2381,97.1429,1.9047999999999945,2.000039899997999,mudou
+esperas_54,Portagem bus→metro | melhorado,median,2,4,2.0,100.0,mudou
+esperas_54,Portagem bus→metro | otimizado,median,2,4,2.0,100.0,mudou
+esperas_54,Portagem metro→bus | atual,cov10,20.9677,29.0323,8.064599999999999,38.462015385569224,mudou
+esperas_54,Portagem metro→bus | atual,lost15,77.4194,67.7419,-9.677499999999995,-12.500096874943484,mudou
+esperas_54,Portagem metro→bus | atual,median,26.02,19.02,-7.0,-26.90238278247502,mudou
+esperas_54,Portagem metro→bus | melhorado,cov10,41.9355,46.7742,4.838700000000003,11.53843402367923,mudou
+esperas_54,Portagem metro→bus | melhorado,lost15,56.4516,51.6129,-4.838699999999996,-8.571413387751624,mudou
+esperas_54,Portagem metro→bus | melhorado,median,15.02,9.35,-5.67,-37.74966711051931,mudou
+esperas_54,Portagem metro→bus | otimizado,cov10,20.9677,29.0323,8.064599999999999,38.462015385569224,mudou
+esperas_54,Portagem metro→bus | otimizado,lost15,79.0323,67.7419,-11.290400000000005,-14.28580466467508,mudou
+esperas_54,Portagem metro→bus | otimizado,median,25.185,19.135,-6.049999999999997,-24.02223545761365,mudou
+busca_fase_54,melhorado,shift_min,0,-10,-10.0,,mudou
+busca_fase_54,melhorado,soma_medianas,40.02,36.25,-3.770000000000003,-9.42028985507247,mudou
+busca_fase_54,otimizado,melhorados,1,0,-1.0,-100.0,mudou
+busca_fase_54,otimizado,shift_min,-10,0,10.0,100.0,mudou
+busca_fase_54,otimizado,soma_medianas,50.19,46.02,-4.169999999999995,-8.30842797369993,mudou

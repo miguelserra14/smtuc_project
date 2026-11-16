@@ -152,16 +152,26 @@ POINTS_OF_INTEREST_CSV = "data/points_of_interest.csv"
 # "à mesma hora" contavam como perfeitas, apesar de as paragens estarem a 20-250 m.
 TRANSFER_BUFFER_MIN = 1.0
 
+# Raio (m) à volta das paragens de autocarro com o nome pedido que ainda contam como o mesmo nó /
+# a mesma origem (overlap.transit._node_stop_ids). 250 m cobre Parque 2 (a 178 m do metro de
+# Portagem, de onde a 54 sai no Ep225) e as paragens de Portagem (até 248 m do metro), sem chegar
+# à paragem seguinte de cada linha.
+INTEGRATION_STOP_RADIUS_M = 250.0
+
 # Os 2 nós de integração linha 54 <-> Metrobus analisados (fonte única para
 # regenerate_all_htmls.py e scripts/search_phase_shift.py - não duplicar estes argumentos).
 INTEGRATION_SITES: tuple[dict, ...] = (
     {
-        "name": "Portagem",  # Portela -> Portagem, linhas 54 + 38
+        "name": "Portagem",  # chegadas a Portagem vindas da margem esquerda: 54 (de Portela) + 38 (de Santa Clara)
         "metro_stop_ref": "Portagem",
         "bus_stop_ref": "Portagem",
         "line_number": ("54", "38"),
         "metro_origin_ref": "Portela",
-        "bus_origin_ref": "Portela do Mondego",
+        # Origem POR LINHA (decidido a 2026-11-16, D2.4): a 38 nunca passa em Portela do Mondego
+        # (Santa Clara <-> Polo II), por isso com uma origem comum contribuía 0 passagens e o nó
+        # era só a 54. Santa Clara -> Polo II passa em "Portagem (Parque Manuel Braga)" (Ep212) /
+        # "Parque 2" (Ep225), como a 54 vinda de Portela.
+        "bus_origin_ref": {"54": "Portela do Mondego", "38": "Santa Clara (Junta de Freguesia)"},
         "output_prefix": "l54_38",
         "output_subdir": "portagem",
         "fixed_html_name": "l54_38_all.html",
@@ -184,22 +194,26 @@ INTEGRATION_SITES: tuple[dict, ...] = (
     },
 )
 
-# Desvios de fase da linha 54 em Portela/Portagem, com o GTFS OFICIAL do Metro (fase 1), decididos
-# a 2026-11-16 (D1 passo 4) com `scripts/search_phase_shift.py`: busca em meio ciclo de cada
-# proposta e escolha do desvio com a menor espera total que NÃO piora nenhum dos 4 sentidos
-# (transbordo a pé incluído). Correr de novo e atualizar aqui sempre que os horários mudarem.
-# Histórico (reports/metricas/busca_fase_54_*.csv): com o metro sintético eram -11/-10 (antes do
-# transbordo, -16/-8).
+# Desvios de fase da linha 54 em Portela/Portagem, decididos com `scripts/search_phase_shift.py`:
+# busca em meio ciclo de cada proposta e escolha do desvio com menos regressões e, depois, a menor
+# espera total dos 4 sentidos (transbordo a pé incluído). Correr de novo e atualizar aqui sempre
+# que os horários mudarem.
+# DECIDIDO a 2026-11-16 (D2.4/D2.6): um só par para todos os cenários, o ótimo da REDE DA FASE 2
+# (cenário fase2_oficial: SMTUC Ep225 + Metro NeTEx), que é para onde vai a proposta. No cenário
+# "antes" (com a 38 já a contar em Portagem) a busca daria 0 / -10; o -10 otimizado só perde lá
+# 0,1 min num sentido (Portagem metro->bus 19.02 -> 19.13).
+# Histórico (reports/metricas/busca_fase_54_*.csv): metro sintético -11/-10 (sem transbordo
+# -16/-8); metro oficial fase 1 sem a 38: -10 / 0.
 
-# "otimizado": mesmo nº de viagens e ciclo de 40 min, só desloca a partida. -10 min melhora
-# Portagem metro->bus (26.0 -> 25.2 min de mediana) e mantém os outros 3 sentidos; soma das
-# medianas 50.2 (51.0 sem desvio). Com o metro oficial os ganhos de deslocar a 54 são pequenos:
-# Portagem bus->metro já está nos 2 min e quase todos os outros desvios pioram-no.
+# "otimizado": mesmo nº de viagens e ciclo de 40 min, só desloca a partida. Na fase 2, -10 min
+# melhora 3 dos 4 sentidos sem piorar nenhum (soma das medianas 49.5 -> 48.6; Portagem
+# metro->bus 19.0 -> 18.5, Portagem bus->metro 4.5 -> 4.0, Portela bus->metro 6.3 -> 6.3).
 LINE_54_OPTIMIZED_PHASE_SHIFT_MIN = -10.0
 
-# "melhorado": 2º autocarro no ciclo (40 -> 20 min, +1 autocarro/motorista), SEM desvio: só
-# dobrar a frequência leva Portagem metro->bus de 26.0 para 15.0 min sem piorar nenhum sentido
-# (soma 40.0). Preterido: -18 (critério antigo, melhora 3 mas piora Portagem bus->metro 2 -> 5 min).
+# "melhorado": 2º autocarro no ciclo (40 -> 20 min, +1 autocarro/motorista), SEM desvio. Na fase 2
+# nenhum desvio do melhorado evita piorar 1 sentido; 0 é o de menor espera total (soma 38.0:
+# Portagem metro->bus 19.0 -> 9.1, Portela metro->bus 19.8 -> 17.7; piora Portela bus->metro
+# 6.3 -> 6.8).
 LINE_54_MELHORADO_PHASE_SHIFT_MIN = 0.0
 
 # Parede FeedNPlay (feednplay_dashboard.html) - toggles independentes: FEEDNPLAY_CLICK_TO_ADVANCE
