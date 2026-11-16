@@ -1,0 +1,311 @@
+section,key,metric,before,after,delta,delta_pct,status
+meta,dados,impressao_digital_metro,b3f7170e307f7cc3,da23030383ae252e,,,mudou
+meta,dados,pasta_metro,,data/gtfs/metro/fase1_gtfs_20251219,,,novo
+meta,dados,pasta_smtuc,,data/gtfs/smtuc/antigo_ep212,,,novo
+meta,snapshot,commit,97151e4+alterações,012178d+alterações,,,mudou
+meta,snapshot,fase,sintetico,oficial_fase1,,,mudou
+linhas,10,overlap_extension_m,7653,9983.8,2330.7999999999993,30.456030314909178,mudou
+linhas,10,overlap_pct,17.2,22.44,5.240000000000002,30.465116279069782,mudou
+linhas,10,overlap_stops,21,24,3.0,14.285714285714285,mudou
+linhas,10,temporal_overlaps_count,537,965,428.0,79.70204841713222,mudou
+linhas,10,temporal_overlaps_pct,50,77.82,27.819999999999993,55.639999999999986,mudou
+linhas,10,temporal_spatial_candidates_count,1074,1240,166.0,15.456238361266294,mudou
+linhas,10A,overlap_extension_m,1901.4,2922.9,1021.5,53.723572104764905,mudou
+linhas,10A,overlap_pct,5.9,9.06,3.16,53.559322033898304,mudou
+linhas,10A,overlap_stops,12,14,2.0,16.666666666666664,mudou
+linhas,10A,temporal_overlaps_count,19,88,69.0,363.15789473684214,mudou
+linhas,10A,temporal_overlaps_pct,19.59,76.52,56.92999999999999,290.6074527820316,mudou
+linhas,10A,temporal_spatial_candidates_count,97,115,18.0,18.556701030927837,mudou
+linhas,10F,temporal_overlaps_count,0,2,2.0,,mudou
+linhas,10F,temporal_overlaps_pct,0,100,100.0,,mudou
+linhas,11,temporal_overlaps_count,80,135,55.0,68.75,mudou
+linhas,11,temporal_overlaps_pct,59.26,100,40.74,68.74789065136686,mudou
+linhas,12,temporal_overlaps_count,19,48,29.0,152.63157894736844,mudou
+linhas,12,temporal_overlaps_pct,39.58,100,60.42,152.65285497726126,mudou
+linhas,12R,temporal_overlaps_count,6,12,6.0,100.0,mudou
+linhas,12R,temporal_overlaps_pct,50,100,50.0,100.0,mudou
+linhas,13,temporal_overlaps_count,76,91,15.0,19.736842105263158,mudou
+linhas,13,temporal_overlaps_pct,82.61,98.91,16.299999999999997,19.731267401041034,mudou
+linhas,13P,temporal_overlaps_count,11,16,5.0,45.45454545454545,mudou
+linhas,13P,temporal_overlaps_pct,68.75,100,31.25,45.45454545454545,mudou
+linhas,14,temporal_overlaps_count,125,154,29.0,23.200000000000003,mudou
+linhas,14,temporal_overlaps_pct,81.17,100,18.83,23.19822594554638,mudou
+linhas,14T,temporal_overlaps_count,208,385,177.0,85.09615384615384,mudou
+linhas,14T,temporal_overlaps_pct,52,96.25,44.25,85.09615384615384,mudou
+linhas,16,temporal_overlaps_count,26,27,1.0,3.8461538461538463,mudou
+linhas,16,temporal_overlaps_pct,96.3,100,3.700000000000003,3.842159916926275,mudou
+linhas,16F,overlap_extension_m,1056.5,820.9,-235.60000000000002,-22.30004732607667,mudou
+linhas,16F,overlap_pct,5.51,4.28,-1.2299999999999995,-22.323049001814873,mudou
+linhas,16F,overlap_stops,6,5,-1.0,-16.666666666666664,mudou
+linhas,16F,temporal_overlaps_count,12,10,-2.0,-16.666666666666664,mudou
+linhas,16F,temporal_spatial_candidates_count,12,10,-2.0,-16.666666666666664,mudou
+linhas,16G,temporal_overlaps_count,39,51,12.0,30.76923076923077,mudou
+linhas,16G,temporal_overlaps_pct,70.91,92.73,21.820000000000007,30.77140036666198,mudou
+linhas,17,temporal_overlaps_count,32,56,24.0,75.0,mudou
+linhas,17,temporal_overlaps_pct,57.14,100,42.86,75.00875043752188,mudou
+linhas,18,temporal_overlaps_count,82,96,14.0,17.073170731707318,mudou
+linhas,18,temporal_overlaps_pct,85.42,100,14.579999999999998,17.068602200889718,mudou
+linhas,18E,overlap_extension_m,781.4,1207.6,426.19999999999993,54.54312771947786,mudou
+linhas,18E,overlap_pct,3.03,4.69,1.6600000000000006,54.78547854785481,mudou
+linhas,18E,overlap_stops,9,11,2.0,22.22222222222222,mudou
+linhas,18E,temporal_overlaps_count,40,48,8.0,20.0,mudou
+linhas,18E,temporal_spatial_candidates_count,40,48,8.0,20.0,mudou
+linhas,18F,temporal_overlaps_count,8,25,17.0,212.5,mudou
+linhas,18F,temporal_overlaps_pct,29.63,92.59,62.96000000000001,212.48734390820115,mudou
+linhas,20,temporal_overlaps_count,39,56,17.0,43.58974358974359,mudou
+linhas,20,temporal_overlaps_pct,69.64,100,30.36,43.595634692705346,mudou
+linhas,20T,temporal_overlaps_count,5,8,3.0,60.0,mudou
+linhas,20T,temporal_overlaps_pct,62.5,100,37.5,60.0,mudou
+linhas,21,temporal_overlaps_count,39,61,22.0,56.41025641025641,mudou
+linhas,21,temporal_overlaps_pct,62.9,98.39,35.49,56.42289348171702,mudou
+linhas,21A,temporal_overlaps_count,32,65,33.0,103.125,mudou
+linhas,21A,temporal_overlaps_pct,49.23,100,50.77,103.12817387771685,mudou
+linhas,21R,temporal_overlaps_count,52,70,18.0,34.61538461538461,mudou
+linhas,21R,temporal_overlaps_pct,68.42,92.11,23.689999999999998,34.62437883659748,mudou
+linhas,21T,temporal_overlaps_count,32,40,8.0,25.0,mudou
+linhas,21T,temporal_overlaps_pct,80,100,20.0,25.0,mudou
+linhas,22,temporal_overlaps_count,63,112,49.0,77.77777777777779,mudou
+linhas,22,temporal_overlaps_pct,55.26,98.25,42.99,77.79587404994571,mudou
+linhas,22F,temporal_overlaps_count,10,46,36.0,360.0,mudou
+linhas,22F,temporal_overlaps_pct,21.74,100,78.26,359.98160073597063,mudou
+linhas,23,overlap_extension_m,1562.7,2415.3,852.6000000000001,54.559416394701486,mudou
+linhas,23,overlap_pct,4.88,7.54,2.66,54.50819672131148,mudou
+linhas,23,overlap_stops,9,11,2.0,22.22222222222222,mudou
+linhas,23,temporal_overlaps_count,165,212,47.0,28.484848484848484,mudou
+linhas,23,temporal_overlaps_pct,74.32,79.7,5.38000000000001,7.238966630785805,mudou
+linhas,23,temporal_spatial_candidates_count,222,266,44.0,19.81981981981982,mudou
+linhas,23C,overlap_extension_m,1203.1,1751.3,548.2,45.56562214279778,mudou
+linhas,23C,overlap_pct,5.9,8.59,2.6899999999999995,45.59322033898304,mudou
+linhas,23C,overlap_stops,7,9,2.0,28.57142857142857,mudou
+linhas,23C,temporal_overlaps_count,41,54,13.0,31.70731707317073,mudou
+linhas,23C,temporal_overlaps_pct,75.93,81.82,5.889999999999986,7.757144738574985,mudou
+linhas,23C,temporal_spatial_candidates_count,54,66,12.0,22.22222222222222,mudou
+linhas,23F,temporal_overlaps_count,7,29,22.0,314.2857142857143,mudou
+linhas,23F,temporal_overlaps_pct,24.14,100,75.86,314.25020712510354,mudou
+linhas,24,temporal_overlaps_count,146,247,101.0,69.17808219178082,mudou
+linhas,24,temporal_overlaps_pct,58.17,98.41,40.239999999999995,69.17655148702079,mudou
+linhas,24T,overlap_extension_m,3393.9,3881.3,487.4000000000001,14.361059548012614,mudou
+linhas,24T,overlap_pct,14.24,16.29,2.049999999999999,14.396067415730329,mudou
+linhas,24T,overlap_stops,9,10,1.0,11.11111111111111,mudou
+linhas,24T,temporal_overlaps_count,533,1267,734.0,137.7110694183865,mudou
+linhas,24T,temporal_overlaps_pct,42.03,89.99,47.959999999999994,114.10896978348796,mudou
+linhas,24T,temporal_spatial_candidates_count,1268,1408,140.0,11.041009463722396,mudou
+linhas,25T,temporal_overlaps_count,1,4,3.0,300.0,mudou
+linhas,25T,temporal_overlaps_pct,25,100,75.0,300.0,mudou
+linhas,26,overlap_extension_m,5547,5531.3,-15.699999999999818,-0.28303587524787843,mudou
+linhas,26,overlap_pct,18.45,18.4,-0.05000000000000071,-0.27100271002710413,mudou
+linhas,26,temporal_overlaps_count,229,257,28.0,12.22707423580786,mudou
+linhas,26,temporal_overlaps_pct,76.08,96.25,20.17,26.51156677181914,mudou
+linhas,26,temporal_spatial_candidates_count,301,267,-34.0,-11.295681063122924,mudou
+linhas,27,temporal_overlaps_count,6,13,7.0,116.66666666666667,mudou
+linhas,27,temporal_overlaps_pct,46.15,100,53.85,116.68472372697724,mudou
+linhas,27F,temporal_overlaps_count,1,3,2.0,200.0,mudou
+linhas,27F,temporal_overlaps_pct,33.33,100,66.67,200.03000300030004,mudou
+linhas,28,temporal_overlaps_count,4,10,6.0,150.0,mudou
+linhas,28,temporal_overlaps_pct,40,100,60.0,150.0,mudou
+linhas,2T,temporal_overlaps_count,3,6,3.0,100.0,mudou
+linhas,2T,temporal_overlaps_pct,50,100,50.0,100.0,mudou
+linhas,30,temporal_overlaps_count,8,6,-2.0,-25.0,mudou
+linhas,30,temporal_overlaps_pct,100,75,-25.0,-25.0,mudou
+linhas,31,temporal_overlaps_count,56,91,35.0,62.5,mudou
+linhas,31,temporal_overlaps_pct,60.22,97.85,37.629999999999995,62.487545665891716,mudou
+linhas,32,temporal_overlaps_count,51,72,21.0,41.17647058823529,mudou
+linhas,32,temporal_overlaps_pct,68.92,97.3,28.379999999999995,41.17817759721415,mudou
+linhas,32A,temporal_overlaps_count,3,10,7.0,233.33333333333334,mudou
+linhas,32A,temporal_overlaps_pct,30,100,70.0,233.33333333333334,mudou
+linhas,32R,temporal_overlaps_count,13,21,8.0,61.53846153846154,mudou
+linhas,32R,temporal_overlaps_pct,59.09,95.45,36.36,61.53325435775935,mudou
+linhas,33,overlap_extension_m,4280.7,5777.6,1496.9000000000005,34.968579905155714,mudou
+linhas,33,overlap_pct,16.42,22.16,5.739999999999998,34.957369062119355,mudou
+linhas,33,overlap_stops,14,17,3.0,21.428571428571427,mudou
+linhas,33,temporal_overlaps_count,457,717,260.0,56.89277899343544,mudou
+linhas,33,temporal_overlaps_pct,74.43,97.15,22.72,30.52532580948542,mudou
+linhas,33,temporal_spatial_candidates_count,614,738,124.0,20.195439739413683,mudou
+linhas,33R,overlap_extension_m,2905.1,4087.9,1182.8000000000002,40.714605349213464,mudou
+linhas,33R,overlap_pct,14.29,20.11,5.82,40.72778166550036,mudou
+linhas,33R,overlap_stops,15,19,4.0,26.666666666666668,mudou
+linhas,33R,temporal_overlaps_count,26,42,16.0,61.53846153846154,mudou
+linhas,33R,temporal_overlaps_pct,81.25,100,18.75,23.076923076923077,mudou
+linhas,33R,temporal_spatial_candidates_count,32,42,10.0,31.25,mudou
+linhas,34,temporal_overlaps_count,209,266,57.0,27.27272727272727,mudou
+linhas,34,temporal_overlaps_pct,77.99,99.25,21.260000000000005,27.259905116040528,mudou
+linhas,35,temporal_overlaps_count,0,4,4.0,,mudou
+linhas,35,temporal_overlaps_pct,0,100,100.0,,mudou
+linhas,36T,temporal_overlaps_count,0,2,2.0,,mudou
+linhas,36T,temporal_overlaps_pct,0,100,100.0,,mudou
+linhas,37,overlap_extension_m,1983.8,2588,604.2,30.45669926403872,mudou
+linhas,37,overlap_pct,9.37,12.23,2.860000000000001,30.5229455709712,mudou
+linhas,37,overlap_stops,9,10,1.0,11.11111111111111,mudou
+linhas,37,temporal_overlaps_count,485,694,209.0,43.09278350515464,mudou
+linhas,37,temporal_overlaps_pct,74.96,95.33,20.370000000000005,27.174493062966924,mudou
+linhas,37,temporal_spatial_candidates_count,647,728,81.0,12.5193199381762,mudou
+linhas,38,overlap_extension_m,1048.3,1893.8,845.5,80.65439282648097,mudou
+linhas,38,overlap_pct,6.55,11.84,5.29,80.76335877862596,mudou
+linhas,38,overlap_stops,5,9,4.0,80.0,mudou
+linhas,38,temporal_overlaps_count,128,252,124.0,96.875,mudou
+linhas,38,temporal_overlaps_pct,88.89,98.44,9.549999999999997,10.743615704803688,mudou
+linhas,38,temporal_spatial_candidates_count,144,256,112.0,77.77777777777779,mudou
+linhas,38F,overlap_extension_m,1655.5,2501,845.5,51.07218363032317,mudou
+linhas,38F,overlap_pct,8.18,12.36,4.18,51.1002444987775,mudou
+linhas,38F,overlap_stops,7,11,4.0,57.14285714285714,mudou
+linhas,38F,temporal_overlaps_count,70,280,210.0,300.0,mudou
+linhas,38F,temporal_overlaps_pct,29.17,74.87,45.7,156.66780939321222,mudou
+linhas,38F,temporal_spatial_candidates_count,240,374,134.0,55.833333333333336,mudou
+linhas,38T,overlap_extension_m,1005.5,1249.2,243.70000000000005,24.23669816011935,mudou
+linhas,38T,overlap_pct,15.23,18.92,3.6900000000000013,24.228496388706507,mudou
+linhas,38T,overlap_stops,4,5,1.0,25.0,mudou
+linhas,38T,temporal_overlaps_count,12,17,5.0,41.66666666666667,mudou
+linhas,38T,temporal_overlaps_pct,75,94.44,19.439999999999998,25.919999999999998,mudou
+linhas,38T,temporal_spatial_candidates_count,16,18,2.0,12.5,mudou
+linhas,41,overlap_extension_m,1541.8,2232.9,691.1000000000001,44.824231417823334,mudou
+linhas,41,overlap_pct,8.52,12.34,3.8200000000000003,44.83568075117371,mudou
+linhas,41,overlap_stops,8,9,1.0,12.5,mudou
+linhas,41,temporal_overlaps_count,113,150,37.0,32.743362831858406,mudou
+linhas,41,temporal_overlaps_pct,85.61,100,14.39,16.808784020558345,mudou
+linhas,41,temporal_spatial_candidates_count,132,150,18.0,13.636363636363635,mudou
+linhas,42V,temporal_overlaps_count,39,46,7.0,17.94871794871795,mudou
+linhas,42V,temporal_overlaps_pct,81.25,95.83,14.579999999999998,17.944615384615386,mudou
+linhas,43,temporal_overlaps_count,10,17,7.0,70.0,mudou
+linhas,43,temporal_overlaps_pct,55.56,94.44,38.879999999999995,69.97840172786177,mudou
+linhas,43T,overlap_extension_m,1300.8,1544.5,243.70000000000005,18.734624846248465,mudou
+linhas,43T,overlap_pct,4.52,5.36,0.8400000000000007,18.584070796460196,mudou
+linhas,43T,overlap_stops,5,6,1.0,20.0,mudou
+linhas,43T,temporal_overlaps_count,44,88,44.0,100.0,mudou
+linhas,43T,temporal_overlaps_pct,58.67,100,41.33,70.4448610874382,mudou
+linhas,43T,temporal_spatial_candidates_count,75,88,13.0,17.333333333333336,mudou
+linhas,44,overlap_extension_m,8090.7,10325.5,2234.8,27.621837418270363,mudou
+linhas,44,overlap_pct,11.44,14.6,3.16,27.622377622377627,mudou
+linhas,44,overlap_stops,24,27,3.0,12.5,mudou
+linhas,44,temporal_overlaps_count,242,337,95.0,39.25619834710744,mudou
+linhas,44,temporal_overlaps_pct,72.89,90.11,17.22,23.62463986829469,mudou
+linhas,44,temporal_spatial_candidates_count,332,374,42.0,12.650602409638553,mudou
+linhas,45,overlap_extension_m,4051,4742.1,691.1000000000004,17.05998518884227,mudou
+linhas,45,overlap_pct,20.51,24.01,3.5,17.064846416382252,mudou
+linhas,45,overlap_stops,19,20,1.0,5.263157894736842,mudou
+linhas,45,temporal_overlaps_count,198,327,129.0,65.15151515151516,mudou
+linhas,45,temporal_overlaps_pct,58.41,91.85,33.44,57.250470809792844,mudou
+linhas,45,temporal_spatial_candidates_count,339,356,17.0,5.014749262536873,mudou
+linhas,47,temporal_overlaps_count,38,70,32.0,84.21052631578947,mudou
+linhas,47,temporal_overlaps_pct,53.52,98.59,45.07,84.21150971599401,mudou
+linhas,47F,temporal_overlaps_count,6,14,8.0,133.33333333333331,mudou
+linhas,47F,temporal_overlaps_pct,42.86,100,57.14,133.31777881474568,mudou
+linhas,48,temporal_overlaps_count,50,69,19.0,38.0,mudou
+linhas,48,temporal_overlaps_pct,72.46,100,27.540000000000006,38.00717637317141,mudou
+linhas,48T,temporal_overlaps_count,11,12,1.0,9.090909090909092,mudou
+linhas,48T,temporal_overlaps_pct,91.67,100,8.329999999999998,9.086942293007525,mudou
+linhas,49,temporal_overlaps_count,43,57,14.0,32.55813953488372,mudou
+linhas,49,temporal_overlaps_pct,75.44,100,24.560000000000002,32.555673382820785,mudou
+linhas,49T,temporal_overlaps_count,156,214,58.0,37.17948717948718,mudou
+linhas,49T,temporal_overlaps_pct,72.22,99.07,26.849999999999994,37.17806701744668,mudou
+linhas,5,temporal_overlaps_count,272,327,55.0,20.22058823529412,mudou
+linhas,5,temporal_overlaps_pct,82.42,99.09,16.67,20.225673380247514,mudou
+linhas,50T,temporal_overlaps_count,2,7,5.0,250.0,mudou
+linhas,50T,temporal_overlaps_pct,12.5,43.75,31.25,250.0,mudou
+linhas,53,temporal_overlaps_count,10,20,10.0,100.0,mudou
+linhas,53,temporal_overlaps_pct,50,100,50.0,100.0,mudou
+linhas,53T,temporal_overlaps_count,2,4,2.0,100.0,mudou
+linhas,53T,temporal_overlaps_pct,50,100,50.0,100.0,mudou
+linhas,54,overlap_extension_m,1412.5,1656.2,243.70000000000005,17.253097345132748,mudou
+linhas,54,overlap_pct,15.57,18.26,2.6900000000000013,17.276814386640986,mudou
+linhas,54,overlap_stops,7,8,1.0,14.285714285714285,mudou
+linhas,54,temporal_overlaps_count,255,373,118.0,46.27450980392157,mudou
+linhas,54,temporal_overlaps_pct,68.18,89.66,21.47999999999999,31.50484012907009,mudou
+linhas,54,temporal_spatial_candidates_count,374,416,42.0,11.229946524064172,mudou
+linhas,5F,overlap_extension_m,3542.8,4493.9,951.0999999999995,26.845997516088953,mudou
+linhas,5F,overlap_pct,12.43,15.76,3.33,26.79002413515688,mudou
+linhas,5F,overlap_stops,17,20,3.0,17.647058823529413,mudou
+linhas,5F,temporal_overlaps_count,351,812,461.0,131.33903133903132,mudou
+linhas,5F,temporal_overlaps_pct,44.04,87.69,43.65,99.11444141689373,mudou
+linhas,5F,temporal_spatial_candidates_count,797,926,129.0,16.18569636135508,mudou
+linhas,5T,overlap_extension_m,1763.3,2168.6,405.29999999999995,22.98531163159984,mudou
+linhas,5T,overlap_pct,4.45,5.47,1.0199999999999996,22.921348314606732,mudou
+linhas,5T,overlap_stops,7,8,1.0,14.285714285714285,mudou
+linhas,5T,temporal_overlaps_count,85,229,144.0,169.41176470588235,mudou
+linhas,5T,temporal_overlaps_pct,35.56,85.13,49.56999999999999,139.39820022497184,mudou
+linhas,5T,temporal_spatial_candidates_count,239,269,30.0,12.552301255230125,mudou
+linhas,6,temporal_overlaps_count,164,297,133.0,81.09756097560977,mudou
+linhas,6,temporal_overlaps_pct,53.95,97.7,43.75,81.09360518999073,mudou
+linhas,6F,temporal_overlaps_count,17,56,39.0,229.41176470588235,mudou
+linhas,6F,temporal_overlaps_pct,25.76,84.85,59.08999999999999,229.38664596273287,mudou
+linhas,7,temporal_overlaps_count,593,1000,407.0,68.63406408094434,mudou
+linhas,7,temporal_overlaps_pct,55.63,93.81,38.18,68.63203307567859,mudou
+linhas,7T,overlap_extension_m,2289,2980.1,691.0999999999999,30.192223678462206,mudou
+linhas,7T,overlap_pct,12.27,15.98,3.710000000000001,30.236348818255916,mudou
+linhas,7T,overlap_stops,11,12,1.0,9.090909090909092,mudou
+linhas,7T,temporal_overlaps_count,931,1760,829.0,89.04403866809882,mudou
+linhas,7T,temporal_overlaps_pct,55.72,96.6,40.879999999999995,73.36683417085426,mudou
+linhas,7T,temporal_spatial_candidates_count,1671,1822,151.0,9.036505086774387,mudou
+linhas,9,overlap_extension_m,6717.3,8099.5,1382.1999999999998,20.57671981302011,mudou
+linhas,9,overlap_pct,16.17,19.5,3.3299999999999983,20.593692022263436,mudou
+linhas,9,overlap_stops,21,22,1.0,4.761904761904762,mudou
+linhas,9,temporal_overlaps_count,329,538,209.0,63.525835866261396,mudou
+linhas,9,temporal_overlaps_pct,60.48,94.22,33.74,55.787037037037045,mudou
+linhas,9,temporal_spatial_candidates_count,544,571,27.0,4.963235294117647,mudou
+overlap_resumo,bottom5_stadium_03,line,5T,34,,,mudou
+overlap_resumo,bottom5_stadium_04,line,34,5T,,,mudou
+overlap_resumo,bottom5_stadium_05,line,38,42T,,,mudou
+overlap_resumo,top5_02,line,26,10,-16.0,-61.53846153846154,mudou
+overlap_resumo,top5_03,line,10,33,23.0,229.99999999999997,mudou
+overlap_resumo,top5_04,line,33,33R,,,mudou
+overlap_resumo,total,overlap_stations,52,59,7.0,13.461538461538462,mudou
+overlap_resumo,total,temporal_overlap_lines,79,82,3.0,3.79746835443038,mudou
+overlap_resumo,total,temporal_overlap_pct,58.93,92.3,33.37,56.62650602409638,mudou
+overlap_resumo,total,temporal_overlap_stations,52,59,7.0,13.461538461538462,mudou
+overlap_resumo,total,temporal_overlap_times,8255,14115,5860.0,70.98728043609933,mudou
+overlap_resumo,total,total_overlap_extension_m,85392.7,103560.8,18168.100000000006,21.275940449242157,mudou
+overlap_resumo,total,total_spatial_candidates,14008,15292,1284.0,9.166190748143919,mudou
+esperas_54,Portagem bus→metro | atual,cov10,42.8571,90.4762,47.6191,111.11134444467778,mudou
+esperas_54,Portagem bus→metro | atual,lost15,33.3333,0,-33.3333,-100.0,mudou
+esperas_54,Portagem bus→metro | atual,median,12,2,-10.0,-83.33333333333334,mudou
+esperas_54,Portagem bus→metro | melhorado,cov10,47.619,100,52.381,110.00021000021,mudou
+esperas_54,Portagem bus→metro | melhorado,lost15,30.9524,0,-30.9524,-100.0,mudou
+esperas_54,Portagem bus→metro | melhorado,median,12,2,-10.0,-83.33333333333334,mudou
+esperas_54,Portagem bus→metro | otimizado,cov10,52.381,95.2381,42.8571,81.81802561997671,mudou
+esperas_54,Portagem bus→metro | otimizado,lost15,28.5714,0,-28.5714,-100.0,mudou
+esperas_54,Portagem metro→bus | atual,cov10,24.3902,20.9677,-3.4224999999999994,-14.032275258095462,mudou
+esperas_54,Portagem metro→bus | atual,lost15,75.6098,77.4194,1.809599999999989,2.393340545802249,mudou
+esperas_54,Portagem metro→bus | atual,median,27,26.02,-0.9800000000000004,-3.629629629629631,mudou
+esperas_54,Portagem metro→bus | melhorado,cov10,41.4634,41.9355,0.4720999999999975,1.138594519503942,mudou
+esperas_54,Portagem metro→bus | melhorado,lost15,58.5366,56.4516,-2.085000000000001,-3.5618741095314737,mudou
+esperas_54,Portagem metro→bus | melhorado,median,17,16.02,-0.9800000000000004,-5.764705882352944,mudou
+esperas_54,Portagem metro→bus | otimizado,cov10,19.5122,20.9677,1.4555000000000007,7.459435635141094,mudou
+esperas_54,Portagem metro→bus | otimizado,lost15,80.4878,79.0323,-1.4554999999999865,-1.8083485944453526,mudou
+esperas_54,Portagem metro→bus | otimizado,median,25,24.185,-0.8150000000000013,-3.260000000000005,mudou
+esperas_54,Portela bus→metro | atual,cov10,42.8571,66.6667,23.809600000000003,55.555788889122226,mudou
+esperas_54,Portela bus→metro | atual,lost15,42.8571,14.2857,-28.571400000000004,-66.66666666666667,mudou
+esperas_54,Portela bus→metro | atual,median,14,7.67,-6.33,-45.214285714285715,mudou
+esperas_54,Portela bus→metro | melhorado,cov10,45.2381,61.9048,16.6667,36.842175069244725,mudou
+esperas_54,Portela bus→metro | melhorado,lost15,45.2381,21.4286,-23.809500000000003,-52.63152077562939,mudou
+esperas_54,Portela bus→metro | melhorado,median,14,7.67,-6.33,-45.214285714285715,mudou
+esperas_54,Portela bus→metro | otimizado,cov10,47.619,61.9048,14.285800000000002,30.000210000210004,mudou
+esperas_54,Portela bus→metro | otimizado,lost15,42.8571,38.0952,-4.761900000000004,-11.11111111111112,mudou
+esperas_54,Portela bus→metro | otimizado,median,15,8.67,-6.33,-42.199999999999996,mudou
+esperas_54,Portela metro→bus | atual,cov10,23.2558,21.0526,-2.203199999999999,-9.473765684259405,mudou
+esperas_54,Portela metro→bus | atual,lost15,76.7442,78.9474,2.2031999999999954,2.8708358416662043,mudou
+esperas_54,Portela metro→bus | atual,median,16,15.33,-0.6699999999999999,-4.1875,mudou
+esperas_54,Portela metro→bus | melhorado,cov10,46.5116,42.1053,-4.406300000000002,-9.473550684130414,mudou
+esperas_54,Portela metro→bus | melhorado,lost15,53.4884,57.8947,4.406300000000002,8.237860919376914,mudou
+esperas_54,Portela metro→bus | melhorado,median,11,15.33,4.33,39.36363636363636,mudou
+esperas_54,Portela metro→bus | otimizado,cov10,25.5814,22.807,-2.7744,-10.845379846294573,mudou
+esperas_54,Portela metro→bus | otimizado,lost15,53.4884,56.1404,2.652000000000001,4.958084369695113,mudou
+esperas_54,Portela metro→bus | otimizado,median,15,14.33,-0.6699999999999999,-4.466666666666666,mudou
+busca_fase_54,melhorado,shift_min,-9,-18,-9.0,-100.0,mudou
+busca_fase_54,melhorado,soma_medianas,64,39.38,-24.619999999999997,-38.46874999999999,mudou
+busca_fase_54,otimizado,melhorados,3,2,-1.0,-33.33333333333333,mudou
+busca_fase_54,otimizado,regressoes,1,2,1.0,100.0,mudou
+busca_fase_54,otimizado,soma_medianas,58,50.19,-7.810000000000002,-13.465517241379315,mudou
+isocrona,faixa 0-10,populacao,14441,14141,-300.0,-2.077418461325393,mudou
+isocrona,faixa 0-10,zonas,114,112,-2.0,-1.7543859649122806,mudou
+isocrona,faixa 10-15,populacao,15037,15137,100.0,0.6650262685376073,mudou
+isocrona,faixa 10-15,zonas,130,125,-5.0,-3.8461538461538463,mudou
+isocrona,faixa 15-30,populacao,35236,35052,-184.0,-0.5221932114882507,mudou
+isocrona,faixa 15-30,zonas,327,329,2.0,0.6116207951070336,mudou
+isocrona,faixa 30-60,populacao,49417,49786,369.0,0.7467065989436834,mudou
+isocrona,faixa 30-60,zonas,667,671,4.0,0.5997001499250375,mudou
+isocrona,faixa >60,populacao,26685,26700,15.0,0.056211354693648116,mudou
+isocrona,faixa >60,zonas,610,611,1.0,0.16393442622950818,mudou
+isocrona,modo a pé,populacao,32473,32640,167.0,0.514273396360053,mudou
+isocrona,modo transporte público,populacao,108343,108176,-167.0,-0.15414009211485744,mudou
+isocrona,total,tempo_medio_ponderado_min,39.4251,39.5004,0.07529999999999859,0.19099507674044858,mudou
+populacao,sem_oferta,populacao,13705,13701,-4.0,-0.02918642831083546,mudou
+populacao,total,partidas,1167341,1233563,66222.0,5.6728924967083305,mudou

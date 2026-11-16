@@ -261,12 +261,23 @@ def _real(dataset: str):
     return _load_gtfs_cached(dataset)
 
 
+# Feriado de teste por feed: o GTFS oficial do Metro (fase 1) só vai até 2026-09-09, por isso
+# usa o 10 de Junho em vez do Natal.
+DIA_DE_PORTUGAL = date(2026, 6, 10)  # quarta-feira, feriado
+
+
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "dataset, weekday_trips, sunday_ids",
-    [("smtuc", 2373, {"Domingos e Feriados"}), ("metrobus", 107, {"SUN"}), ("metrobus_fase2", 303, {"SUN"})],
+    "dataset, weekday_trips, sunday_ids, holiday",
+    [
+        ("smtuc", 2373, {"Domingos e Feriados"}, CHRISTMAS),
+        # Oficial (D1 passo 4): serviço 3 = dias úteis, 1 = domingo; 291 conferido no ficheiro bruto.
+        ("metrobus", 291, {"1"}, DIA_DE_PORTUGAL),
+        ("metro_sintetico_fase1", 107, {"SUN"}, CHRISTMAS),
+        ("metrobus_fase2", 303, {"SUN"}, CHRISTMAS),
+    ],
 )
-def test_real_feeds(dataset: str, weekday_trips: int, sunday_ids: set[str]) -> None:
+def test_real_feeds(dataset: str, weekday_trips: int, sunday_ids: set[str], holiday: date) -> None:
     gtfs = _real(dataset)
     require_reference_data(dataset)  # contagens fixas: só valem para os feeds calibrados
     trip_sids = gtfs.trips["service_id"].astype(str)
@@ -274,11 +285,22 @@ def test_real_feeds(dataset: str, weekday_trips: int, sunday_ids: set[str]) -> N
     active = _active_service_ids(gtfs, WEEKDAY)
     assert int(trip_sids.isin(active).sum()) == weekday_trips  # igual ao valor antes da alteração
 
-    assert _active_service_ids(gtfs, CHRISTMAS) == sunday_ids
+    assert _active_service_ids(gtfs, holiday) == sunday_ids
     assert _active_service_ids(gtfs, SUNDAY) == sunday_ids
 
     with pytest.raises(ServiceCalendarError):
         _active_service_ids(gtfs, OUT_OF_RANGE)
+
+
+@pytest.mark.integration
+def test_official_phase1_metro_refuses_phase2_dates() -> None:
+    """O GTFS da fase 1 vale até 2026-09-09 (calendário estendido no build): um dia já da fase 2
+    tem de dar erro, nunca o horário da fase 1."""
+    gtfs = _real("metrobus")
+    require_reference_data("metrobus")
+    assert _active_service_ids(gtfs, date(2026, 9, 9)) == {"3"}
+    with pytest.raises(ServiceCalendarError):
+        _active_service_ids(gtfs, date(2026, 9, 10))
 
 
 @pytest.mark.integration

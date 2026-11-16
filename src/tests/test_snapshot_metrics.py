@@ -13,7 +13,9 @@ import pytest
 from tests.reference_data import require_reference_data
 
 ROOT = Path(__file__).resolve().parents[2]
-BASELINE = ROOT / "reports" / "metricas" / "sintetico.csv"
+# Linha de base ATUAL (dados em uso). reports/metricas/sintetico.csv fica como registo do "antes"
+# (metro sintético); a diferença está em reports/metricas/diff_sintetico_vs_oficial_fase1.csv.
+BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1.csv"
 
 
 def _load_script():
@@ -157,8 +159,9 @@ def test_baseline_covers_every_section_and_known_values(current_snapshot: pd.Dat
     base = snap_mod.read_snapshot(BASELINE).set_index(["section", "key", "metric"])["value"]
     assert set(base.index.get_level_values("section")) == {"meta", *snap_mod.SECTIONS}
     assert base[("meta", "snapshot", "secoes_omitidas")] == ""
-    # Valores verificados à mão contra os horários (passos 0.1 e 0.2 do roadmap).
+    # Frequências verificadas à mão (passo 0.1; SMTUC, não mudaram com o metro oficial).
     assert base[("linhas", "7", "avg_freq_min")] == "20"
     assert base[("linhas", "54", "avg_freq_min")] == "40"
-    assert base[("esperas_54", "Portagem metro→bus | atual", "median")] == "27"
+    # Metro oficial (D1 passo 4): 26.02 = espera mediana com o transbordo de 1.40 min (era 27).
+    assert base[("esperas_54", "Portagem metro→bus | atual", "median")] == "26.02"
     assert base[("busca_fase_54", "otimizado", "shift_min")] == "-11"

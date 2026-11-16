@@ -32,9 +32,9 @@ MAX_SPEED_KMH = 120.0
 MAX_SAME_TIME_DISTANCE_M = 1000.0
 
 KNOWN_ISSUES: dict[tuple[str, str], str] = {
-    ("metrobus", "velocidade"): "sintético: 4 paragens da Lousã com coordenadas erradas (troços a ~320 km/h) - docs D1, secção 1",
+    ("metro_sintetico_fase1", "velocidade"): "sintético: 4 paragens da Lousã com coordenadas erradas (troços a ~320 km/h)",
     ("metrobus_fase2", "velocidade"): "sintético: mesmas coordenadas erradas da fase 1",
-    ("metrobus", "horas"): "sintético: Casal de Santo António -> Serpins, 1077 m com a mesma hora (0 s)",
+    ("metro_sintetico_fase1", "horas"): "sintético: Casal de Santo António -> Serpins, 1077 m com a mesma hora (0 s)",
     ("metrobus_fase2", "horas"): "sintético: o mesmo troço CSA -> SRP a 0 s",
 }
 
@@ -145,10 +145,10 @@ def test_service_period_covers_reference_day(dataset: str) -> None:
     assert start <= day <= end, f"{dataset}: período {start}..{end} não cobre o dia de referência {day}"
 
 
-def test_official_feeds_are_built_with_provenance() -> None:
-    # Um feed oficial que entre no config sem passar pelo build (cópia à mão) é apanhado aqui.
-    for dataset in DATASETS:
-        if "oficial" in dataset:
+def test_official_metro_feeds_are_built_with_provenance() -> None:
+    # Um feed de metro não sintético que entre no config sem passar pelo build (cópia à mão) é apanhado aqui.
+    for dataset, folder in config.DATASET_DIRS.items():
+        if folder.startswith("metro/") and "sintetico" not in folder:
             assert dataset in BUILT, f"{dataset}: sem PROVENANCE.json - construir com scripts/build_feeds.py"
 
 

@@ -88,10 +88,13 @@ FREQUENCY_WINDOW_END_H = 20
 GTFS_DIR = "data/gtfs"
 DATASET_DIRS: dict[str, str] = {
     "smtuc": "smtuc/antigo_ep212",            # SMTUC Ep212 (pré-set 2026)
-    "metrobus": "metro/sintetico_fase1",      # SINTÉTICO, fase 1 (a substituir na D1.5)
+    # Metro fase 1 (até 09/09/2026) OFICIAL desde a D1 passo 4: GTFS de 2025-12-19 construído de
+    # data/raw por scripts/build_feeds.py (ver PROVENANCE.json). Antes era o sintético abaixo.
+    "metrobus": "metro/fase1_gtfs_20251219",
     "metrobus_fase2": "metro/sintetico_fase2",  # SINTÉTICO, fase 2 (a substituir na D2)
-    # Oficial, construído de data/raw por scripts/build_feeds.py (ver PROVENANCE.json da pasta).
-    "metro_fase1_oficial": "metro/fase1_gtfs_20251219",  # Metro até 09/09/2026
+    # Sintético da fase 1, só para reproduzir os números de antes (reports/metricas/sintetico.csv);
+    # a arquivar no passo 5 da D1.
+    "metro_sintetico_fase1": "metro/sintetico_fase1",
 }
 
 DEFAULT_BGRI_GPKG_PATH = "data/dadospopulacaoBGRI/BGRI2021_0603.gpkg"

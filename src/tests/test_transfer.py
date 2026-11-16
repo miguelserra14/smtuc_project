@@ -180,12 +180,14 @@ def test_reverse_shift_keeps_trigger_transfer() -> None:
 # --------------------------------------------------------------------------------------------
 
 def _require_data() -> None:
-    # Distâncias/transbordos fixos (2.39, 1.28) só valem para estes feeds (coords do metro sintético).
+    # Transbordos fixos para o GTFS OFICIAL do Metro (D1 passo 4), refeitos à mão: Portela 113.4 m
+    # (autocarro 911 <-> metro 244) -> 2.42 min; Portagem 31.9 m (504 <-> 233) -> 1.40 min.
+    # Com o sintético eram 2.39 / 1.28.
     require_reference_data("smtuc", "metrobus")
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("site_name, expected_transfer", [("Portela", 2.39), ("Portagem", 1.28)])
+@pytest.mark.parametrize("site_name, expected_transfer", [("Portela", 2.42), ("Portagem", 1.40)])
 def test_real_sites_transfer_and_no_impossible_connections(tmp_path: Path, site_name: str, expected_transfer: float) -> None:
     _require_data()
     from config import INTEGRATION_SITES
