@@ -20,6 +20,7 @@ SECTIONS = (
     "regenerate_overlap_htmls",
     "regenerate_overlap_fase2_htmls",
     "regenerate_integration_htmls",
+    "regenerate_comparison_html",
     "regenerate_master_dashboard",
     "regenerate_presentation_dashboard",
     "regenerate_feednplay_dashboard",
@@ -108,7 +109,35 @@ def test_real_integration_section_records_failure_instead_of_swallowing(monkeypa
 
     monkeypatch.setattr(regen, "generate_connection_visualizations", _boom)
     regen.regenerate_integration_htmls()
-    assert [s for s, _ in regen._FAILURES] == ["integração Portagem (54+38)", "integração Portela (54)"]
+    assert [s for s, _ in regen._FAILURES] == [
+        "integração Portagem (54+38)",
+        "integração Portela (54)",
+        "integração fase2 Portagem (54+38)",
+        "integração fase2 Portela (54)",
+    ]
+
+
+def test_integration_section_covers_every_scenario(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Cada cenário de config.SCENARIOS gera as suas páginas de integração (a fase 2 grava em
+    # integration/<subpasta>_fase2/), com o SEU dia de referência e o seu nome de cenário.
+    monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
+    calls: list[tuple[str, str, str]] = []
+
+    def _fake(**kwargs):
+        calls.append((kwargs["scenario"], kwargs["day_str"], kwargs["output_subdir"]))
+        return {"combined_html": "x"}
+
+    monkeypatch.setattr(regen, "generate_connection_visualizations", _fake)
+    regen.regenerate_integration_htmls()
+    assert regen._FAILURES == []
+    by_scenario: dict[str, set[str]] = {}
+    for scenario, day, _subdir in calls:
+        by_scenario.setdefault(scenario, set()).add(day)
+    assert set(by_scenario) == set(regen.scenario_names())
+    for name, days in by_scenario.items():
+        expected = regen.resolve_reference_day(scenario=regen.get_scenario(name)).strftime("%Y-%m-%d")
+        assert days == {expected}
+    assert len(calls) == len(regen.scenario_names()) * len(regen.INTEGRATION_SITES)
 
 
 def test_utf8_output_survives_redirected_stdout() -> None:
@@ -134,3 +163,42 @@ def test_without_fix_redirected_stdout_really_breaks() -> None:
         pytest.skip("stdout redirecionado já é UTF-8 neste sistema")
     proc = subprocess.run([sys.executable, "-c", "print('→')"], capture_output=True, env=env, timeout=60)
     assert proc.returncode != 0 and b"UnicodeEncodeError" in proc.stderr
+
+
+def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # D2.5: a secção tira um snapshot por cenário de COMPARISON_SCENARIOS (aqui falso) e grava a
+    # página + CSV em <raiz>/outputs/comparacao/ (aqui tmp_path); erro no snapshot = falha registada.
+    from tests.test_scenario_comparison import AFTER, BEFORE
+
+    taken: list[tuple[str, tuple[str, ...]]] = []
+
+    class _FakeSnapshot:
+        @staticmethod
+        def take_snapshot(phase, scenario=None, sections=()):
+            taken.append((scenario, tuple(sections)))
+            return {"antes": BEFORE, "fase2": AFTER}[scenario]
+
+    monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
+    monkeypatch.setattr(regen, "_require_geo_stack", lambda: None)
+    monkeypatch.setattr(regen, "_require_bgri_data", lambda: Path("."))
+    monkeypatch.setattr(regen, "_project_root", lambda: tmp_path)
+    monkeypatch.setattr(regen, "_load_snapshot_module", lambda: _FakeSnapshot)
+    regen.regenerate_comparison_html()
+    assert regen._FAILURES == []
+    assert [s for s, _ in taken] == list(regen.COMPARISON_SCENARIOS)
+    assert all("busca_fase_54" not in secs and "linhas" not in secs for _, secs in taken)
+    out = tmp_path / "outputs" / "comparacao"
+    assert "338,1 km" in (out / "antes_vs_fase2.html").read_text(encoding="utf-8")
+    assert (out / "antes_vs_fase2.csv").exists()
+
+    def _boom(*a, **k):
+        raise RuntimeError("snapshot falhou")
+
+    monkeypatch.setattr(_FakeSnapshot, "take_snapshot", staticmethod(_boom))
+    regen.regenerate_comparison_html()
+    assert [s for s, _ in regen._FAILURES] == ["comparação de cenários"]
+
+
+def test_snapshot_module_loads_from_scripts() -> None:
+    module = regen._load_snapshot_module()
+    assert set(regen._COMPARISON_SECTIONS) <= set(module.SECTIONS)

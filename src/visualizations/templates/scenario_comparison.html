@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>__TITLE__</title>
+  <!-- Sem recursos externos: a página tem de funcionar offline (parede FeedNPlay) e dentro de
+       um iframe num cartão branco dos slides - por isso fundo claro e as cores da apresentação. -->
+  <style>
+    :root {
+      --ink: #221d13;
+      --muted: #5c574c;
+      --border: #e7e2d8;
+      --card: #ffffff;
+      --card-soft: #faf8f4;
+      --accent: #ffdd2b;
+      --good: #1f7a3a;
+      --good-bg: #e6f4ea;
+      --bad: #a3361f;
+      --bad-bg: #fbe9e4;
+      color-scheme: light only;
+    }
+    html, body { margin: 0; background: var(--card); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
+      font-size: clamp(13px, 1.25vw, 17px);
+      line-height: 1.4;
+      padding: 1em 1.2em;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 1.05em;
+      margin: 0 0 0.5em;
+      letter-spacing: 0.01em;
+    }
+    section + section { margin-top: 1.4em; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 0.45em 0.6em; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+    thead th { background: var(--card-soft); font-size: 0.85em; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--accent); }
+    thead th span { font-weight: 400; }
+    th[scope="row"], thead th:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+    td { white-space: nowrap; }
+    .trend-melhor { color: var(--good); background: var(--good-bg); font-weight: 600; }
+    .trend-pior { color: var(--bad); background: var(--bad-bg); font-weight: 600; }
+    span.trend-melhor, span.trend-pior { padding: 0 0.3em; border-radius: 3px; }
+    .note { color: var(--muted); font-size: 0.85em; margin: 0.5em 0 0; }
+    .sources { margin-top: 1.4em; }
+    code { font-size: 0.95em; }
+    @media (max-width: 560px) {
+      body { padding: 0.75em 0.5em; }
+      th, td { padding: 0.35em 0.3em; }
+      td { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+__BODY__
+</body>
+</html>

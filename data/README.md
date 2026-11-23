@@ -27,7 +27,7 @@ Arquivado: `_arquivo/sintetico/` (metro sintético das fases 1 e 2 e os scripts 
 | `dados-gov/metro-mondego-netex/` | espelho do anterior (outra publicação, mesmo conteúdo: só regista `igual`) | — | CC BY 4.0 |
 | `dados-gov/metro-mondego-gtfs/` | GTFS oficial `20251219-export-gtfs.zip` | Metro fase 1 (até 09/09/2026) | CC BY 4.0 |
 | `dados-gov/metro-mondego-kmz/` | `rede-metrobus.kmz` | mapas, Linha do Hospital (D4) | CC BY 4.0 |
-| `municipio-coimbra/smtuc-gtfs/` | GTFS do SMTUC publicado pelo Município (Ep225, a partir de 18/09/2026) | SMTUC atual | **não especificada** no catálogo: o ficheiro **não é versionado** (`.gitignore`), só o sha256 no manifest; cada máquina corre o fetch |
+| `municipio-coimbra/smtuc-gtfs/` | GTFS do SMTUC publicado pelo Município (Ep225, a partir de 18/09/2026; versão `20261117-115142-bba239d8` = `Ep225_Prog1@202611161433`, 16/11 a 30/12/2026, descarregada a 2026-11-23 e **não construída**: horário igual ao Ep225 em vigor ao minuto em dias úteis, domingos e no serviço Especial, mesmas paragens; só o calendário é estendido e a linha 237 deixa de circular ao sábado. Não cobre o dia de referência da fase 2, 2026-11-09) | SMTUC atual | **não especificada** no catálogo: o ficheiro **não é versionado** (`.gitignore`), só o sha256 no manifest; cada máquina corre o fetch |
 | `agit/smtuc-netex-validacao/` | só o `validation.json` do NeTEx SMTUC: prova que é gerado do GTFS acima (`source.sha256`) e dá as contagens oficiais | — | CC BY 4.0 |
 | `agit/sit-netex/`, `dados-gov/sit-percursos-gpkg/` | SIT (grupo `sit`, ainda não descarregado) | D3 | CC BY 4.0 |
 | `manual/metro-mondego-horarios-pdf/2025-12-22/` | PDFs oficiais de horários (criados a 22/12/2025, descarregados a 06/09/2026) | validação do "antes" | Metro Mondego |

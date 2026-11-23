@@ -112,7 +112,36 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
             },
         ],
     },
+    # --- Slide 4c: Antes vs Fase 2 (D2.5) ------------------------------------------------------
+    # "table" é a página gerada por regenerate_comparison_html (números dos snapshots de
+    # scripts/snapshot_metrics.py, os mesmos de reports/metricas/); "iframes" ficam lado a lado.
+    {
+        "id": "antes_vs_fase2",
+        "label": "Antes vs Fase 2",
+        "kind": "scenario-compare",
+        "description": "O que mudou entre a rede antes da fase 2 e a rede em vigor, num dia útil de cada cenário.",
+        "note": "Entre os dois cenários mudam o metro e o horário do SMTUC (Ep212 → Ep225). Com a fase 2 há muito mais rede SMTUC a par do metro; a 54 continua a passar de 40 em 40 min e só um 2.º autocarro corta a espera de quem sai do metro em Portagem.",
+        "table": {
+            "title": "Indicadores lado a lado",
+            "src": "comparacao/antes_vs_fase2.html",
+            "caption": "Overlap, acessibilidade a partir do estádio, população sem oferta e esperas da linha 54.",
+        },
+        "iframes": [
+            {
+                "title": "Linhas sobrepostas: antes",
+                "src": "overlap/overlap_lines_map.html",
+                "caption": "Rede antes da fase 2 (11/05/2026).",
+            },
+            {
+                "title": "Linhas sobrepostas: fase 2",
+                "src": "overlap/overlap_lines_map_fase2.html",
+                "caption": "Rede com a fase 2 (09/11/2026).",
+            },
+        ],
+    },
     # --- Slide 5: Integração (Portagem/Portela) ----------------------------------------------
+    # "scenarios" (opcional, por coluna): botões que trocam o iframe entre cenários; o primeiro é
+    # o que abre (= "current.src").
     {
         "id": "integracao",
         "label": "Integração",
@@ -128,6 +157,10 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
                     "src": "integration/portagem/l54_38_all.html",
                     "caption": "Integração atual no sentido Portela → Portagem.",
                 },
+                "scenarios": [
+                    {"label": "Antes", "src": "integration/portagem/l54_38_all.html"},
+                    {"label": "Fase 2", "src": "integration/portagem_fase2/l54_38_all.html"},
+                ],
                 "optimized": [
                     "Reduzir tempos de espera no transbordo",
                     "Ajustar horários ao Metrobus",
@@ -142,6 +175,10 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
                     "src": "integration/portela/l54_all.html",
                     "caption": "Integração atual no sentido Portagem → Portela.",
                 },
+                "scenarios": [
+                    {"label": "Antes", "src": "integration/portela/l54_all.html"},
+                    {"label": "Fase 2", "src": "integration/portela_fase2/l54_all.html"},
+                ],
                 "optimized": [
                     "Simplificar o percurso de ligação",
                     "Reorganizar a cadência horária",

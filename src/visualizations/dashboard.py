@@ -267,6 +267,37 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
             "kind": "iframe",
             "src": "integration/portela/l54_all.html",
         },
+        # D2.5: comparação antes vs fase 2 (página de regenerate_comparison_html) + as vistas da
+        # fase 2 que não têm separador próprio.
+        {
+            "id": "antes-vs-fase2",
+            "label": "Antes vs Fase 2",
+            "description": "Indicadores lado a lado: rede antes da fase 2 (11/05/2026) e rede em vigor (09/11/2026).",
+            "kind": "iframe",
+            "src": "comparacao/antes_vs_fase2.html",
+            "extra_frames": [
+                {
+                    "title": "Mapa de linhas sobrepostas (fase 2)",
+                    "src": "overlap/overlap_lines_map_fase2.html",
+                    "caption": "Linhas SMTUC com maior e menor overlap face à rede já com a fase 2.",
+                },
+                {
+                    "title": "Reachability e overlap temporal (fase 2)",
+                    "src": "overlap/overlap_reachability_now_fase2.html",
+                    "caption": "Isócronas a partir do estádio com a fase 2.",
+                },
+                {
+                    "title": "Integração Portagem (fase 2)",
+                    "src": "integration/portagem_fase2/l54_38_all.html",
+                    "caption": "Linhas 54 e 38 com o metro da fase 2.",
+                },
+                {
+                    "title": "Integração Portela (fase 2)",
+                    "src": "integration/portela_fase2/l54_all.html",
+                    "caption": "Linha 54 com o metro da fase 2.",
+                },
+            ],
+        },
     ]
 
 

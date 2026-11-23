@@ -9,6 +9,7 @@ Uso:
 from __future__ import annotations
 
 import html
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -39,6 +40,7 @@ from visualizations import (
     _write_folium_html,
 )
 from visualizations.dashboard import _load_overlap_stats
+from visualizations.scenario_comparison import create_scenario_comparison_html
 from src.config import (
     CATCHMENT_M,
     POPULATION_STADIUM_MAP_RADIUS_M,
@@ -49,6 +51,8 @@ from src.config import (
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
     LINE_54_MELHORADO_PHASE_SHIFT_MIN,
     INTEGRATION_SITES,
+    OUTPUTS_COMPARISON_DIR,
+    COMPARISON_SCENARIOS,
 )
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
 from overlap.overlap_db import _load_gtfs_cached
@@ -462,26 +466,33 @@ def regenerate_overlap_scenario_htmls(scenario: str) -> None:
 
 
 def regenerate_integration_htmls() -> None:
-    """Regenera HTMLs de integração (Portagem e Portela)."""
+    """Regenera HTMLs de integração (Portagem e Portela) de TODOS os cenários: o cenário por
+    omissão em `integration/<subpasta>/`, os outros em `integration/<subpasta><sufixo>/`."""
+    for name in scenario_names():
+        regenerate_integration_scenario_htmls(name)
+
+
+def regenerate_integration_scenario_htmls(scenario: str | None = None) -> None:
+    """Regenera os HTMLs de integração de um cenário (None = o cenário por omissão)."""
+    sc = get_scenario(scenario)
+    section = "integração" if not sc.output_suffix else f"integração {sc.name}"
     print("\n" + "=" * 60)
-    print("[INFO] Regenerando HTMLs de Integração...")
+    print(f"[INFO] Regenerando HTMLs de Integração (cenário {sc.name})...")
     print("=" * 60)
-    
-    # Verificar datasets (cenário por omissão)
-    sc = get_scenario()
+
     if not _require_dataset(sc.smtuc) or not _require_dataset(sc.metro):
-        _record_skip("integração", f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
+        _record_skip(section, f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
         return
-    
+
     try:
         day_str = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
         print(f"[INFO] Usando data: {day_str}")
-        
+
         # Nós de integração definidos uma só vez em config.INTEGRATION_SITES (também usados por
         # scripts/search_phase_shift.py, que procura os desvios de fase abaixo).
         for site in INTEGRATION_SITES:
             lines = [site["line_number"]] if isinstance(site["line_number"], str) else list(site["line_number"])
-            label = f"integração {site['name']} ({'+'.join(lines)})"
+            label = f"{section} {site['name']} ({'+'.join(lines)})"
             print()
             print(f"[INFO] Gerando {label}: {site['metro_origin_ref']} → {site['metro_stop_ref']}...")
             kwargs = {k: v for k, v in site.items() if k != "name"}
@@ -497,9 +508,65 @@ def regenerate_integration_htmls() -> None:
                 print(f"[SUCCESS] {label}: {results.get('combined_html', 'N/A')}")
             except Exception as e:
                 _record_failure(label, e)
-        
+
     except Exception as e:
-        _record_failure("integração", e)
+        _record_failure(section, e)
+
+
+# Secções do snapshot que a página de comparação usa (sem "linhas" nem a busca de fase, que é a
+# parte lenta e não entra na página).
+_COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao")
+
+
+def _load_snapshot_module():
+    """`scripts/snapshot_metrics.py` carregado por caminho (scripts/ não é um pacote): a página de
+    comparação usa EXATAMENTE os números de controlo de reports/metricas/, não uma cópia do cálculo."""
+    path = _project_root() / "scripts" / "snapshot_metrics.py"
+    spec = importlib.util.spec_from_file_location("snapshot_metrics", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def regenerate_comparison_html() -> None:
+    """Página "Antes vs Fase 2" (D2.5): snapshot de cada cenário de COMPARISON_SCENARIOS (nada
+    gravado em outputs/ pelo snapshot) -> outputs/comparacao/<antes>_vs_<depois>.{html,csv}.
+    Corre depois das secções de overlap, para reaproveitar o cache de métricas já atualizado."""
+    section = "comparação de cenários"
+    print("\n" + "=" * 60)
+    print("[INFO] Regenerando comparação de cenários...")
+    print("=" * 60)
+
+    before_name, after_name = COMPARISON_SCENARIOS
+    for name in COMPARISON_SCENARIOS:
+        sc = get_scenario(name)
+        if not _require_dataset(sc.smtuc) or not _require_dataset(sc.metro):
+            _record_skip(section, f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
+            return
+    try:
+        _require_geo_stack()
+        _require_bgri_data()
+    except Exception as e:
+        _record_skip(section, f"geostack/BGRI não disponível (isócronas e população): {e}")
+        return
+
+    try:
+        snapshot_metrics = _load_snapshot_module()
+        snaps = {
+            name: snapshot_metrics.take_snapshot(f"pagina_{name}", scenario=name, sections=_COMPARISON_SECTIONS)
+            for name in COMPARISON_SCENARIOS
+        }
+        out_dir = _project_root() / OUTPUTS_COMPARISON_DIR
+        stem = f"{before_name}_vs_{after_name}"
+        created = create_scenario_comparison_html(
+            out_dir / f"{stem}.html",
+            before=snaps[before_name],
+            after=snaps[after_name],
+            csv_path=out_dir / f"{stem}.csv",
+        )
+        print(f"[SUCCESS] Comparação de cenários: {created}")
+    except Exception as e:
+        _record_failure(section, e)
 
 
 def regenerate_master_dashboard() -> None:
@@ -573,6 +640,7 @@ def main() -> None:
     regenerate_overlap_htmls()
     regenerate_overlap_fase2_htmls()
     regenerate_integration_htmls()
+    regenerate_comparison_html()
     regenerate_master_dashboard()
     regenerate_presentation_dashboard()
     regenerate_feednplay_dashboard()

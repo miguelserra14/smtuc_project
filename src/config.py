@@ -71,6 +71,11 @@ OUTPUTS_POPULATION_DIR = "outputs/population"
 OUTPUTS_OVERLAP_DIR = "outputs/overlap"
 OUTPUTS_INTEGRATION_DIR = "outputs/integration"
 OUTPUTS_OVERLAP_LINES_MAP = "outputs/overlap/overlap_lines_map.html"
+# Comparação lado a lado de dois cenários (D2.5; ver visualizations/scenario_comparison.py):
+# página + CSV em OUTPUTS_COMPARISON_DIR/<antes>_vs_<depois>.{html,csv}, usada pelo slide
+# "Antes vs Fase 2" e pelo separador do dashboard master.
+OUTPUTS_COMPARISON_DIR = "outputs/comparacao"
+COMPARISON_SCENARIOS = ("antes", "fase2")
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 
@@ -241,6 +246,10 @@ Integração linha 54 <-> Metrobus (nós em INTEGRATION_SITES; cada página tem 
 metro->autocarro e autocarro->metro, espera de transbordo e equidade temporal):
 http://localhost:8000/outputs/integration/portela/l54_all.html
 http://localhost:8000/outputs/integration/portagem/l54_38_all.html
+Fase 2 (cenário fase2): as mesmas páginas em integration/portela_fase2/ e portagem_fase2/.
+
+Antes vs Fase 2 (COMPARISON_SCENARIOS; números de scripts/snapshot_metrics.py):
+http://localhost:8000/outputs/comparacao/antes_vs_fase2.html
 """
 
 
