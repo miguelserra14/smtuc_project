@@ -65,6 +65,27 @@ def test_cache_signature_reads_the_same_folder_as_the_loader(fake: Path, monkeyp
     assert overlap_db._dataset_signature("plano") == after  # subpastas não são lidas por ninguém
 
 
+def test_cache_signature_depends_on_content_not_mtime(fake: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Antes era nome+tamanho+mtime: o OneDrive/git a tocar nos ficheiros invalidava a cache sem
+    # nada ter mudado. Agora só o conteúdo conta (e CRLF == LF, como na impressão digital).
+    import os
+
+    from overlap import overlap_db
+
+    monkeypatch.setattr(overlap_db, "_project_root", lambda: fake)
+    folder = dataset_dir("plano", fake)
+    _write_gtfs(folder)
+    before = overlap_db._dataset_signature("plano")
+    trips = folder / "trips.txt"
+    stat = trips.stat()
+    os.utime(trips, ns=(stat.st_atime_ns, stat.st_mtime_ns + 5_000_000_000))
+    assert overlap_db._dataset_signature("plano") == before
+    trips.write_bytes(trips.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    assert overlap_db._dataset_signature("plano") == before
+    trips.write_bytes(trips.read_bytes() + b"R,WD,T9\r\n")
+    assert overlap_db._dataset_signature("plano") != before
+
+
 def test_real_datasets_exist_where_config_says() -> None:
     root = Path(__file__).resolve().parents[2]
     for name in config.DATASET_DIRS:

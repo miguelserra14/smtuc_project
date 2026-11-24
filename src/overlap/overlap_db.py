@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import weakref
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -45,18 +47,49 @@ def _min_distance_to_points_m(
     return dists.min(axis=1)
 
 
+class _TripIndex:
+    """Índices de stop_times por viagem de UM GTFSData, calculados uma vez (ver `_trip_index`)."""
+
+    def __init__(self, gtfs) -> None:
+        st = gtfs.stop_times
+        # Mesma tabela (e ordem, por trip_id) que o groupby que se fazia em cada chamada, para o
+        # desempate da viagem mais comprida (sort_values não estável) dar a MESMA viagem.
+        self.trip_sizes = st.groupby("trip_id", as_index=False).agg(n_stops=("stop_id", "count"))
+        self.rows_by_trip = st.groupby("trip_id").indices
+        self.route_directions: dict[str, tuple] = {}
+
+
+_TRIP_INDEXES: dict[int, _TripIndex] = {}
+
+
+def _trip_index(gtfs) -> _TripIndex:
+    """`_TripIndex` do feed, guardado enquanto o objeto existir. Os GTFSData de
+    `gtfs.load_gtfs_cached` são partilhados e nunca alterados no lugar (regra do projeto), por
+    isso os índices continuam válidos; a entrada sai quando o objeto é libertado."""
+    key = id(gtfs)
+    index = _TRIP_INDEXES.get(key)
+    if index is None:
+        index = _TripIndex(gtfs)
+        _TRIP_INDEXES[key] = index
+        weakref.finalize(gtfs, _TRIP_INDEXES.pop, key, None)
+    return index
+
+
 def _representative_route_stops_for_subset(gtfs, route_trips: pd.DataFrame) -> pd.DataFrame:
+    """Paragens (por ordem) da viagem com mais paragens de `route_trips`. Antes filtrava o
+    stop_times inteiro (~190 mil linhas) em cada chamada - ~800 chamadas por regenerate; agora
+    usa os índices por viagem de `_trip_index` (mesma viagem escolhida, mesmas linhas)."""
     if route_trips.empty:
         return pd.DataFrame()
 
-    st = gtfs.stop_times[gtfs.stop_times["trip_id"].isin(route_trips["trip_id"])].copy()
-    if st.empty:
+    index = _trip_index(gtfs)
+    trip_sizes = index.trip_sizes[index.trip_sizes["trip_id"].isin(route_trips["trip_id"])].reset_index(drop=True)
+    if trip_sizes.empty:
         return pd.DataFrame()
 
-    trip_sizes = st.groupby("trip_id", as_index=False).agg(n_stops=("stop_id", "count"))
     best_trip = str(trip_sizes.sort_values("n_stops", ascending=False).iloc[0]["trip_id"])
 
-    best = st[st["trip_id"] == best_trip].sort_values("stop_sequence")
+    best = gtfs.stop_times.iloc[index.rows_by_trip[best_trip]].sort_values("stop_sequence")
     best = best.merge(
         gtfs.stops[["stop_id", "stop_lat", "stop_lon"]],
         on="stop_id",
@@ -69,6 +102,20 @@ def iter_route_direction_stop_arrays(
     gtfs_smtuc,
     route_id: str,
 ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, int]]:
+    """Por sentido da rota: (lat, lon, stop_ids, n) das paragens da viagem representativa.
+
+    Memorizado por feed e rota (a mesma rota era pedida pelo overlap, pelo raio do estádio e
+    pelas várias camadas do mapa de linhas). Os arrays devolvidos são só de leitura."""
+    index = _trip_index(gtfs_smtuc)
+    key = str(route_id)
+    cached = index.route_directions.get(key)
+    if cached is None:
+        cached = tuple(_route_direction_stop_arrays(gtfs_smtuc, key))
+        index.route_directions[key] = cached
+    return list(cached)
+
+
+def _route_direction_stop_arrays(gtfs_smtuc, route_id: str) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, int]]:
     route_trips = gtfs_smtuc.trips[gtfs_smtuc.trips["route_id"] == str(route_id)].copy()
     if route_trips.empty:
         return []
@@ -90,6 +137,8 @@ def iter_route_direction_stop_arrays(
         route_lat = route_stops["stop_lat"].astype(float).to_numpy()
         route_lon = route_stops["stop_lon"].astype(float).to_numpy()
         route_stop_ids = route_stops["stop_id"].to_numpy()
+        for arr in (route_lat, route_lon, route_stop_ids):
+            arr.flags.writeable = False
         directions.append((route_lat, route_lon, route_stop_ids, int(len(route_stops))))
 
     return directions
@@ -283,17 +332,30 @@ def _atomic_write_csv(df: pd.DataFrame, path: Path) -> None:
 
 
 def _dataset_signature(dataset: str) -> str:
-    # Mesma pasta que load_gtfs() lê (gtfs.dataset_dir); os .txt estão diretamente nela (sem
-    # subpastas - _find_gtfs_dir deixou de as aceitar).
+    """Assinatura do CONTEÚDO dos .txt do dataset (sha256), para a chave da cache de métricas.
+
+    Mesma pasta que load_gtfs() lê (gtfs.dataset_dir); os .txt estão diretamente nela (sem
+    subpastas). Antes era nome+tamanho+mtime: o OneDrive/git a tocar nos ficheiros sem mudar o
+    conteúdo invalidava a cache, que recalculava os mesmos valores e mudava a assinatura gravada
+    em outputs/overlap/line_metrics_db*.csv (ruído nos commits). Quebras de linha normalizadas
+    (CRLF/LF), como em gtfs_processing.fingerprint."""
     from gtfs_processing.gtfs import dataset_dir
 
     folder = dataset_dir(dataset, _project_root())
     txt_files = sorted(folder.glob("*.txt")) if folder.exists() else []
-    raw = "|".join(
-        f"{p.relative_to(folder).as_posix()}:{p.stat().st_size}:{p.stat().st_mtime_ns}"
-        for p in txt_files
-    )
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    h = hashlib.sha256()
+    for path in txt_files:
+        stat = path.stat()
+        h.update(path.name.encode("utf-8"))
+        h.update(_file_content_digest(str(path), stat.st_size, stat.st_mtime_ns))
+    return h.hexdigest()
+
+
+@lru_cache(maxsize=64)
+def _file_content_digest(path: str, size: int, mtime_ns: int) -> bytes:
+    """sha256 do conteúdo (CRLF -> LF). `size`/`mtime_ns` só servem de chave da memória: um
+    ficheiro tocado volta a ser lido, mas a assinatura só muda se o conteúdo mudar."""
+    return hashlib.sha256(Path(path).read_bytes().replace(b"\r\n", b"\n")).digest()
 
 
 def _route_direction_radius_coverage_summaries(

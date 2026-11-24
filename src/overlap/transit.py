@@ -128,6 +128,33 @@ def _check_origin_candidates(origin_candidates: list[str] | None) -> None:
         raise ValueError("Origem pedida sem paragens no feed (lista vazia) - o sentido não seria filtrado.")
 
 
+def _first_passages(
+    gtfs, trips: pd.DataFrame, stop_ids: list[str], origin_candidates: list[str] | None
+) -> pd.DataFrame:
+    """Por viagem de `trips` e paragem de `stop_ids`: a 1.ª passagem (menor stop_sequence) - e,
+    com `origin_candidates`, só se a viagem passou ANTES numa paragem de origem (a menor
+    stop_sequence de origem tem de ser menor). Colunas trip_id, stop_id, stop_sequence,
+    arrival_time. É a regra que `_arrival_times_for_stop`, `_arrival_events_for_stop` e
+    `_pick_best_target_stop_id` aplicavam com um ciclo Python por viagem (~20 s por
+    regenerate); vetorizada, com os mesmos resultados."""
+    _check_origin_candidates(origin_candidates)
+    st = gtfs.stop_times
+    st = st[st["trip_id"].isin(trips["trip_id"])]
+    if st.empty:
+        return pd.DataFrame(columns=["trip_id", "stop_id", "stop_sequence", "arrival_time"])
+    seq = pd.to_numeric(st["stop_sequence"])
+
+    at = st.loc[st["stop_id"].isin([str(v) for v in stop_ids]), ["trip_id", "stop_id", "stop_sequence", "arrival_time"]]
+    at = at.assign(_seq=seq.loc[at.index])
+    at = at.sort_values(["trip_id", "stop_id", "_seq"], kind="mergesort").drop_duplicates(["trip_id", "stop_id"])
+    if origin_candidates is not None:
+        origin_set = {str(v) for v in origin_candidates}
+        origin_seq = seq[st["stop_id"].isin(origin_set)].groupby(st.loc[st["stop_id"].isin(origin_set), "trip_id"]).min()
+        before = at["trip_id"].map(origin_seq)
+        at = at[before.notna() & (before < at["_seq"])]
+    return at.drop(columns="_seq")
+
+
 def _arrival_times_for_stop(
     gtfs,
     trips: pd.DataFrame,
@@ -136,36 +163,8 @@ def _arrival_times_for_stop(
 ) -> list[str]:
     if trips.empty:
         return []
-
-    st = gtfs.stop_times.copy()
-    st = st[st["trip_id"].isin(trips["trip_id"])]
-    if st.empty:
-        return []
-
-    _check_origin_candidates(origin_candidates)
-    target_stop_id = str(target_stop_id)
-    with_origin = origin_candidates is not None
-    origin_set = {str(v) for v in (origin_candidates or [])}
-
-    out: list[str] = []
-    for _, trip_st in st.groupby("trip_id"):
-        trip_st = trip_st.sort_values("stop_sequence")
-        target_rows = trip_st[trip_st["stop_id"] == target_stop_id]
-        if target_rows.empty:
-            continue
-
-        target_row = target_rows.iloc[0]
-        if with_origin:
-            origins = trip_st[trip_st["stop_id"].isin(origin_set)]
-            if origins.empty:
-                continue
-            origin_seq = int(origins["stop_sequence"].min())
-            if origin_seq >= int(target_row["stop_sequence"]):
-                continue
-
-        out.append(str(target_row["arrival_time"]))
-
-    return sorted(set(out))
+    passages = _first_passages(gtfs, trips, [str(target_stop_id)], origin_candidates)
+    return sorted(set(passages["arrival_time"].astype(str)))
 
 
 def _arrival_events_for_stop(
@@ -177,40 +176,12 @@ def _arrival_events_for_stop(
 ) -> list[dict[str, str]]:
     if trips.empty:
         return []
-
-    st = gtfs.stop_times.copy()
-    st = st[st["trip_id"].isin(trips["trip_id"])]
-    if st.empty:
-        return []
-
-    _check_origin_candidates(origin_candidates)
-    target_stop_id = str(target_stop_id)
-    with_origin = origin_candidates is not None
-    origin_set = {str(v) for v in (origin_candidates or [])}
+    passages = _first_passages(gtfs, trips, [str(target_stop_id)], origin_candidates)
     line_by_trip = line_by_trip or {}
-
-    out: list[dict[str, str]] = []
-    for trip_id, trip_st in st.groupby("trip_id"):
-        trip_st = trip_st.sort_values("stop_sequence")
-        target_rows = trip_st[trip_st["stop_id"] == target_stop_id]
-        if target_rows.empty:
-            continue
-
-        target_row = target_rows.iloc[0]
-        if with_origin:
-            origins = trip_st[trip_st["stop_id"].isin(origin_set)]
-            if origins.empty:
-                continue
-            origin_seq = int(origins["stop_sequence"].min())
-            if origin_seq >= int(target_row["stop_sequence"]):
-                continue
-
-        out.append(
-            {
-                "time": str(target_row["arrival_time"]),
-                "line": str(line_by_trip.get(str(trip_id), "")),
-            }
-        )
+    out = [
+        {"time": str(t), "line": str(line_by_trip.get(str(trip_id), ""))}
+        for trip_id, t in zip(passages["trip_id"], passages["arrival_time"])
+    ]
 
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
@@ -229,43 +200,25 @@ def _pick_best_target_stop_id(
     target_candidates: list[str],
     origin_candidates: list[str] | None = None,
 ) -> str:
+    """Candidata servida por mais viagens (vindas da origem, se indicada); empate -> a 1.ª da
+    lista."""
     if not target_candidates:
         raise ValueError("Sem paragens candidatas para o destino.")
 
+    _check_origin_candidates(origin_candidates)
     if len(target_candidates) == 1:
         return str(target_candidates[0])
 
-    _check_origin_candidates(origin_candidates)
-    st = gtfs.stop_times.copy()
-    st = st[st["trip_id"].isin(trips["trip_id"])]
-
-    origin_set = {str(v) for v in (origin_candidates or [])}
-    use_origin = origin_candidates is not None
-
-    best_stop = str(target_candidates[0])
-    best_score = -1
-    for cand in [str(v) for v in target_candidates]:
-        score = 0
-        for _, trip_st in st.groupby("trip_id"):
-            trip_st = trip_st.sort_values("stop_sequence")
-            target_rows = trip_st[trip_st["stop_id"] == cand]
-            if target_rows.empty:
-                continue
-
-            if use_origin:
-                origins = trip_st[trip_st["stop_id"].isin(origin_set)]
-                if origins.empty:
-                    continue
-                if int(origins["stop_sequence"].min()) >= int(target_rows.iloc[0]["stop_sequence"]):
-                    continue
-
-            score += 1
-
+    candidates = [str(v) for v in target_candidates]
+    passages = _first_passages(gtfs, trips, candidates, origin_candidates)
+    scores = passages.groupby("stop_id")["trip_id"].nunique()
+    best_stop, best_score = candidates[0], -1
+    for cand in candidates:
+        score = int(scores.get(cand, 0))
         if score > best_score:
-            best_score = score
-            best_stop = cand
-
+            best_stop, best_score = cand, score
     return best_stop
+
 
 
 def safe_slug(value: str) -> str:

@@ -179,3 +179,40 @@ def test_synthetic_reachability_is_deterministic_across_hash_seeds() -> None:
         outputs.add(next(line for line in proc.stdout.splitlines() if line.startswith("RESULT")))
     assert len(outputs) == 1, outputs
     assert "('Z', 23.75)" in outputs.pop()
+
+
+def _reach_with(monkeypatch: pytest.MonkeyPatch, gtfs: GTFSData, max_transfers: int = 2) -> dict[str, float]:
+    monkeypatch.setattr(ov, "load_gtfs_cached", lambda dataset: gtfs)
+    return _reach(max_transfers)
+
+
+def test_boarding_stop_is_not_lowered_by_the_trips_own_dwell(monkeypatch: pytest.MonkeyPatch) -> None:
+    # T1 chega a X às 08:05 mas só parte às 08:12: quem chega a X a pé (15 min, 08:15)... não
+    # a apanha; quem a apanha em O nunca "chega" a O antes de lá estar. A paragem onde se
+    # embarca não conta como descida (regra da versão em ciclo, mantida no RAPTOR numpy).
+    gtfs = _synthetic_gtfs()
+    st = gtfs.stop_times.copy()
+    first_o = (st["trip_id"] == "T1") & (st["stop_id"] == "O")
+    st.loc[first_o, "arrival_seconds"] = _s("07:50")  # chega a O antes de t0, parte às 08:00
+    gtfs = GTFSData(**{**gtfs.__dict__, "stop_times": st})
+    reach = _reach_with(monkeypatch, gtfs)
+    assert reach["O"] == pytest.approx(0.0)  # nunca -10 (a chegada da viagem a O)
+    assert reach["X"] == pytest.approx(10.0)
+
+
+def test_stop_missing_from_stops_txt_still_links_trips(monkeypatch: pytest.MonkeyPatch) -> None:
+    # "Q" só existe em stop_times: não aparece no resultado nem tem caminhadas, mas uma viagem
+    # que lá chega permite apanhar outra que de lá parte (como na versão anterior).
+    gtfs = _synthetic_gtfs()
+    extra = pd.DataFrame([
+        {"trip_id": "T4", "stop_id": "X", "stop_sequence": 1, "arrival_seconds": _s("08:12"), "departure_seconds": _s("08:12")},
+        {"trip_id": "T4", "stop_id": "Q", "stop_sequence": 2, "arrival_seconds": _s("08:15"), "departure_seconds": _s("08:15")},
+        {"trip_id": "T5", "stop_id": "Q", "stop_sequence": 1, "arrival_seconds": _s("08:16"), "departure_seconds": _s("08:16")},
+        {"trip_id": "T5", "stop_id": "V", "stop_sequence": 2, "arrival_seconds": _s("08:30"), "departure_seconds": _s("08:30")},
+    ])
+    trips = pd.concat([gtfs.trips, pd.DataFrame({"route_id": ["R", "R"], "service_id": ["WD", "WD"], "trip_id": ["T4", "T5"]})], ignore_index=True)
+    gtfs = GTFSData(**{**gtfs.__dict__, "trips": trips, "stop_times": pd.concat([gtfs.stop_times, extra], ignore_index=True)})
+    reach = _reach_with(monkeypatch, gtfs)
+    assert "Q" not in reach
+    assert reach["V"] == pytest.approx(30.0)  # O -T1-> X -T4-> Q -T5-> V
+    assert "V" not in _reach_with(monkeypatch, gtfs, max_transfers=1)  # precisa de 3 viagens

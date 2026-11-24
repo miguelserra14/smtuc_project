@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
@@ -84,26 +85,36 @@ def load_bgri_file(
 ) -> gpd.GeoDataFrame:
     """
     Load BGRI from GeoPackage and ensure valid state.
-    
+
+    O GeoPackage é lido UMA vez por processo (memória por caminho+camada+CRS+tamanho+mtime) e
+    cada chamada recebe uma CÓPIA, que pode alterar à vontade. Antes cada secção do regenerate /
+    snapshot voltava a lê-lo do disco (10 leituras num regenerate).
+
     Args:
         gpkg_path: Path to GeoPackage
         layer: Layer name
         target_crs: Target CRS
-    
+
     Returns:
         Processed GeoDataFrame
     """
-    bgri = gpd.read_file(gpkg_path, layer=layer)
+    path = Path(gpkg_path).resolve()
+    stat = path.stat()
+    return _read_bgri_cached(str(path), layer, target_crs, stat.st_size, stat.st_mtime_ns).copy()
+
+
+@lru_cache(maxsize=4)
+def _read_bgri_cached(path: str, layer: str, target_crs: str, size: int, mtime_ns: int) -> gpd.GeoDataFrame:
+    """Leitura real (nunca devolver este objeto a quem chama - ver load_bgri_file)."""
+    bgri = gpd.read_file(path, layer=layer)
     if bgri.empty:
         raise ValueError(f"Layer {layer} vazio")
-    
+
     # Remove rows without geometry
     bgri = bgri[~bgri.geometry.isna()].copy()
-    
+
     # Ensure correct CRS
-    bgri = ensure_crs(bgri, target_crs)
-    
-    return bgri
+    return ensure_crs(bgri, target_crs)
 
 
 __all__ = [

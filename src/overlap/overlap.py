@@ -631,103 +631,85 @@ def _reachable_stops_multimodal_now(
     direct_walk_m = haversine_m(origin_lat, origin_lon, stop_lats, stop_lons)
     direct_walk_min = direct_walk_m / float(walk_speed_m_min)
 
-    inf_s = float("inf")
-    arrivals_prev_s = pd.Series(inf_s, index=global_stop_ids, dtype="float64")
+    n_stops = len(global_stop_ids)
+    arrivals_prev = np.full(n_stops, np.inf, dtype="float64")
     boardable_mask = direct_walk_min <= float(max_board_walk_min)
-    if np.any(boardable_mask):
-        arrivals_prev_s.loc[np.array(global_stop_ids)[boardable_mask]] = (
-            float(t0) + direct_walk_min[boardable_mask] * 60.0
-        )
+    arrivals_prev[boardable_mask] = float(t0) + direct_walk_min[boardable_mask] * 60.0
 
     if not trip_tables:
         out = all_stops[["dataset", "stop_id", "stop_lat", "stop_lon"]].copy()
-        out["reach_min"] = (arrivals_prev_s.reindex(all_stops["global_stop_id"]).to_numpy(dtype=float) - float(t0)) / 60.0
+        out["reach_min"] = (arrivals_prev - float(t0)) / 60.0
         out = out[np.isfinite(out["reach_min"])].copy()
         out = out[out["reach_min"] <= float(max_min)].copy()
         return out
 
+    # --- RAPTOR em arrays numpy (5.3) -------------------------------------------------------
+    # Mesma regra que a versão anterior (um ciclo Python por viagem e por paragem, ~5 s por
+    # isócrona): resultados iguais ao bit, verificado em vários pontos/horas dos dois cenários.
+    # Cada paragem é um índice; paragens que aparecem em stop_times mas não em stops.txt (ou sem
+    # coordenadas) ganham um índice extra - contam como chegada de viagem e saem do resultado,
+    # mas não há caminhada a partir delas nem até elas (como antes).
     full_stop_times = pd.concat(trip_tables, ignore_index=True)
     full_stop_times = full_stop_times.sort_values(["global_trip_id", "stop_sequence"]).reset_index(drop=True)
+    trip_len = full_stop_times.groupby("global_trip_id", sort=False)["global_stop_id"].transform("size")
+    full_stop_times = full_stop_times[trip_len.to_numpy() >= 2].reset_index(drop=True)
 
-    trips_grouped: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
-    for _, group in full_stop_times.groupby("global_trip_id", sort=False):
-        stop_arr = group["global_stop_id"].astype(str).to_numpy()
-        dep_arr = group["dep_s"].astype(float).to_numpy()
-        arr_arr = group["arr_s"].astype(float).to_numpy()
-        if len(stop_arr) >= 2:
-            trips_grouped.append((stop_arr, dep_arr, arr_arr))
-
-    transfer_walk_m = float(max_transfer_walk_min) * float(walk_speed_m_min)
     stop_id_to_idx = {sid: i for i, sid in enumerate(global_stop_ids)}
+    st_stop_ids = full_stop_times["global_stop_id"].astype(str)
+    unknown = sorted(set(st_stop_ids) - set(stop_id_to_idx))
+    for sid in unknown:
+        stop_id_to_idx[sid] = len(stop_id_to_idx)
+    arrivals_prev = np.concatenate([arrivals_prev, np.full(len(unknown), np.inf)])
+
+    row_stop = st_stop_ids.map(stop_id_to_idx).to_numpy(dtype="int64")
+    row_dep = full_stop_times["dep_s"].to_numpy(dtype="float64")
+    row_arr = full_stop_times["arr_s"].to_numpy(dtype="float64")
+    trip_codes = pd.factorize(full_stop_times["global_trip_id"], sort=False)[0]
+    # 1.ª linha de cada viagem (as linhas de uma viagem são contíguas, por ordem de paragem).
+    trip_start = np.flatnonzero(np.r_[True, trip_codes[1:] != trip_codes[:-1]])
+    row_trip_start = np.repeat(trip_start, np.diff(np.r_[trip_start, len(trip_codes)]))
+
+    # Pares de caminhada de transbordo (origem, destino, segundos), calculados UMA vez. A
+    # distância de cada par é a mesma conta elemento a elemento que haversine_m(origem, todas).
+    transfer_walk_m = float(max_transfer_walk_min) * float(walk_speed_m_min)
+    dist_matrix = haversine_m(stop_lats[:, None], stop_lons[:, None], stop_lats[None, :], stop_lons[None, :])
+    walk_src, walk_dst = np.nonzero(dist_matrix <= transfer_walk_m)
+    walk_sec = (dist_matrix[walk_src, walk_dst] / float(walk_speed_m_min)) * 60.0
+    del dist_matrix
+
     max_boardings = max(1, int(max_transfers) + 1)
-
     for _round in range(max_boardings):
-        arrivals_curr_s = arrivals_prev_s.copy()
-        changed_stop_ids: set[str] = set()
+        # Viagens: embarca na 1.ª paragem em que já se estava (ronda anterior) antes da partida
+        # (e depois de t0) e desce em QUALQUER paragem seguinte. A paragem de embarque não conta
+        # como descida (com tempo de paragem, arr < dep, isso dava uma chegada antes de o
+        # passageiro lá estar).
+        at_stop = arrivals_prev[row_stop]
+        can_board = np.isfinite(at_stop) & (row_dep >= at_stop) & (row_dep >= float(t0))
+        boarded_cum = np.cumsum(can_board)
+        boarded_before = boarded_cum - can_board - (boarded_cum[row_trip_start] - can_board[row_trip_start])
+        alight = boarded_before > 0
+        trip_best = np.full(len(arrivals_prev), np.inf)
+        np.minimum.at(trip_best, row_stop[alight], row_arr[alight])
+        improved_by_trip = trip_best < arrivals_prev
+        arrivals_curr = np.minimum(arrivals_prev, trip_best)
 
-        # Trip relaxation: board any feasible trip and alight at any downstream stop.
-        for trip_stops, trip_dep_s, trip_arr_s in trips_grouped:
-            on_board = False
-            for i in range(len(trip_stops)):
-                sid = str(trip_stops[i])
-                arr_s = float(trip_arr_s[i])
+        # Caminhadas de transbordo SÓ a partir das paragens melhoradas por uma viagem nesta
+        # ronda, e a partir da chegada dessa viagem (nunca de outra caminhada da mesma ronda:
+        # nada de caminhadas encadeadas, resultado independente da ordem).
+        from_trip = improved_by_trip[walk_src]
+        if from_trip.any():
+            candidate = trip_best[walk_src[from_trip]] + walk_sec[from_trip]
+            np.minimum.at(arrivals_curr, walk_dst[from_trip], candidate)
 
-                # Alight/relax using the trip boarded at a PREVIOUS stop (on_board carried over
-                # from the last iteration) - must run before the boarding check below, not
-                # after. Otherwise a trip that dwells at its own boarding stop (arr_s < dep_s
-                # there) would overwrite that stop's own arrival with the trip's scheduled
-                # arrival, which can be earlier than when the passenger actually got there -
-                # claiming a stop is reachable sooner than physically possible. Real GTFS feeds
-                # in this project currently have zero dwell everywhere so this was dormant, but
-                # is not guaranteed to stay that way (e.g. a modeled layover at a transfer hub).
-                if on_board and arr_s < float(arrivals_curr_s.get(sid, inf_s)):
-                    arrivals_curr_s.loc[sid] = arr_s
-                    changed_stop_ids.add(sid)
+        with np.errstate(invalid="ignore"):
+            if not np.any((arrivals_curr - arrivals_prev) < -1e-9):
+                break
+        arrivals_prev = arrivals_curr
 
-                if not on_board:
-                    earliest_at_stop_s = float(arrivals_prev_s.get(sid, inf_s))
-                    dep_s = float(trip_dep_s[i])
-                    if np.isfinite(earliest_at_stop_s) and dep_s >= earliest_at_stop_s and dep_s >= float(t0):
-                        on_board = True
-
-        # Transfer-walk relaxation from stops improved BY A TRIP in this round (RAPTOR footpaths).
-        # A caminhada parte sempre da chegada de viagem fotografada ANTES deste ciclo (snapshot),
-        # nunca de um valor já baixado por outra caminhada no mesmo ciclo. Antes lia-se
-        # arrivals_curr_s, que este próprio ciclo vai alterando: A->B a pé e depois B->C a pé
-        # encadeavam-se (ultrapassando o limite de max_transfer_walk_min) ou não, conforme a
-        # ordem de iteração do set changed_stop_ids - que depende de PYTHONHASHSEED, aleatório
-        # em cada execução. Resultado: isócronas diferentes a cada regeneração (1072-1090
-        # paragens alcançáveis a partir do estádio, medido). Com o snapshot o resultado é
-        # independente da ordem; `sorted` fica só por legibilidade/reprodutibilidade de debug.
-        if changed_stop_ids:
-            trip_arrival_s = {sid: float(arrivals_curr_s.get(sid, inf_s)) for sid in changed_stop_ids}
-            for sid in sorted(changed_stop_ids):
-                src_idx = stop_id_to_idx.get(sid)
-                if src_idx is None:
-                    continue
-                base_arrival_s = trip_arrival_s[sid]
-                if not np.isfinite(base_arrival_s):
-                    continue
-
-                dists_m = haversine_m(stop_lats[src_idx], stop_lons[src_idx], stop_lats, stop_lons)
-                near_idx = np.where(dists_m <= transfer_walk_m)[0]
-                if len(near_idx) == 0:
-                    continue
-
-                walk_sec = (dists_m[near_idx] / float(walk_speed_m_min)) * 60.0
-                candidate_arrival_s = base_arrival_s + walk_sec
-
-                for j, cand_s in zip(near_idx, candidate_arrival_s):
-                    nid = global_stop_ids[int(j)]
-                    if cand_s < float(arrivals_curr_s.get(nid, inf_s)):
-                        arrivals_curr_s.loc[nid] = float(cand_s)
-
-        if not np.any((arrivals_curr_s - arrivals_prev_s) < -1e-9):
-            break
-        arrivals_prev_s = arrivals_curr_s
+    arrivals_prev = arrivals_prev[:n_stops]
 
     out = all_stops[["dataset", "stop_id", "stop_lat", "stop_lon", "global_stop_id"]].copy()
-    out["reach_min"] = (arrivals_prev_s.reindex(out["global_stop_id"]).to_numpy(dtype=float) - float(t0)) / 60.0
+    out["reach_min"] = (arrivals_prev - float(t0)) / 60.0
     out = out[np.isfinite(out["reach_min"])].copy()
     out = out[out["reach_min"] >= 0.0].copy()
     out = out[out["reach_min"] <= float(max_min)].copy()
@@ -819,12 +801,13 @@ def compute_bgri_reachability_now(
 
     direct_walk_min = haversine_m(origin_lat, origin_lon, cent_lat, cent_lon) / float(walk_speed_m_min)
 
+    # Melhor (tempo até à paragem + caminhada até ao centróide) por zona, em blocos de zonas.
     pt_best_min = np.full(shape=len(gdf_3763), fill_value=np.inf, dtype="float64")
-    for idx in range(len(gdf_3763)):
-        d_to_stops_m = haversine_m(cent_lat[idx], cent_lon[idx], stop_lat, stop_lon)
-        candidate = stop_reach + (d_to_stops_m / float(walk_speed_m_min))
-        if len(candidate) > 0:
-            pt_best_min[idx] = float(np.min(candidate))
+    if len(stop_reach) > 0:
+        for lo in range(0, len(gdf_3763), 512):
+            hi = min(lo + 512, len(gdf_3763))
+            d_to_stops_m = haversine_m(cent_lat[lo:hi, None], cent_lon[lo:hi, None], stop_lat[None, :], stop_lon[None, :])
+            pt_best_min[lo:hi] = np.min(stop_reach[None, :] + (d_to_stops_m / float(walk_speed_m_min)), axis=1)
 
     reach_min = np.minimum(direct_walk_min, pt_best_min)
     reach_mode = np.where(pt_best_min + 1e-9 < direct_walk_min, "transporte público", "a pé")

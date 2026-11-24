@@ -37,9 +37,14 @@ def series_hhmmss_to_seconds(values: pd.Series, what: str = "hora") -> pd.Series
     Levanta ValueError se ALGUMA célula estiver vazia ou malformada, indicando quantas e
     exemplos. O GTFS permite horas vazias em paragens que não são pontos de controlo, mas o
     projeto não interpola horários: aceitá-las como 0 punha passagens à meia-noite.
+
+    Só as horas DISTINTAS passam pelo regex (num stop_times há ~10-30x menos horas distintas do
+    que linhas): é o que custava ~0,4 s por coluna ao carregar cada feed.
     """
-    parts = values.astype("string").str.extract(_HHMMSS_PATTERN)
-    bad = parts.isna().any(axis=1)
+    codes, uniques = pd.factorize(values.astype("string"), use_na_sentinel=True)
+    parts = pd.Series(uniques, dtype="string").str.extract(_HHMMSS_PATTERN)
+    bad_unique = parts.isna().any(axis=1).to_numpy()
+    bad = (codes < 0) | bad_unique[codes.clip(min=0)] if len(uniques) else codes < 0
     if bad.any():
         sample = values[bad].head(5).tolist()
         raise ValueError(
@@ -47,4 +52,5 @@ def series_hhmmss_to_seconds(values: pd.Series, what: str = "hora") -> pd.Series
             f"exemplos: {sample}"
         )
     p = parts.astype("int64")
-    return p[0] * 3600 + p[1] * 60 + p[2]
+    seconds = (p[0] * 3600 + p[1] * 60 + p[2]).to_numpy()
+    return pd.Series(seconds[codes], index=values.index, dtype="int64")
