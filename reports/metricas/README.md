@@ -14,6 +14,8 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `oficial_fase1_d24.csv` | D2.4 (mesmos dados): a 38 conta em Portagem com origem própria (Santa Clara) e as paragens do nó incluem as que ficam a ≤ 250 m. Linha de base até ao T3 |
 | `oficial_fase1_t3.csv` | T3 (2026-11-24, mesmos dados): overlap temporal só com o serviço do dia de referência. É a linha de base atual (`test_snapshot_metrics.py`) |
 | `oficial_fase2_t3.csv` | O mesmo para o cenário `fase2` |
+| `oficial_fase2_norte.csv` | Cenário `fase2` (2026-11-24, mesmos dados): + o sentido informativo Portagem autocarro→metro para norte. Linha de base atual da fase 2 |
+| `diff_oficial_fase2_t3_vs_norte.csv` | Diferenças (12 números novos, só esse sentido; a busca de fase não muda) |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -116,3 +118,19 @@ Mesmos dados e parâmetros; muda só a regra do overlap temporal, aprovada pelo 
 
 - As contagens descem cerca de 70 % por passarem de uma semana somada a um dia útil; a percentagem quase não muda.
 - Deixam de ter overlap as linhas que não circulam no dia de referência: no `antes` 5F, 10F, 18F, 22F, 23F, 28F, 47F e 50M; na fase 2 18F, 22F, 23F, 28F, 36F e 47F.
+
+## Portagem autocarro→metro para norte, informativo (2026-11-24)
+
+Mesmos dados. Na fase 2 o metro continua de Portagem para Coimbra B (U1, S1) e para a República (U2, S2). O sentido norte é provavelmente o transbordo mais usado: a 54 termina em Parque 2 e a 38 segue ela própria para Polo II. Entra como **métrica informativa**, só no cenário `fase2` (decisão do utilizador):
+- **Conta a primeira partida em qualquer dos ramos:** 153 partidas por dia, tantas como para sul (150).
+- **Fica fora da busca do desvio de fase.** O par −10 / 0 continua a otimizar só os 4 sentidos. Com o norte no objetivo o ótimo mudava, mas só por ~0,1 min.
+- **No `antes` não existe**, porque o metro acaba em Portagem. O snapshot do `antes` não muda.
+
+| Portagem autocarro→metro (54+38, mediana) | atual | otimizado (−10) | melhorado (0) |
+|---|---|---|---|
+| Sul (sentido contado) | 4,5 min | 4,0 min | 4,5 min |
+| Norte, qualquer ramo | 5,7 min | 5,8 min | 5,8 min |
+
+Por ramo (análise de 2026-11-24, horário atual): só Coimbra B 9,8 min; só República 6,8 min (média 11,3 e p90 21, por causa de buracos de até 41 min).
+
+Na mesma altura, uma origem ou um sentido que não existe no feed passa a ser um **erro**. Antes, a lista vazia de paragens desligava o filtro de sentido e contava os dois sentidos: o metro "vindo de Coimbra B" no feed da fase 1 dava as 257 passagens. Nenhum número publicado dependia disso.

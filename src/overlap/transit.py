@@ -99,9 +99,17 @@ def _origin_candidates_by_line(
         missing = [line for line in line_values if line not in refs]
         if missing:
             raise ValueError(f"Origem em falta para a(s) linha(s) {', '.join(missing)} em bus_origin_ref={bus_origin_ref}")
-        return {line: _node_stop_ids(gtfs, str(refs[line]), radius_m) for line in line_values}
-    candidates = _node_stop_ids(gtfs, str(bus_origin_ref), radius_m)
-    return {line: candidates for line in line_values}
+        out = {line: _node_stop_ids(gtfs, str(refs[line]), radius_m) for line in line_values}
+    else:
+        candidates = _node_stop_ids(gtfs, str(bus_origin_ref), radius_m)
+        out = {line: candidates for line in line_values}
+    unknown = [line for line, cands in out.items() if not cands]
+    if unknown:
+        raise ValueError(
+            f"Origem de autocarro não encontrada no feed para a(s) linha(s) {', '.join(unknown)} "
+            f"(bus_origin_ref={bus_origin_ref}) - sem ela o sentido não seria filtrado"
+        )
+    return out
 
 
 def bus_origin_label(bus_origin_ref: str | dict) -> str:
@@ -109,6 +117,15 @@ def bus_origin_label(bus_origin_ref: str | dict) -> str:
     if isinstance(bus_origin_ref, dict):
         return "; ".join(f"{k}: {v}" for k, v in bus_origin_ref.items())
     return str(bus_origin_ref)
+
+
+def _check_origin_candidates(origin_candidates: list[str] | None) -> None:
+    """`None` = sem filtro de sentido; uma lista VAZIA = pediu-se uma origem que não existe no feed.
+    Antes as duas davam o mesmo (`bool([])` é False): uma origem desconhecida deixava de filtrar o
+    sentido e contava as passagens dos DOIS sentidos, em silêncio (ex.: metro "vindo de Coimbra B"
+    no feed da fase 1, que acaba em Portagem, devolvia todas as 257 passagens)."""
+    if origin_candidates is not None and not list(origin_candidates):
+        raise ValueError("Origem pedida sem paragens no feed (lista vazia) - o sentido não seria filtrado.")
 
 
 def _arrival_times_for_stop(
@@ -125,8 +142,9 @@ def _arrival_times_for_stop(
     if st.empty:
         return []
 
+    _check_origin_candidates(origin_candidates)
     target_stop_id = str(target_stop_id)
-    with_origin = bool(origin_candidates)
+    with_origin = origin_candidates is not None
     origin_set = {str(v) for v in (origin_candidates or [])}
 
     out: list[str] = []
@@ -165,8 +183,9 @@ def _arrival_events_for_stop(
     if st.empty:
         return []
 
+    _check_origin_candidates(origin_candidates)
     target_stop_id = str(target_stop_id)
-    with_origin = bool(origin_candidates)
+    with_origin = origin_candidates is not None
     origin_set = {str(v) for v in (origin_candidates or [])}
     line_by_trip = line_by_trip or {}
 
@@ -216,11 +235,12 @@ def _pick_best_target_stop_id(
     if len(target_candidates) == 1:
         return str(target_candidates[0])
 
+    _check_origin_candidates(origin_candidates)
     st = gtfs.stop_times.copy()
     st = st[st["trip_id"].isin(trips["trip_id"])]
 
     origin_set = {str(v) for v in (origin_candidates or [])}
-    use_origin = bool(origin_set)
+    use_origin = origin_candidates is not None
 
     best_stop = str(target_candidates[0])
     best_score = -1
@@ -539,6 +559,9 @@ def build_line_stop_vs_metro_table(
         raise ValueError(f"Paragem de autocarro não encontrada: {bus_stop_ref}")
     if not metro_target_candidates:
         raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
+    if not metro_origin_candidates:
+        # Sem isto o sentido deixava de ser filtrado (ver _check_origin_candidates).
+        raise ValueError(f"Paragem de metro (origem/sentido) não encontrada: {metro_origin_ref}")
 
     # Trips do metro
     metro_services = active_service_ids(gtfs_metro, day)
@@ -634,11 +657,23 @@ def build_line_stop_vs_metro_table(
     return out_df
 
 
+def informative_reverse_senses(site: dict, scenario: str | Scenario | None = None) -> list[dict]:
+    """Sentidos bus->metro EXTRA de um nó (`site["informative_reverse_senses"]`, config) que se
+    aplicam ao cenário: só informativos - entram nas páginas de integração, nos snapshots e na
+    comparação, mas NUNCA no objetivo da busca de desvio de fase (`scripts/search_phase_shift.py`
+    usa só `reverse_metro_towards_ref`). Cada um: `key` (sufixo do sentido, ex. "norte"),
+    `label`, `towards_refs` e `scenarios` (onde existe - ex. o norte de Portagem só na fase 2:
+    no feed da fase 1 o metro acaba em Portagem). Um cenário fora de `scenarios` -> nada; num
+    cenário de `scenarios` as paragens têm de existir (build_reverse_stop_vs_metro_table rebenta)."""
+    name = get_scenario(scenario).name
+    return [dict(sense) for sense in site.get("informative_reverse_senses", ()) if name in sense["scenarios"]]
+
+
 def build_reverse_stop_vs_metro_table(
     bus_stop_ref: str,
     metro_stop_ref: str,
     line_number: str | int | list[str | int] | tuple[str | int, ...],
-    metro_towards_ref: str,
+    metro_towards_ref: str | tuple[str, ...] | list[str],
     day_str: str | None = None,
     bus_origin_ref: str | dict = "Portagem",
     output_csv_name: str | None = None,
@@ -654,7 +689,10 @@ def build_reverse_stop_vs_metro_table(
     `metro_stop_ref`: só contam as viagens que passam numa paragem com este nome/id DEPOIS de
     `metro_stop_ref` (ex.: em Portagem, "Vale das Flores" = sentido Serpins). Usa-se uma paragem
     e não `trips.direction_id`/`route_id` porque esses códigos mudam de feed para feed (ver
-    `_towards_arrival_times_for_stop`).
+    `_towards_arrival_times_for_stop`). Vários nomes (tuplo/lista) = um sentido com vários ramos:
+    conta a viagem que passar DEPOIS em qualquer um deles (ex.: Portagem na fase 2,
+    `("Coimbra B", "República")` = sentido norte, ver `informative_reverse_senses`); cada nome tem
+    de existir no feed.
 
     Devolve o MESMO esquema de colunas que `build_line_stop_vs_metro_table`
     (`bus_time`/`bus_line_passage`, `metro_time_from_origin`) mas com o conteúdo trocado, DE
@@ -673,14 +711,22 @@ def build_reverse_stop_vs_metro_table(
     bus_origin_by_line = _origin_candidates_by_line(gtfs_bus, bus_origin_ref, _normalize_line_numbers(line_number))
     bus_target_candidates = _node_stop_ids(gtfs_bus, str(bus_stop_ref))
     metro_target_candidates = _matching_stop_ids(gtfs_metro, str(metro_stop_ref))
-    metro_towards_candidates = _matching_stop_ids(gtfs_metro, str(metro_towards_ref))
+    towards_refs = [metro_towards_ref] if isinstance(metro_towards_ref, str) else list(metro_towards_ref)
+    if not towards_refs:
+        raise ValueError("Sentido do metro (metro_towards_ref) não indicado.")
+    metro_towards_candidates: list[str] = []
+    for ref in towards_refs:
+        found = _matching_stop_ids(gtfs_metro, str(ref))
+        if not found:
+            # Um ramo em falta tem de rebentar (não só "nenhum"): senão o sentido perdia-o em silêncio.
+            raise ValueError(f"Paragem de metro (sentido) não encontrada: {ref}")
+        metro_towards_candidates.extend(found)
+    metro_towards_candidates = list(dict.fromkeys(metro_towards_candidates))
 
     if not bus_target_candidates:
         raise ValueError(f"Paragem de autocarro não encontrada: {bus_stop_ref}")
     if not metro_target_candidates:
         raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
-    if not metro_towards_candidates:
-        raise ValueError(f"Paragem de metro (sentido) não encontrada: {metro_towards_ref}")
 
     metro_services = active_service_ids(gtfs_metro, day)
     metro_trips = gtfs_metro.trips.copy()

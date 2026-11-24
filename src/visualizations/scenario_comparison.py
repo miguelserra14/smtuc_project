@@ -27,9 +27,14 @@ from .io import _read_template
 WAIT_SENSES = (
     "Portagem metro→bus",
     "Portagem bus→metro",
+    "Portagem bus→metro (norte)",
     "Portela metro→bus",
     "Portela bus→metro",
 )
+# Sentidos só informativos (config INTEGRATION_SITES[*]["informative_reverse_senses"]): não
+# entram na busca do desvio de fase e podem não existir num dos cenários (o norte de Portagem só
+# existe na fase 2). Um sentido sem valor em NENHUM dos snapshots não sai na tabela.
+INFORMATIVE_WAIT_SENSES = ("Portagem bus→metro (norte)",)
 WAIT_VARIANTS = ("atual", "otimizado", "melhorado")
 
 
@@ -152,8 +157,12 @@ def build_comparison_rows(before: pd.DataFrame, after: pd.DataFrame) -> dict[str
     waits: list[dict[str, str]] = []
     for sense in WAIT_SENSES:
         raw_b = snapshot_value(before, "esperas_54", f"{sense} | atual", "median")
+        if sense in INFORMATIVE_WAIT_SENSES and raw_b is None and snapshot_value(
+            after, "esperas_54", f"{sense} | atual", "median"
+        ) is None:
+            continue
         row = {
-            "label": sense.replace("bus", "autocarro"),
+            "label": sense.replace("bus", "autocarro") + (" *" if sense in INFORMATIVE_WAIT_SENSES else ""),
             "before": _fmt_number(_number(raw_b), 1, "min"),
             "before_value": raw_b or "",
         }
@@ -189,6 +198,13 @@ def _render_body(before: pd.DataFrame, after: pd.DataFrame, rows: dict[str, list
         f"{_cell(r['delta'], r['trend'])}</tr>"
         for r in rows["kpis"]
     )
+    informative_note = (
+        '<p class="note">* Informativo: só existe na fase 2, em que o metro continua de Portagem para '
+        "Coimbra B e para a República (conta a primeira partida em qualquer dos ramos). Fica fora da "
+        "busca do desvio de fase da 54.</p>"
+        if any(r["label"].endswith(" *") for r in rows["waits"])
+        else ""
+    )
     wait_rows = "".join(
         f"<tr><th scope=\"row\">{html.escape(r['label'])}</th>{_cell(r['before'])}"
         f"{_cell(r['atual'], r['trend'])}{_cell(r['otimizado'], r.get('otimizado_trend', ''))}"
@@ -218,6 +234,7 @@ def _render_body(before: pd.DataFrame, after: pd.DataFrame, rows: dict[str, list
     <tbody>{wait_rows}</tbody>
   </table>
   <p class="note">A cor compara com o horário atual da fase 2 (e esse com o antes): <span class="trend-melhor">menos espera</span>, <span class="trend-pior">mais espera</span>.</p>
+  {informative_note}
 </section>
 <p class="note sources">Entre os dois cenários mudam o metro <strong>e</strong> o horário do SMTUC. {' · '.join(feeds)}. Dados: AGIT / dados.gov.pt (CC BY 4.0), SMTUC, INE (BGRI 2021).</p>
 """

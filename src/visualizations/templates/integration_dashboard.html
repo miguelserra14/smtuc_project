@@ -121,6 +121,10 @@
                 <div id="plot_equity_rev" class="plot"></div>
             </section>
         </div>
+
+        <!-- Sentidos bus->metro só informativos (ex. Portagem -> norte na fase 2), fora da busca
+             do desvio de fase - construídos em JS a partir de `informative` (textContent). -->
+        <div id="info-groups"></div>
     </main>
     <script>
         const figWaits = __WAITS_JSON__;
@@ -130,6 +134,7 @@
         const figEquityRev = __EQUITY_REV_JSON__;
         const variantsFwd = __VARIANTS_JSON__;
         const variantsRev = __VARIANTS_REV_JSON__;
+        const informative = __INFORMATIVE_JSON__;
         const cfg = { responsive: true };
 
         if (hasReverse) {
@@ -144,6 +149,59 @@
             allFigs.push(['plot_waits_rev', figWaitsRev]);
             allFigs.push(['plot_equity_rev', figEquityRev]);
         }
+
+        // Um grupo por sentido informativo, com a mesma estrutura de #rev-group (os ids levam o
+        // índice). Só textContent/atributos - nunca innerHTML com texto vindo dos dados.
+        const infoGroups = [];
+        (informative || []).forEach((item, i) => {
+            const group = document.createElement('div');
+            group.id = `info-group-${i}`;
+            const heading = document.createElement('h2');
+            heading.className = 'direction-heading';
+            heading.textContent = item.heading || 'Sentido informativo';
+            group.appendChild(heading);
+            const infoBar = document.createElement('section');
+            infoBar.className = 'opt-note-bar';
+            const infoText = document.createElement('p');
+            infoText.className = 'opt-note';
+            infoText.textContent = item.note || '';
+            infoBar.appendChild(infoText);
+            group.appendChild(infoBar);
+            const noteBar = document.createElement('section');
+            noteBar.className = 'opt-note-bar';
+            noteBar.id = `opt-note-bar-info-${i}`;
+            noteBar.hidden = true;
+            const note = document.createElement('p');
+            note.className = 'opt-note';
+            note.id = `opt-note-info-${i}`;
+            noteBar.appendChild(note);
+            group.appendChild(noteBar);
+            [['waits', 'Espera de transbordo (autocarro -> metro)'], ['equity', 'Equidade temporal (autocarro -> metro)']].forEach(([key, title]) => {
+                const panel = document.createElement('section');
+                panel.className = 'panel';
+                const h = document.createElement('h2');
+                const span = document.createElement('span');
+                span.textContent = title;
+                const toggle = document.createElement('span');
+                toggle.className = 'opt-toggle';
+                toggle.dataset.figure = key;
+                toggle.dataset.plot = `plot_${key}_info_${i}`;
+                toggle.setAttribute('role', 'group');
+                toggle.setAttribute('aria-label', `${title}: horário atual, otimizado ou melhorado`);
+                toggle.hidden = true;
+                h.appendChild(span);
+                h.appendChild(toggle);
+                const plot = document.createElement('div');
+                plot.id = `plot_${key}_info_${i}`;
+                plot.className = 'plot';
+                panel.appendChild(h);
+                panel.appendChild(plot);
+                group.appendChild(panel);
+                allFigs.push([plot.id, item[key]]);
+            });
+            document.getElementById('info-groups').appendChild(group);
+            infoGroups.push([group, item.variants, noteBar.id, note.id]);
+        });
 
         function pad2(v) {
             return String(v).padStart(2, '0');
@@ -260,6 +318,7 @@
         if (hasReverse) {
             wireVariantToggles(document.getElementById('rev-group'), variantsRev, 'opt-note-bar-rev', 'opt-note-rev');
         }
+        infoGroups.forEach(([group, payload, noteBarId, noteId]) => wireVariantToggles(group, payload, noteBarId, noteId));
     </script>
 </body>
 </html>

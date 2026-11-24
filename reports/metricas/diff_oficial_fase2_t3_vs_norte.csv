@@ -1,0 +1,15 @@
+section,key,metric,before,after,delta,delta_pct,status
+meta,snapshot,commit,20937e0+alterações,ea3a7cc+alterações,,,mudou
+meta,snapshot,fase,oficial_fase2_t3,oficial_fase2_norte,,,mudou
+esperas_54,Portagem bus→metro (norte) | atual,cov10,,94.2857,,,novo
+esperas_54,Portagem bus→metro (norte) | atual,lost15,,2.8571,,,novo
+esperas_54,Portagem bus→metro (norte) | atual,median,,5.73,,,novo
+esperas_54,Portagem bus→metro (norte) | atual,shift_min,,0,,,novo
+esperas_54,Portagem bus→metro (norte) | melhorado,cov10,,95.7143,,,novo
+esperas_54,Portagem bus→metro (norte) | melhorado,lost15,,1.4286,,,novo
+esperas_54,Portagem bus→metro (norte) | melhorado,median,,5.83,,,novo
+esperas_54,Portagem bus→metro (norte) | melhorado,shift_min,,0,,,novo
+esperas_54,Portagem bus→metro (norte) | otimizado,cov10,,97.1429,,,novo
+esperas_54,Portagem bus→metro (norte) | otimizado,lost15,,0,,,novo
+esperas_54,Portagem bus→metro (norte) | otimizado,median,,5.83,,,novo
+esperas_54,Portagem bus→metro (norte) | otimizado,shift_min,,-10,,,novo

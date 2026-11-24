@@ -18,6 +18,7 @@ from overlap.transit import (
     build_line_stop_vs_metro_table,
     build_metro_bus_connection_metrics,
     build_reverse_stop_vs_metro_table,
+    informative_reverse_senses as applicable_informative_senses,
     resolve_reference_day,
     safe_slug,
 )
@@ -371,6 +372,7 @@ def create_combined_integration_dashboard(
     equity_fig: object,
     variants: dict | None = None,
     reverse: dict | None = None,
+    informative: list[dict] | None = None,
 ) -> str:
     """Create a single HTML page with waits and equity in one document.
 
@@ -383,6 +385,9 @@ def create_combined_integration_dashboard(
     `build_reverse_stop_vs_metro_table`) a mostrar como 2 painéis extra na mesma página - deve
     ter as chaves `waits_fig`/`equity_fig` e opcionalmente `variants` (mesmo formato do parâmetro
     acima). Sem isto, a página só mostra o sentido metro->bus.
+
+    `informative` (opcional): sentidos bus->metro extra, só informativos - lista de dicts com
+    as chaves de `reverse` mais `heading` e `note` (texto, inserido com textContent).
     """
     if pio is None:
         raise ImportError("plotly.io nao esta disponivel para gerar visualizacoes")
@@ -415,6 +420,20 @@ def create_combined_integration_dashboard(
         page = page.replace("__EQUITY_REV_JSON__", "null")
         page = page.replace("__VARIANTS_REV_JSON__", "null")
 
+    info_items = [
+        {
+            "heading": str(item.get("heading", "")),
+            "note": str(item.get("note", "")),
+            "waits": json.loads(pio.to_json(item["waits_fig"])),
+            "equity": json.loads(pio.to_json(item["equity_fig"])),
+            "variants": item.get("variants"),
+        }
+        for item in (informative or [])
+    ]
+    page = page.replace(
+        "__INFORMATIVE_JSON__", json.dumps(info_items, ensure_ascii=False).replace("</", "<\\/")
+    )
+
     output_path.write_text(page, encoding="utf-8")
     return str(output_path)
 
@@ -433,6 +452,7 @@ def generate_connection_visualizations(
     phase_shift_line: str = "54",
     melhorado_phase_shift_min: float | None = None,
     reverse_metro_towards_ref: str | None = None,
+    informative_reverse_senses: tuple[dict, ...] | list[dict] | None = None,
     scenario: str | Scenario | None = None,
 ) -> dict[str, str]:
     """
@@ -456,6 +476,11 @@ def generate_connection_visualizations(
     apanhada no nó (ver `build_reverse_stop_vs_metro_table`); se indicada, gera TAMBÉM o sentido
     inverso (bus->metro) como 3 painéis extra na mesma página, cada um com o seu próprio botão
     Atual/Otimizado/Melhorado. Sem isto, só sai o sentido metro->bus.
+
+    `informative_reverse_senses` (opcional, `INTEGRATION_SITES[*]["informative_reverse_senses"]`):
+    sentidos bus->metro extra, só informativos (ex. Portagem -> norte na fase 2). Os que se
+    aplicam ao cenário (`overlap.transit.informative_reverse_senses`) saem como mais 2 painéis
+    cada, com os mesmos desvios de fase (que NÃO foram otimizados para eles).
 
     Retorna um dicionario com os caminhos dos ficheiros gerados.
     """
@@ -558,16 +583,16 @@ def generate_connection_visualizations(
         wait_target_line_label="Linha",
     )
 
-    reverse_payload = None
-    waits_df_rev: pd.DataFrame | None = None
-    if reverse_metro_towards_ref is not None:
+    def _reverse_direction(towards_ref, csv_name: str | None, title_suffix: str):
+        """Sentido bus->metro (tabela, propostas e figuras) para um sentido do metro."""
         schedule_df_rev = build_reverse_stop_vs_metro_table(
             bus_stop_ref=bus_stop_ref,
             metro_stop_ref=metro_stop_ref,
             line_number=line_number,
-            metro_towards_ref=reverse_metro_towards_ref,
+            metro_towards_ref=towards_ref,
             day_str=day_str,
             bus_origin_ref=bus_origin_ref,
+            output_csv_name=csv_name,
             output_dir=atual_dir,
             scenario=sc,
         )
@@ -585,7 +610,6 @@ def generate_connection_visualizations(
             else None
         )
 
-        apply_melhorado_rev = melhorado_phase_shift_min is not None
         schedule_df_rev_melhorado = (
             double_and_shift_reverse_schedule_bus_arrivals(schedule_df_rev, melhorado_phase_shift_min)
             if apply_melhorado_rev
@@ -601,23 +625,54 @@ def generate_connection_visualizations(
             else None
         )
 
-        fig_wait_rev, fig_heat_rev, variants_payload_rev, waits_df_rev = _build_direction_figures(
+        fig_wait_rev, fig_heat_rev, variants_payload_rev, waits_df_dir = _build_direction_figures(
             schedule_df_rev,
             [
                 ("otimizado", "Otimizado", schedule_df_rev_opt, optimization_desc_rev),
                 ("melhorado", "Melhorado", schedule_df_rev_melhorado, melhorado_desc_rev),
             ],
-            wait_title=f"Espera até à Próxima Partida de Metro ({sample_date})",
-            equity_title=f"Equidade Temporal de Ligações - sentido inverso ({sample_date})",
+            wait_title=f"Espera até à Próxima Partida de Metro{title_suffix} ({sample_date})",
+            equity_title=f"Equidade Temporal de Ligações - sentido inverso{title_suffix} ({sample_date})",
             wait_trigger_label="Hora de chegada do autocarro",
             wait_target_label="Próxima partida de metro",
             wait_target_line_label="Sentido",
         )
-        reverse_payload = {
+        payload = {
             "waits_fig": fig_wait_rev,
             "equity_fig": fig_heat_rev,
             "variants": variants_payload_rev,
         }
+        return payload, waits_df_dir, schedule_df_rev_melhorado
+
+    apply_melhorado_rev = melhorado_phase_shift_min is not None
+    reverse_payload = None
+    waits_df_rev: pd.DataFrame | None = None
+    schedule_df_rev_melhorado: pd.DataFrame | None = None
+    if reverse_metro_towards_ref is not None:
+        reverse_payload, waits_df_rev, schedule_df_rev_melhorado = _reverse_direction(
+            reverse_metro_towards_ref, None, ""
+        )
+
+    # Sentidos informativos (fora da busca de fase), com CSV próprio para não pisarem o do
+    # sentido principal (o nome por omissão de build_reverse_stop_vs_metro_table não tem o sentido).
+    informative_payloads: list[dict] = []
+    informative_waits: dict[str, pd.DataFrame] = {}
+    senses = applicable_informative_senses({"informative_reverse_senses": informative_reverse_senses or ()}, sc)
+    for sense in senses:
+        csv_name = (
+            f"reverse_{sense['key']}_line_{safe_slug(line_number)}_bus_{safe_slug(bus_stop_ref)}"
+            f"_metro_{safe_slug(metro_stop_ref)}.csv"
+        )
+        payload, waits_info, _ = _reverse_direction(sense["towards_refs"], csv_name, f" - {sense['key']}")
+        payload["heading"] = f"Sentido inverso: autocarro -> {sense['label']} (informativo)"
+        payload["note"] = (
+            "Indicador informativo: conta a primeira partida de metro em qualquer dos ramos ("
+            + " / ".join(sense["towards_refs"])
+            + "). Fica fora da busca do desvio de fase da 54: os desvios Otimizado/Melhorado "
+            "foram escolhidos para os outros sentidos."
+        )
+        informative_payloads.append(payload)
+        informative_waits[sense["key"]] = waits_info
 
     waits_csv_path = atual_dir / f"{prefix}_wt.csv"
     schedule_csv_path = atual_dir / (
@@ -638,6 +693,8 @@ def generate_connection_visualizations(
         )
     if waits_df_rev is not None:
         waits_df_rev.to_csv(atual_dir / f"{prefix}_wt_reverso.csv", index=False)
+    for key, waits_info in informative_waits.items():
+        waits_info.to_csv(atual_dir / f"{prefix}_wt_reverso_{key}.csv", index=False)
 
     if apply_melhorado:
         melhorado_dir = out_root / "melhorado"
@@ -674,6 +731,7 @@ def generate_connection_visualizations(
         equity_fig=fig_heat,
         variants=variants_payload,
         reverse=reverse_payload,
+        informative=informative_payloads,
     )
 
     return {

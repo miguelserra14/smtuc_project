@@ -18,6 +18,7 @@ from visualizations.dashboard import (
     create_presentation_dashboard_html,
 )
 from visualizations.scenario_comparison import (
+    INFORMATIVE_WAIT_SENSES,
     WAIT_SENSES,
     _fmt_number,
     build_comparison_rows,
@@ -104,7 +105,28 @@ def test_wait_trend_follows_displayed_rounding() -> None:
     portela = _wait(rows, "Portela metro→autocarro")
     assert portela["trend"] == "pior"
     assert portela["otimizado_trend"] == ""
-    assert [r["label"] for r in rows["waits"]] == [s.replace("bus", "autocarro") for s in WAIT_SENSES]
+    # Sem valores do sentido informativo em nenhum snapshot -> a linha não aparece.
+    assert [r["label"] for r in rows["waits"]] == [
+        s.replace("bus", "autocarro") for s in WAIT_SENSES if s not in INFORMATIVE_WAIT_SENSES
+    ]
+
+
+def test_informative_north_sense_only_after(tmp_path: Path) -> None:
+    # O norte de Portagem só existe na fase 2: "–" no antes, sem tendência, marcado com * e nota.
+    after = pd.concat([AFTER, pd.DataFrame(
+        [("esperas_54", f"Portagem bus→metro (norte) | {v}", "median", str(x))
+         for v, x in (("atual", 5.65), ("otimizado", 5.8), ("melhorado", 5.8))],
+        columns=AFTER.columns,
+    )], ignore_index=True)
+    rows = build_comparison_rows(BEFORE, after)
+    labels = [r["label"] for r in rows["waits"]]
+    assert labels.index("Portagem autocarro→metro (norte) *") == labels.index("Portagem autocarro→metro") + 1
+    north = _wait(rows, "Portagem autocarro→metro (norte) *")
+    assert (north["before"], north["atual"], north["trend"]) == ("–", "5,7 min", "")
+    assert north["otimizado_trend"] == "pior"
+    text = Path(create_scenario_comparison_html(tmp_path / "c.html", BEFORE, after, csv_path=tmp_path / "c.csv")).read_text(encoding="utf-8")
+    assert "* Informativo" in text
+    assert "* Informativo" not in Path(create_scenario_comparison_html(tmp_path / "d.html", BEFORE, AFTER, csv_path=tmp_path / "d.csv")).read_text(encoding="utf-8")
 
 
 def test_page_and_csv(tmp_path: Path) -> None:

@@ -18,7 +18,9 @@ Secções:
   linhas          por linha SMTUC: frequência, viagens no dia, overlap espacial/temporal, raio do estádio
   overlap_resumo  totais do overlap (os do rodapé/slide de overlap) e rankings top/bottom 5
   esperas_54      espera mediana, cobertura <=10 min e perda >15 min por sentido nos nós
-                  INTEGRATION_SITES, para o horário atual e as propostas com os desvios do config
+                  INTEGRATION_SITES, para o horário atual e as propostas com os desvios do config;
+                  inclui os sentidos informativos do cenário (ex. "Portagem bus→metro (norte)" só
+                  na fase 2), que não entram na busca de fase
   busca_fase_54   melhor desvio de fase de cada proposta (scripts/search_phase_shift.py)
   isocrona        população e zonas por faixa de tempo a partir do estádio, e por modo
   populacao       população sem oferta (total e no raio do painel do estádio), top 10 de subserviço
@@ -141,15 +143,16 @@ def _section_waits(snap: Snapshot, workdir: Path, with_search: bool, scenario) -
 
     search = _load_phase_search()
     schedules = search.load_schedules(workdir, scenario=scenario)
+    informative = search.load_informative_schedules(workdir, scenario=scenario)
     shifts = {"atual": 0.0, "otimizado": LINE_54_OPTIMIZED_PHASE_SHIFT_MIN, "melhorado": LINE_54_MELHORADO_PHASE_SHIFT_MIN}
-    for sense, df in schedules.items():
+    for sense, df in {**schedules, **informative}.items():
         for variant, shift in shifts.items():
             m = search.sense_metrics(search._variant(variant, sense, df, float(shift)))
             for metric in ("median", "cov10", "lost15"):
                 snap.add("esperas_54", f"{sense} | {variant}", metric, m[metric])
             snap.add("esperas_54", f"{sense} | {variant}", "shift_min", shift)
     if with_search:
-        results, _ = search.search(schedules)  # meio ciclo de cada proposta, critério do script
+        results, _ = search.search(schedules)  # só os 4 sentidos (sem os informativos), critério do script
         for variant in ("otimizado", "melhorado"):
             best = search.best(results, variant)
             for metric in ("shift_min", "melhorados", "regressoes", "soma_medianas"):

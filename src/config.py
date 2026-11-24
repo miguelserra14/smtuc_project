@@ -173,6 +173,22 @@ INTEGRATION_SITES: tuple[dict, ...] = (
         # sentido Serpins. Por paragem e não por direction_id/route_id: esses códigos mudam de feed
         # para feed (sintético: sentido 1 / rota LOUSA; GTFS oficial 2025: sentido 0 / rota 3606).
         "reverse_metro_towards_ref": "Vale das Flores",
+        # Sentido NORTE (bus->metro), só INFORMATIVO (decidido a 2026-11-24): na fase 2 o metro
+        # continua de Portagem para Coimbra B (U1/S1) e para a República (U2/S2) - provavelmente
+        # o transbordo mais usado (a 54 termina em Parque 2; a 38 segue ela própria para Polo
+        # II). Conta qualquer ramo (mediana fase 2: 4,5 min sul vs 5,7 min norte). Aparece na
+        # página de integração, nos snapshots (esperas_54) e na comparação, mas NÃO entra na
+        # busca do desvio de fase (o par -10/0 continua a otimizar só os 4 sentidos acima; com
+        # o norte no objetivo o ótimo mudava por ~0,1 min). Não existe na fase 1 (o metro acaba
+        # em Portagem). Ver overlap.transit.informative_reverse_senses.
+        "informative_reverse_senses": (
+            {
+                "key": "norte",
+                "label": "metro para norte (Coimbra B ou República)",
+                "towards_refs": ("Coimbra B", "República"),
+                "scenarios": ("fase2",),
+            },
+        ),
     },
     {
         "name": "Portela",  # Portagem -> Portela, linha 54

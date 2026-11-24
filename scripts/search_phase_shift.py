@@ -51,6 +51,7 @@ from gtfs_processing.scenarios import Scenario, get_scenario, scenario_names  # 
 from overlap.transit import (  # noqa: E402
     build_line_stop_vs_metro_table,
     build_reverse_stop_vs_metro_table,
+    informative_reverse_senses,
     resolve_reference_day,
 )
 from overlap.phase import (  # noqa: E402
@@ -82,6 +83,28 @@ def load_schedules(output_dir: Path, scenario: str | Scenario | None = None) -> 
             s["bus_stop_ref"], s["metro_stop_ref"], _lines(s), metro_towards_ref=s["reverse_metro_towards_ref"],
             bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir, scenario=scenario,
         )
+    return out
+
+
+def informative_sense_name(site: dict, sense: dict) -> str:
+    """Nome do sentido informativo (chave do snapshot/comparação), ex. "Portagem bus→metro (norte)"."""
+    return f"{site['name']} bus→metro ({sense['key']})"
+
+
+def load_informative_schedules(output_dir: Path, scenario: str | Scenario | None = None) -> dict[str, pd.DataFrame]:
+    """Tabelas dos sentidos bus->metro INFORMATIVOS do cenário (config
+    `INTEGRATION_SITES[*]["informative_reverse_senses"]`, ex. Portagem norte na fase 2). Ficam
+    FORA de `load_schedules` de propósito: não entram em `search` (o objetivo do desvio de fase
+    são só os 4 sentidos); o snapshot e a página de integração mostram-nos à parte."""
+    out: dict[str, pd.DataFrame] = {}
+    for s in INTEGRATION_SITES:
+        for sense in informative_reverse_senses(s, scenario):
+            name = informative_sense_name(s, sense)
+            out[name] = build_reverse_stop_vs_metro_table(
+                s["bus_stop_ref"], s["metro_stop_ref"], _lines(s), metro_towards_ref=sense["towards_refs"],
+                bus_origin_ref=s["bus_origin_ref"], output_dir=output_dir, scenario=scenario,
+                output_csv_name=f"reverse_{s['output_prefix']}_{sense['key']}.csv",
+            )
     return out
 
 
@@ -180,6 +203,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     with tempfile.TemporaryDirectory() as tmp:
         schedules = load_schedules(Path(tmp), scenario=sc)
+        informative = load_informative_schedules(Path(tmp), scenario=sc)
     if args.sem_transbordo:
         print("[AVISO] --sem-transbordo: regra antiga, transbordo = 0 min (ligações fisicamente impossíveis contam)")
         schedules = {k: v.drop(columns=["target_transfer_min", "trigger_transfer_min"], errors="ignore") for k, v in schedules.items()}
@@ -193,6 +217,10 @@ def main(argv: list[str] | None = None) -> int:
     print("\nHorário atual (espera mediana, min):")
     for sense, m in base.items():
         print(f"  {sense:22s} mediana={m['median']:5.1f}  cob≤10={m['cov10']:5.1f}%  perda>15={m['lost15']:5.1f}%")
+    for sense, df in informative.items():
+        m = sense_metrics(df)
+        print(f"  {sense:22s} mediana={m['median']:5.1f}  cob≤10={m['cov10']:5.1f}%  perda>15={m['lost15']:5.1f}%"
+              "  [informativo: fora da busca]")
 
     medians = [c for c in results.columns if c.endswith(" mediana")]
     show = ["shift_min", *medians, "melhorados", "regressoes", "soma_medianas"]
