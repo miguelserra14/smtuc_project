@@ -143,7 +143,9 @@ def test_line_metrics_cache_uses_the_scenario(two_scenarios, monkeypatch, tmp_pa
 
 
 def test_regenerate_validates_each_scenario_on_its_own_day(two_scenarios, monkeypatch) -> None:
-    import tests.regenerate_all_htmls as regen
+    from tests.script_loader import load_script
+
+    regen = load_script("regenerate")
 
     checked: list[tuple[str, date]] = []
 

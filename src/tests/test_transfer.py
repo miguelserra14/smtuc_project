@@ -15,11 +15,11 @@ import pytest
 from gtfs_processing.gtfs import GTFSData
 from overlap.transit import compute_transfer_waits, transfer_minutes
 from tests.reference_data import require_reference_data
-from visualizations.integration import (
-    _build_waits_table,
-    _double_and_shift_schedule_bus_times,
-    _shift_reverse_schedule_bus_arrivals,
-    _shift_schedule_bus_times,
+from overlap.phase import (
+    build_waits_table,
+    double_and_shift_schedule_bus_times,
+    shift_reverse_schedule_bus_arrivals,
+    shift_schedule_bus_times,
 )
 
 M_PER_DEG_LAT = 6371000.0 * math.pi / 180.0
@@ -75,7 +75,7 @@ def test_transfer_minutes_across_feeds_and_unknown_stop() -> None:
 
 
 # --------------------------------------------------------------------------------------------
-# compute_transfer_waits / _build_waits_table
+# compute_transfer_waits / build_waits_table
 # --------------------------------------------------------------------------------------------
 
 def test_departure_at_arrival_time_is_no_longer_a_zero_minute_connection() -> None:
@@ -113,7 +113,7 @@ def test_reverse_direction_transfer_is_on_the_trigger() -> None:
 
 def test_no_catchable_departure() -> None:
     df = _schedule(bus=[("23:00:00", "54", 2.0)], metro=[("22:59:00", 0.0), ("23:30:00", 0.0)])
-    waits = _build_waits_table(df)
+    waits = build_waits_table(df)
     assert waits["wait_class"].tolist() == ["sem_ligacao", "sem_ligacao"]
     assert waits["wait_min"].isna().all()
     assert waits["transfer_min"].isna().all()  # nunca 0.0 sem ligação
@@ -124,7 +124,7 @@ def test_waits_table_columns_and_classes() -> None:
         bus=[("08:05:00", "54", 2.0), ("08:30:00", "54", 2.0), ("09:30:00", "54", 2.0)],
         metro=[("08:00:00", 0.0), ("08:18:00", 0.0), ("09:00:00", 0.0)],
     )
-    waits = _build_waits_table(df)
+    waits = build_waits_table(df)
     assert list(waits.columns) == ["metro_time", "next_bus_time", "next_bus_line", "wait_min", "transfer_min", "wait_class", "period"]
     assert waits["wait_min"].tolist() == [5.0, 12.0, 30.0]
     assert waits["wait_class"].tolist() == ["<=10", "10-15", ">15"]
@@ -133,7 +133,7 @@ def test_waits_table_columns_and_classes() -> None:
 
 def test_empty_schedule() -> None:
     assert compute_transfer_waits(pd.DataFrame()) == []
-    assert _build_waits_table(pd.DataFrame()).empty
+    assert build_waits_table(pd.DataFrame()).empty
 
 
 def test_csv_roundtrip_with_blank_cells() -> None:
@@ -149,7 +149,7 @@ def test_csv_roundtrip_with_blank_cells() -> None:
 
 def test_shift_keeps_transfer_aligned_with_its_passage() -> None:
     df = _schedule(bus=[("08:10:00", "54", 2.0), ("08:12:00", "38", 5.0)], metro=[("08:05:00", 0.0)])
-    shifted = _shift_schedule_bus_times(df, "54", -4.0)  # 54 passa para as 08:06
+    shifted = shift_schedule_bus_times(df, "54", -4.0)  # 54 passa para as 08:06
     assert shifted.loc[0, ["bus_time", "target_transfer_min"]].tolist() == ["08:06:00", 2.0]
     assert shifted.loc[1, ["bus_time", "target_transfer_min"]].tolist() == ["08:12:00", 5.0]  # 38 intocada
     (w,) = compute_transfer_waits(shifted)
@@ -159,7 +159,7 @@ def test_shift_keeps_transfer_aligned_with_its_passage() -> None:
 
 def test_double_and_shift_copies_transfer_to_the_new_bus() -> None:
     df = _schedule(bus=[("08:00:00", "54", 2.0)], metro=[("08:15:00", 0.0)])
-    doubled = _double_and_shift_schedule_bus_times(df, "54", 0.0)
+    doubled = double_and_shift_schedule_bus_times(df, "54", 0.0)
     rows = doubled[doubled["bus_line_passage"] == "54"].sort_values("bus_time")
     assert rows["bus_time"].tolist() == ["08:00:00", "08:20:00"]
     assert rows["target_transfer_min"].tolist() == [2.0, 2.0]
@@ -169,7 +169,7 @@ def test_double_and_shift_copies_transfer_to_the_new_bus() -> None:
 
 def test_reverse_shift_keeps_trigger_transfer() -> None:
     df = _schedule(bus=[("09:10:00", "Metro", 0.0)], metro=[("09:00:00", 3.0)])
-    shifted = _shift_reverse_schedule_bus_arrivals(df, 5.0)
+    shifted = shift_reverse_schedule_bus_arrivals(df, 5.0)
     assert shifted.loc[0, ["metro_time_from_origin", "trigger_transfer_min"]].tolist() == ["09:05:00", 3.0]
     (w,) = compute_transfer_waits(shifted)
     assert w["wait_min"] == 5.0
@@ -208,7 +208,7 @@ def test_real_sites_transfer_and_no_impossible_connections(tmp_path: Path, site_
     assert sorted(rev["trigger_transfer_min"].dropna().unique().tolist()) == expected_transfer
 
     for df in (fwd, rev):
-        waits = _build_waits_table(df)
+        waits = build_waits_table(df)
         valid = waits.dropna(subset=["wait_min"])
         assert (valid["wait_min"] >= valid["transfer_min"] - 1e-9).all()  # nunca abaixo do tempo a pé
         assert (valid["wait_min"] > 0).all()
@@ -219,6 +219,6 @@ def test_real_sites_transfer_and_no_impossible_connections(tmp_path: Path, site_
         bus_origin_ref=s["bus_origin_ref"], output_dir=tmp_path,
     )
     median_metric = float(metrics.loc[(metrics.scope == "overall") & (metrics.metric == "wait_median_min"), "value"].iloc[0])
-    assert median_metric == pytest.approx(float(_build_waits_table(fwd)["wait_min"].median()))
+    assert median_metric == pytest.approx(float(build_waits_table(fwd)["wait_min"].median()))
     walk = float(metrics.loc[metrics.metric == "transfer_walk_median_min", "value"].iloc[0])
     assert expected_transfer[0] <= walk <= expected_transfer[-1]

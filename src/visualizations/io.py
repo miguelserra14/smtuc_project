@@ -16,7 +16,7 @@ def _read_template(template_name: str) -> str:
     return template_path.read_text(encoding="utf-8")
 
 
-def _write_readable_plotly_html(
+def write_readable_plotly_html(
     fig: object,
     output_path: Path | str,
     title: str = "Visualization",
@@ -42,7 +42,7 @@ def _write_readable_plotly_html(
     output_path.write_text(html_content, encoding="utf-8")
 
 
-def _write_folium_html(map_obj: object, output_path: Path | str, footer_html: str | None = None) -> None:
+def write_folium_html(map_obj: object, output_path: Path | str, footer_html: str | None = None) -> None:
     """Write a Folium map to an HTML file and optionally append footer HTML below the map.
 
     Args:

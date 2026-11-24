@@ -1,4 +1,4 @@
-"""Testes do entrypoint regenerate_all_htmls.py (passo 0.4 do roadmap): output UTF-8 mesmo com
+"""Testes do entrypoint scripts/regenerate.py (passo 0.4 do roadmap): output UTF-8 mesmo com
 stdout redirecionado, registo de falhas por secção e exit code != 0 quando algo falha.
 
 Não geram HTML nenhum: as secções reais são substituídas por stubs.
@@ -12,7 +12,9 @@ from pathlib import Path
 
 import pytest
 
-import tests.regenerate_all_htmls as regen
+from tests.script_loader import SCRIPTS_DIR, load_script
+
+regen = load_script("regenerate")
 
 ROOT = Path(__file__).resolve().parents[2]
 SECTIONS = (
@@ -144,10 +146,11 @@ def test_utf8_output_survives_redirected_stdout() -> None:
     """Corre num subprocesso com o stdout num pipe (o caso que rebentava: cp1252 sem "→") e SEM
     PYTHONIOENCODING/PYTHONUTF8, para reproduzir as condições reais."""
     code = (
-        "import sys; sys.path[:0] = [r'%s', r'%s'];"
-        "import tests.regenerate_all_htmls as r; r._configure_utf8_output();"
+        "import importlib.util as u;"
+        "s = u.spec_from_file_location('r', r'%s'); r = u.module_from_spec(s); s.loader.exec_module(r);"
+        "r._configure_utf8_output();"
         "print('Portela → Portagem · REGENERAÇÃO CONCLUÍDA')"
-    ) % (ROOT / "src", ROOT)
+    ) % (SCRIPTS_DIR / "regenerate.py")
     env = {k: v for k, v in __import__("os").environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, env=env, cwd=ROOT, timeout=300)
     assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")

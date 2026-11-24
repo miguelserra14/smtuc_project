@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import LINE_METRICS_DB_PATH
+from overlap.overlap_db import line_metrics_db_path
 
 try:
     import plotly.graph_objects as go
@@ -13,11 +13,11 @@ except Exception:  # pragma: no cover - optional dependency guard
     go = None
     make_subplots = None
 
-from .io import _write_readable_plotly_html
+from .io import write_readable_plotly_html
 
 
-def _load_temporal_breakdown_df(metrics_csv: str | Path = LINE_METRICS_DB_PATH) -> pd.DataFrame:
-    df = pd.read_csv(metrics_csv)
+def _load_temporal_breakdown_df(metrics_csv: str | Path | None = None) -> pd.DataFrame:
+    df = pd.read_csv(line_metrics_db_path(metrics_csv))
     cols = ["line", "temporal_overlaps_count", "temporal_overlaps_pct", "temporal_spatial_candidates_count"]
     df = df[cols].copy()
     for col in cols[1:]:
@@ -51,7 +51,7 @@ def _bucket_top_n(df: pd.DataFrame, top_n: int) -> pd.DataFrame:
 
 def create_temporal_overlap_breakdown_html(
     output_path: Path | str,
-    metrics_csv: str | Path = LINE_METRICS_DB_PATH,
+    metrics_csv: str | Path | None = None,
     bar_top_n: int = 15,
     pie_top_n: int = 6,
 ) -> Path:
@@ -65,7 +65,7 @@ def create_temporal_overlap_breakdown_html(
     if df.empty:
         fig = go.Figure()
         fig.update_layout(title="Sem dados de overlap temporal disponíveis")
-        _write_readable_plotly_html(fig, output_path, title="Overlap Temporal por Linha")
+        write_readable_plotly_html(fig, output_path, title="Overlap Temporal por Linha")
         return output_path
 
     pie_df = _bucket_top_n(df, pie_top_n)
@@ -170,5 +170,5 @@ def create_temporal_overlap_breakdown_html(
         col=1,
     )
 
-    _write_readable_plotly_html(fig, output_path, title="Overlap Temporal por Linha")
+    write_readable_plotly_html(fig, output_path, title="Overlap Temporal por Linha")
     return output_path

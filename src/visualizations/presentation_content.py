@@ -6,7 +6,7 @@ dois partilham exatamente o mesmo conteúdo. Para mudar o texto que aparece em q
 edita só este ficheiro; não é preciso mexer em `dashboard.py` nem nos templates.
 
 Uma exceção: a chave "stats" do slide "overlap" não vive aqui - é calculada em tempo real a
-partir de `outputs/overlap/line_metrics_db.csv` (ver `_load_overlap_stats` em `dashboard.py`) e
+partir de `outputs/overlap/line_metrics_db.csv` (ver `load_overlap_stats` em `dashboard.py`) e
 só é anexada ao voo, porque são dados, não texto editável à mão.
 """
 

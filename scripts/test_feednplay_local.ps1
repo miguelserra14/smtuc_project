@@ -19,7 +19,7 @@ Uso:
     .\scripts\test_feednplay_local.ps1                    # janela pequena (1280x720), sem preview
     .\scripts\test_feednplay_local.ps1 -Preview           # produtor também mostra as janelas de debug (OpenCV)
     .\scripts\test_feednplay_local.ps1 -FullWall          # bridge a 9720x1920 (tamanho real da parede)
-    .\scripts\test_feednplay_local.ps1 -Regenerate        # corre regenerate_all_htmls.py primeiro
+    .\scripts\test_feednplay_local.ps1 -Regenerate        # corre scripts\regenerate.py primeiro
     .\scripts\test_feednplay_local.ps1 -StopKafka         # ao sair, também pára os containers Docker
 
 Nota: para uma paragem limpa, fecha a janela do bridge em vez de Ctrl+C no terminal - o
@@ -102,15 +102,14 @@ if (-not (Test-Path $DashboardHtml)) {
     if ($Regenerate) {
         Write-Host "[INFO] outputs\feednplay_dashboard.html nao existe - a regenerar (pode demorar)..."
         Push-Location $ProjectRoot
-        $env:PYTHONPATH = "$ProjectRoot;$ProjectRoot\src"
-        & $PythonExe "src\tests\regenerate_all_htmls.py"
+        & $PythonExe "scripts\regenerate.py"
         Pop-Location
         if (-not (Test-Path $DashboardHtml)) {
             Write-Error "Regeneracao correu mas outputs\feednplay_dashboard.html continua em falta - ver output acima."
             exit 1
         }
     } else {
-        Write-Error "outputs\feednplay_dashboard.html nao existe. Corre com -Regenerate, ou manualmente:`n  python src\tests\regenerate_all_htmls.py"
+        Write-Error "outputs\feednplay_dashboard.html nao existe. Corre com -Regenerate, ou manualmente:`n  python scripts\regenerate.py"
         exit 1
     }
 }

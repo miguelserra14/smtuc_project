@@ -14,6 +14,7 @@ from config import (
     TRANSFER_BUFFER_MIN,
     WALK_SPEED_M_MIN,
 )
+from paths import PROJECT_ROOT
 from gtfs_processing.geo import haversine_m
 from gtfs_processing.gtfs import load_gtfs_cached
 from gtfs_processing.gtfs_probe import (
@@ -587,7 +588,7 @@ def build_line_stop_vs_metro_table(
     if n == 0:
         out_df = pd.DataFrame(columns=columns)
         out_dir = Path(output_dir) if output_dir is not None else (
-            Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+            PROJECT_ROOT / OUTPUTS_INTEGRATION_DIR
         )
         out_dir.mkdir(parents=True, exist_ok=True)
         csv_name = output_csv_name or (
@@ -621,7 +622,7 @@ def build_line_stop_vs_metro_table(
     out_df = pd.DataFrame(rows, columns=columns)
 
     out_dir = Path(output_dir) if output_dir is not None else (
-        Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+        PROJECT_ROOT / OUTPUTS_INTEGRATION_DIR
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
@@ -660,7 +661,7 @@ def build_reverse_stop_vs_metro_table(
     PROPÓSITO: `bus_time`/`bus_line_passage` passam a conter as PARTIDAS de metro (rotuladas
     "Metro" - é o que se quer apanhar) e `metro_time_from_origin` passa a conter as CHEGADAS de
     autocarro (é o que desencadeia a espera). Isto mantém o contrato de colunas que
-    `_build_waits_table` e as funções de visualização em `visualizations/integration.py` já
+    `build_waits_table` e as funções de visualização em `visualizations/integration.py` já
     esperam, para as reutilizar sem alterações nos dois sentidos.
     """
     sc = get_scenario(scenario)
@@ -729,7 +730,7 @@ def build_reverse_stop_vs_metro_table(
         "trigger_transfer_min",
     ]
     out_dir = Path(output_dir) if output_dir is not None else (
-        Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+        PROJECT_ROOT / OUTPUTS_INTEGRATION_DIR
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
@@ -1017,7 +1018,7 @@ def build_metro_bus_connection_metrics(
     )
 
     out_dir = Path(output_dir) if output_dir is not None else (
-        Path(__file__).resolve().parents[2] / OUTPUTS_INTEGRATION_DIR
+        PROJECT_ROOT / OUTPUTS_INTEGRATION_DIR
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     metrics_df.to_csv(out_dir / csv_name, index=False)

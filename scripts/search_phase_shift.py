@@ -26,7 +26,6 @@ Os resultados dependem dos horários do cenário (feeds e dia em config.SCENARIO
 DEFAULT_SCENARIO). Sempre que os dados mudarem (ex.: feeds oficiais AGIT), correr de novo e
 atualizar o config:
 
-    PYTHONPATH="src;." python scripts/search_phase_shift.py            # Windows (Git Bash)
     python scripts/search_phase_shift.py --cenario fase2 --csv outputs/integration/phase_search.csv
 """
 
@@ -54,12 +53,12 @@ from overlap.transit import (  # noqa: E402
     build_reverse_stop_vs_metro_table,
     resolve_reference_day,
 )
-from visualizations.integration import (  # noqa: E402
-    _build_waits_table,
-    _double_and_shift_reverse_schedule_bus_arrivals,
-    _double_and_shift_schedule_bus_times,
-    _shift_reverse_schedule_bus_arrivals,
-    _shift_schedule_bus_times,
+from overlap.phase import (  # noqa: E402
+    build_waits_table,
+    double_and_shift_reverse_schedule_bus_arrivals,
+    double_and_shift_schedule_bus_times,
+    shift_reverse_schedule_bus_arrivals,
+    shift_schedule_bus_times,
 )
 
 LINE = "54"
@@ -91,18 +90,18 @@ def _variant(name: str, sense: str, df: pd.DataFrame, shift: float) -> pd.DataFr
     if name == "atual":
         return df
     if name == "otimizado":
-        return _shift_schedule_bus_times(df, LINE, shift) if forward else _shift_reverse_schedule_bus_arrivals(df, shift)
+        return shift_schedule_bus_times(df, LINE, shift) if forward else shift_reverse_schedule_bus_arrivals(df, shift)
     if name == "melhorado":
         return (
-            _double_and_shift_schedule_bus_times(df, LINE, shift)
+            double_and_shift_schedule_bus_times(df, LINE, shift)
             if forward
-            else _double_and_shift_reverse_schedule_bus_arrivals(df, shift)
+            else double_and_shift_reverse_schedule_bus_arrivals(df, shift)
         )
     raise ValueError(name)
 
 
 def sense_metrics(df: pd.DataFrame) -> dict[str, float]:
-    waits = pd.to_numeric(_build_waits_table(df)["wait_min"], errors="coerce")
+    waits = pd.to_numeric(build_waits_table(df)["wait_min"], errors="coerce")
     n = len(waits)
     return {
         "median": float(waits.median()) if waits.notna().any() else float("nan"),

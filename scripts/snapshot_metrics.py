@@ -118,9 +118,9 @@ def _section_lines(snap: Snapshot, metrics: pd.DataFrame) -> None:
 
 
 def _section_overlap_summary(snap: Snapshot, metrics_csv: Path) -> None:
-    from visualizations.dashboard import _load_overlap_stats
+    from visualizations.dashboard import load_overlap_stats
 
-    stats = _load_overlap_stats(metrics_csv) or {}
+    stats = load_overlap_stats(metrics_csv) or {}
     for name, value in sorted((stats.get("temporal_summary") or {}).items()):
         if isinstance(value, (int, float, str)) and not str(name).endswith("_fmt"):
             snap.add("overlap_resumo", "total", name, value)

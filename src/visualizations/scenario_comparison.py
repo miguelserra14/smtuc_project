@@ -3,7 +3,7 @@
 Os números vêm de snapshots de `scripts/snapshot_metrics.py` (DataFrame longo
 section,key,metric,value) - a MESMA definição dos registos em `reports/metricas/` e da tabela do
 README, para a página nunca divergir deles. Este módulo só formata e escreve: quem tira os
-snapshots é o chamador (`regenerate_all_htmls.regenerate_comparison_html`), porque
+snapshots é o chamador (`scripts/regenerate.py`, `regenerate_comparison_html`), porque
 `snapshot_metrics` vive em `scripts/` e não é importável como módulo de `src/`.
 
 Saídas: uma página HTML só com tabelas (usada como iframe no slide "Antes vs Fase 2" e no

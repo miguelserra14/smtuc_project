@@ -22,7 +22,7 @@ from population.points_of_interest import MANUALLY_INCLUDED_LOW_CONFIDENCE_POI
 from visualizations import (
     create_population_dashboard_html,
 )
-from src.config import CATCHMENT_M, STADIUM_RADIUS_M, POPULATION_STADIUM_MAP_RADIUS_M, OUTPUTS_POPULATION_DIR
+from config import CATCHMENT_M, STADIUM_RADIUS_M, POPULATION_STADIUM_MAP_RADIUS_M, OUTPUTS_POPULATION_DIR
 
 
 def _require_geo_stack_or_skip() -> None:

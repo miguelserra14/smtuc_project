@@ -29,7 +29,7 @@ def require_geo_stack() -> None:
     """Check if the geospatial stack is available.
 
     Raises a plain RuntimeError (not pytest.skip - this module is imported by production
-    code in regenerate_all_htmls.py, not just tests, and pytest.skip's exception subclasses
+    code in scripts/regenerate.py, not just tests, and pytest.skip's exception subclasses
     BaseException rather than Exception, so a plain `except Exception` around a production
     call site would NOT have caught it - it would have crashed instead of degrading
     gracefully as intended). Tests that want skip-on-missing-dependency behavior should catch

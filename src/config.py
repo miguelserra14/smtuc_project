@@ -153,7 +153,7 @@ TRANSFER_BUFFER_MIN = 1.0
 INTEGRATION_STOP_RADIUS_M = 250.0
 
 # Os 2 nós de integração linha 54 <-> Metrobus analisados (fonte única para
-# regenerate_all_htmls.py e scripts/search_phase_shift.py - não duplicar estes argumentos).
+# scripts/regenerate.py e scripts/search_phase_shift.py - não duplicar estes argumentos).
 INTEGRATION_SITES: tuple[dict, ...] = (
     {
         "name": "Portagem",  # chegadas a Portagem vindas da margem esquerda: 54 (de Portela) + 38 (de Santa Clara)
@@ -223,8 +223,7 @@ Runbook (comandos manuais) - caminhos relativos à raiz do repo; o executável d
 ambiente conda `smtuc312` (o teu caminho pessoal pode ir num docstring de src/config_local.py).
 
 Regenerar tudo (sai com código 1 se alguma secção falhar):
-    PYTHONPATH="src;." python src/tests/regenerate_all_htmls.py      (Git Bash)
-    $env:PYTHONPATH="src;."; python src/tests/regenerate_all_htmls.py (PowerShell)
+    python scripts/regenerate.py
 
 Servir e ver no browser (a partir da raiz do repo):
     python -m http.server 8000
@@ -256,8 +255,8 @@ http://localhost:8000/outputs/comparacao/antes_vs_fase2.html
 # ------------------------------------------------------------------------------------------------
 # Valores locais/privados: src/config_local.py (ignorado pelo git; modelo em config_local.example.py)
 # ------------------------------------------------------------------------------------------------
-# Carregado pelo caminho deste ficheiro (não por import), para funcionar igual quer este módulo
-# seja importado como `config` quer como `src.config`. Só pode SOBREPOR constantes que já existam
+# Carregado pelo caminho deste ficheiro (não por import), para funcionar igual a partir de
+# qualquer ponto de entrada (testes, scripts). Só pode SOBREPOR constantes que já existam
 # aqui (um nome desconhecido é quase sempre um erro de escrita - avisa em vez de o ignorar).
 def _apply_local_overrides() -> list[str]:
     import importlib.util

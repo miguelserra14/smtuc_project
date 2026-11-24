@@ -14,8 +14,9 @@ import pandas as pd
 from config import STADIUM_COORD, STADIUM_RADIUS_M, STADIUM_MIN_EXTENSION_PCT, POINTS_OF_INTEREST_CSV
 from gtfs_processing.scenarios import DEFAULT_METRO_DATASET, DEFAULT_SMTUC_DATASET
 from gtfs_processing.gtfs import load_gtfs_cached
-from overlap.overlap_db import line_to_route_ids, iter_route_direction_stop_arrays
-from visualizations.io import _write_folium_html
+from overlap.overlap_db import iter_route_direction_stop_arrays, line_metrics_db_path, line_to_route_ids
+from paths import project_path
+from visualizations.io import write_folium_html
 
 
 def _safe_center(lat: float, lon: float) -> tuple[float, float]:
@@ -27,7 +28,7 @@ def _safe_center(lat: float, lon: float) -> tuple[float, float]:
 
 def create_overlap_lines_map(
     output_path: Path | str,
-    metrics_csv: str | Path = "outputs/overlap/line_metrics_db.csv",
+    metrics_csv: str | Path | None = None,
     smtuc_dataset: str = DEFAULT_SMTUC_DATASET,
     metrobus_dataset: str = DEFAULT_METRO_DATASET,
     top_n: int = 5,
@@ -44,7 +45,7 @@ def create_overlap_lines_map(
     if folium is None:
         raise ImportError("folium não disponível para gerar o mapa de linhas")
 
-    metrics_path = Path(metrics_csv)
+    metrics_path = line_metrics_db_path(metrics_csv)
     if not metrics_path.exists():
         raise FileNotFoundError(f"Metrics CSV not found: {metrics_path}")
 
@@ -135,7 +136,7 @@ def create_overlap_lines_map(
     # "pontos de referência" no mapa; agrupados por categoria (emprego / outro) em vez de um
     # marcador por local, para não sobrecarregar o controlo de camadas com ~27 entradas.
     try:
-        poi_path = Path(points_of_interest_csv)
+        poi_path = project_path(points_of_interest_csv)
         if poi_path.exists():
             poi_df = pd.read_csv(poi_path)
             poi_groups = {
@@ -311,5 +312,5 @@ def create_overlap_lines_map(
         out_path.write_text(new_page, encoding='utf-8')
     except Exception:
         # fallback: save map normally
-        _write_folium_html(m, out_path)
+        write_folium_html(m, out_path)
     return str(out_path)

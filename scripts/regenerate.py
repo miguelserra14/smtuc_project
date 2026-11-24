@@ -1,73 +1,74 @@
-"""
-Script para regenerar todos os ficheiros HTML da dashboard.
+"""Regenera todos os HTML do projeto: população, overlap/isócronas (todos os cenários),
+integração da 54 (todos os cenários), comparação antes vs fase 2 e os dashboards master,
+apresentação e FeedNPlay.
 
-Uso:
-    python src/tests/regenerate_all_htmls.py
-    python -m pytest src/tests/regenerate_all_htmls.py --tb=short
+Uso (não precisa de PYTHONPATH - o script põe src/ no sys.path, como os outros de scripts/):
+    python scripts/regenerate.py
+
+Valida primeiro o dia de referência de cada cenário contra os seus feeds (sai com 1 sem gerar nada
+se algum estiver fora do período), corre cada secção registando falhas/saltos/avisos e sai com 1 se
+alguma secção ou artefacto falhar.
 """
 
 from __future__ import annotations
 
-import html
 import importlib.util
 import sys
 from pathlib import Path
 
-import pandas as pd
+ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT / "src")]
 
-# Importar as funções de geração
-from population.data_processing import (
-    project_root,
-    require_bgri_data,
-    require_geo_stack,
-    compute_poi_underservice,
-    compute_underserved_zones,
-    filter_zones_by_distance,
-)
-from overlap.overlap import (
-    compute_bgri_reachability_now,
-)
-from overlap.overlap_db import load_line_metrics_db
-from visualizations import (
-    create_master_dashboard_html,
-    create_presentation_dashboard_html,
-    create_feednplay_dashboard_html,
-    create_population_dashboard_html,
-    create_overlap_reachability_map,
-        create_overlap_lines_map,
-    create_temporal_overlap_breakdown_html,
-    generate_connection_visualizations,
-    _write_folium_html,
-)
-from visualizations.dashboard import _load_overlap_stats
-from visualizations.scenario_comparison import create_scenario_comparison_html
-from src.config import (
+from config import (  # noqa: E402
     CATCHMENT_M,
-    POPULATION_STADIUM_MAP_RADIUS_M,
-    OUTPUTS_POPULATION_DIR,
-    OUTPUTS_INTEGRATION_DIR,
-    STADIUM_COORD,
-    REACHABILITY_MAX_TRANSFERS,
-    LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
-    LINE_54_MELHORADO_PHASE_SHIFT_MIN,
-    INTEGRATION_SITES,
-    OUTPUTS_COMPARISON_DIR,
     COMPARISON_SCENARIOS,
+    INTEGRATION_SITES,
+    LINE_54_MELHORADO_PHASE_SHIFT_MIN,
+    LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
+    OUTPUTS_COMPARISON_DIR,
+    OUTPUTS_OVERLAP_DIR,
+    OUTPUTS_POPULATION_DIR,
+    POPULATION_STADIUM_MAP_RADIUS_M,
+    REACHABILITY_MAX_TRANSFERS,
+    STADIUM_COORD,
 )
-from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
-from overlap.overlap_db import load_gtfs_cached
-from gtfs_processing.gtfs_probe import (
+from gtfs_processing.gtfs import load_gtfs_cached  # noqa: E402
+from gtfs_processing.gtfs_probe import (  # noqa: E402
     ServiceCalendarError,
     active_service_ids,
     feed_service_period,
     is_public_holiday,
 )
-from gtfs_processing.scenarios import (
+from gtfs_processing.scenarios import (  # noqa: E402
     get_scenario,
     scenario_names,
     scenario_output_path,
     scenario_reference_time,
 )
+from overlap.overlap import compute_bgri_reachability_now  # noqa: E402
+from overlap.overlap_db import line_metrics_db_path, load_line_metrics_db  # noqa: E402
+from overlap.transit import resolve_reference_day  # noqa: E402
+from population.data_processing import (  # noqa: E402
+    compute_poi_underservice,
+    compute_underserved_zones,
+    filter_zones_by_distance,
+    project_root,
+    require_bgri_data,
+    require_geo_stack,
+)
+from visualizations import (  # noqa: E402
+    create_feednplay_dashboard_html,
+    create_master_dashboard_html,
+    create_overlap_lines_map,
+    create_overlap_reachability_map,
+    create_population_dashboard_html,
+    create_presentation_dashboard_html,
+    create_temporal_overlap_breakdown_html,
+    generate_connection_visualizations,
+    write_folium_html,
+)
+from visualizations.dashboard import load_overlap_stats, overlap_stats_footer_html  # noqa: E402
+from visualizations.scenario_comparison import create_scenario_comparison_html  # noqa: E402
 
 # Registo do que correu mal / foi saltado durante a execução, para o resumo final e o exit code.
 # Antes cada secção engolia o seu erro com um print e o script acabava sempre com "CONCLUÍDA" e
@@ -245,161 +246,33 @@ def regenerate_population_htmls() -> None:
 
 
 def regenerate_overlap_htmls() -> None:
-    """Regenera HTMLs de overlap/reachability."""
-    print("\n" + "=" * 60)
-    print("[INFO] Regenerando HTMLs de Overlap...")
-    print("=" * 60)
-    
-    try:
-        out_dir = project_root() / "outputs" / "overlap"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        # Garantir que outputs/overlap/line_metrics_db.csv está atualizado antes de qualquer
-        # coisa que o leia diretamente do disco (_load_overlap_stats, create_overlap_lines_map).
-        # load_line_metrics_db valida a assinatura dos dados/parâmetros e só recalcula se algo
-        # mudou - não regenera do zero em cada execução.
-        sc = get_scenario()
-        print("[INFO] Verificando cache de métricas de linha (line_metrics_db)...")
-        load_line_metrics_db(scenario=sc)
-
-        day_str = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
-        print(f"[INFO] Usando data: {day_str}")
-
-        # Dia/hora do mapa de isócronas = os do cenário (scenario_reference_time: a hora fixa do
-        # cenário com USE_FIXED_REFERENCE_DAY, "agora" com o dia dinâmico) - os mesmos da
-        # integração e da população; não reintroduzir aqui um fallback próprio.
-        reach_day_str = day_str
-        reach_time_str = scenario_reference_time(sc)
-        print(f"[INFO] Isócronas: usando data/hora de referência {reach_day_str} {reach_time_str or '(agora)'}")
-
-        # Computar zonas subservidas como base
-        print("[INFO] Computando reachability...")
-        merged = compute_underserved_zones(day_str=reach_day_str, datasets=sc.datasets)
-
-        # Computar reachability a partir do estádio
-        reach_gdf = compute_bgri_reachability_now(
-            merged_bgri=merged,
-            origin_lat=STADIUM_COORD[0],
-            origin_lon=STADIUM_COORD[1],
-            datasets=sc.datasets,
-            day_str=reach_day_str,
-            time_str=reach_time_str,
-            max_transfers=REACHABILITY_MAX_TRANSFERS,
-        )
-
-        selected_time = str(reach_gdf["reach_time"].iloc[0]) if not reach_gdf.empty else "00:00:00"
-
-        # Criar mapa de reachability
-        print("[INFO] Gerando mapa de reachability...")
-        fig_map = create_overlap_reachability_map(
-            reach_gdf=reach_gdf,
-            origin_lat=STADIUM_COORD[0],
-            origin_lon=STADIUM_COORD[1],
-            day_str=reach_day_str,
-            time_str=selected_time,
-        )
-        
-        reachability_html = out_dir / "overlap_reachability_now.html"
-        # Generate footer HTML with overlap stats tables and append below the map
-        stats = _load_overlap_stats()
-        footer_html = ""
-        if stats:
-            try:
-                top5 = stats.get("top5", [])
-                bottom5 = stats.get("bottom5", [])
-                bottom5_stadium = stats.get("bottom5_stadium", [])
-                temporal = stats.get("temporal_summary", {})
-
-                def _table_html(title, rows):
-                    html_rows = """
-                    <div style="margin:12px 6px; padding:8px; border-top:1px solid #ddd;">
-                      <h3 style="margin:6px 0;">%s</h3>
-                      <table style="border-collapse:collapse; width:100%%; font-size:12px">
-                        <thead>
-                          <tr>
-                            <th style="text-align:left; padding:4px; border-bottom:1px solid #ccc">Linha</th>
-                            <th style="text-align:right; padding:4px; border-bottom:1px solid #ccc">Overlap %%</th>
-                            <th style="text-align:right; padding:4px; border-bottom:1px solid #ccc">Overlap m</th>
-                            <th style="text-align:right; padding:4px; border-bottom:1px solid #ccc">Extensão m</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                    """ % (html.escape(title))
-                    for r in rows:
-                        html_rows += "<tr>"
-                        html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee\">{html.escape(str(r.get('line','-')))}</td>"
-                        html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee;text-align:right\">{html.escape(str(r.get('overlap_pct','-')))}</td>"
-                        html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee;text-align:right\">{html.escape(str(r.get('overlap_m','-')))}</td>"
-                        html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee;text-align:right\">{html.escape(str(r.get('extension_m','-')))}</td>"
-                        html_rows += "</tr>"
-                    html_rows += "</tbody></table></div>"
-                    return html_rows
-
-                footer_parts = []
-                footer_parts.append(_table_html("Top 5: linhas com maior overlap espacial", top5))
-                footer_parts.append(_table_html("Bottom 5 (estádios): possíveis redundâncias locais", bottom5_stadium))
-
-                temporal_html = "<div style=\"margin:12px 6px;padding:8px;border-top:1px solid #ddd;font-size:12px\">"
-                temporal_html += f"<h3 style=\"margin:6px 0\">Resumo temporal</h3>"
-                temporal_html += f"<div>Total candidatos espaciais: {temporal.get('total_spatial_candidates',0)}</div>"
-                temporal_html += f"<div>Estações com overlap temporal: {temporal.get('temporal_overlap_stations',0)}</div>"
-                temporal_html += f"<div>Ocorrências temporais: {temporal.get('temporal_overlap_times',0)}</div>"
-                temporal_html += f"<div>% sobre candidatos espaciais: {temporal.get('temporal_overlap_pct',0)}%</div>"
-                temporal_html += f"<div>Tempo máximo temporal configurado (min): {temporal.get('TEMPORAL_OVERLAP_MAX_MIN')}</div>"
-                temporal_html += f"<div>Distância de caminhada (m) usada p/ overlap espacial: {temporal.get('walk_distance_threshold',0):.1f}</div>"
-                temporal_html += "</div>"
-
-                footer_html = "<div id=\"overlap-stats-footer\" style=\"max-width:980px;margin:8px auto 28px;background:#fff;padding:6px;border:1px solid #ddd;border-radius:4px;\">" + "\n".join(footer_parts) + temporal_html + "</div>"
-            except Exception as e:
-                _record_warning("overlap", f"rodapé de estatísticas omitido: {e}")
-                footer_html = ""
-
-        _write_folium_html(fig_map, reachability_html, footer_html=footer_html)
-        print(f"[SUCCESS] Mapa de reachability: {reachability_html}")
-
-        # Also create a standalone overlap lines map (top/bottom lines + metro)
-        try:
-            lines_map_html = out_dir / "overlap_lines_map.html"
-            created = create_overlap_lines_map(output_path=lines_map_html)
-            print(f"[SUCCESS] Mapa de linhas (overlap): {created}")
-        except Exception as e:
-            _record_failure("overlap: mapa de linhas", e)
-
-        try:
-            breakdown_html = out_dir / "overlap_temporal_breakdown.html"
-            created = create_temporal_overlap_breakdown_html(output_path=breakdown_html)
-            print(f"[SUCCESS] Breakdown overlap temporal: {created}")
-        except Exception as e:
-            _record_failure("overlap: breakdown temporal", e)
-
-    except Exception as e:
-        _record_failure("overlap", e)
+    """Overlap/isócronas do cenário por omissão (slide "Overlap")."""
+    regenerate_overlap_scenario_htmls(get_scenario().name)
 
 
 def regenerate_overlap_fase2_htmls() -> None:
-    """Slide dedicado da fase 2 da apresentação (cenário "fase2" de config.SCENARIOS) - ver
-    `regenerate_overlap_scenario_htmls`."""
+    """Slide dedicado da fase 2 da apresentação (cenário "fase2" de config.SCENARIOS)."""
     regenerate_overlap_scenario_htmls("fase2")
 
 
 def regenerate_overlap_scenario_htmls(scenario: str) -> None:
-    """Regenera os 2 HTMLs standalone (isócronas + mapa de linhas) de um cenário que não é o por
-    omissão, para o seu slide dedicado. Deliberadamente SEPARADO de `regenerate_overlap_htmls()`:
-    as restantes visualizações (incluindo o slide "Overlap" original) usam o cenário por omissão -
-    ver `PRESENTATION_TABS` em presentation_content.py. Os feeds, o dia/hora de referência e o
-    sufixo dos ficheiros de saída/cache (ex.: `_fase2`) vêm do cenário, para não pisar os do
-    cenário por omissão."""
+    """Isócronas a partir do estádio + mapa de linhas de UM cenário, com os feeds, o dia/hora de
+    referência e o sufixo de ficheiros desse cenário (ex.: `_fase2`, para não pisar os do cenário
+    por omissão). Só o cenário por omissão leva o rodapé de estatísticas no mapa de isócronas e a
+    página de breakdown temporal - são as do slide "Overlap" original (ver `PRESENTATION_TABS`).
+
+    Antes havia duas funções quase iguais (uma por cenário); esta é a única."""
     sc = get_scenario(scenario)
-    section = f"overlap {scenario}"
+    is_default = not sc.output_suffix
+    section = "overlap" if is_default else f"overlap {sc.name}"
     print("\n" + "=" * 60)
-    print(f"[INFO] Regenerando HTMLs de Overlap (cenário {scenario} - slide dedicado)...")
+    print(f"[INFO] Regenerando HTMLs de Overlap (cenário {sc.name})...")
     print("=" * 60)
 
     missing = [d for d in sc.datasets if not _require_dataset(d)]
     if missing:
         _record_skip(section, f"dataset {', '.join(missing)} não disponível")
         return
-
     try:
         require_geo_stack()
         gpkg = require_bgri_data()
@@ -408,19 +281,21 @@ def regenerate_overlap_scenario_htmls(scenario: str) -> None:
         return
 
     try:
-        out_dir = project_root() / "outputs" / "overlap"
+        out_dir = project_root() / OUTPUTS_OVERLAP_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"[INFO] Verificando cache de métricas de linha ({scenario})...")
-        metrics_csv = scenario_output_path(f"{out_dir.as_posix()}/line_metrics_db.csv", sc)
-        load_line_metrics_db(db_path=metrics_csv, scenario=sc)
+        # Cache de métricas validada/atualizada ANTES de qualquer leitura do CSV do disco (rodapé,
+        # mapa de linhas, breakdown): só recalcula se dados/parâmetros/código mudaram.
+        print(f"[INFO] Verificando cache de métricas de linha ({sc.name})...")
+        load_line_metrics_db(scenario=sc)
+        metrics_csv = line_metrics_db_path(scenario=sc)
 
+        # Dia/hora das isócronas = os do cenário (os mesmos da integração e da população).
         day_str = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
         reach_time_str = scenario_reference_time(sc)
-        print(f"[INFO] Isócronas ({scenario}): usando data/hora de referência {day_str} {reach_time_str or '(agora)'}")
+        print(f"[INFO] Isócronas ({sc.name}): data/hora de referência {day_str} {reach_time_str or '(agora)'}")
 
-        print(f"[INFO] Computando reachability ({scenario})...")
-        merged_sc = compute_underserved_zones(
+        merged = compute_underserved_zones(
             day_str=day_str,
             catchment_m=CATCHMENT_M,
             datasets=sc.datasets,
@@ -429,8 +304,8 @@ def regenerate_overlap_scenario_htmls(scenario: str) -> None:
             population_col="N_INDIVIDUOS",
             output_csv_path=scenario_output_path(f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap.csv", sc),
         )
-        reach_gdf_sc = compute_bgri_reachability_now(
-            merged_bgri=merged_sc,
+        reach_gdf = compute_bgri_reachability_now(
+            merged_bgri=merged,
             origin_lat=STADIUM_COORD[0],
             origin_lon=STADIUM_COORD[1],
             datasets=sc.datasets,
@@ -438,31 +313,47 @@ def regenerate_overlap_scenario_htmls(scenario: str) -> None:
             time_str=reach_time_str,
             max_transfers=REACHABILITY_MAX_TRANSFERS,
         )
-        selected_time = str(reach_gdf_sc["reach_time"].iloc[0]) if not reach_gdf_sc.empty else "00:00:00"
-
-        print(f"[INFO] Gerando mapa de reachability ({scenario})...")
-        fig_map_sc = create_overlap_reachability_map(
-            reach_gdf=reach_gdf_sc,
+        selected_time = str(reach_gdf["reach_time"].iloc[0]) if not reach_gdf.empty else "00:00:00"
+        fig_map = create_overlap_reachability_map(
+            reach_gdf=reach_gdf,
             origin_lat=STADIUM_COORD[0],
             origin_lon=STADIUM_COORD[1],
             day_str=day_str,
             time_str=selected_time,
         )
-        reachability_html = Path(scenario_output_path(out_dir / "overlap_reachability_now.html", sc))
-        _write_folium_html(fig_map_sc, reachability_html)
-        print(f"[SUCCESS] Mapa de reachability ({scenario}): {reachability_html}")
 
-        lines_map_html = Path(scenario_output_path(out_dir / "overlap_lines_map.html", sc))
+        footer_html = None
+        if is_default:
+            try:
+                footer_html = overlap_stats_footer_html(load_overlap_stats(metrics_csv))
+            except Exception as e:
+                _record_warning(section, f"rodapé de estatísticas omitido: {e}")
+        reachability_html = Path(scenario_output_path(out_dir / "overlap_reachability_now.html", sc))
+        write_folium_html(fig_map, reachability_html, footer_html=footer_html)
+        print(f"[SUCCESS] Mapa de reachability ({sc.name}): {reachability_html}")
+    except Exception as e:
+        _record_failure(section, e)
+        return
+
+    try:
         created = create_overlap_lines_map(
-            output_path=lines_map_html,
+            output_path=Path(scenario_output_path(out_dir / "overlap_lines_map.html", sc)),
             metrics_csv=metrics_csv,
             smtuc_dataset=sc.smtuc,
             metrobus_dataset=sc.metro,
         )
-        print(f"[SUCCESS] Mapa de linhas ({scenario}): {created}")
-
+        print(f"[SUCCESS] Mapa de linhas ({sc.name}): {created}")
     except Exception as e:
-        _record_failure(section, e)
+        _record_failure(f"{section}: mapa de linhas", e)
+
+    if is_default:
+        try:
+            created = create_temporal_overlap_breakdown_html(
+                output_path=out_dir / "overlap_temporal_breakdown.html", metrics_csv=metrics_csv
+            )
+            print(f"[SUCCESS] Breakdown overlap temporal: {created}")
+        except Exception as e:
+            _record_failure(f"{section}: breakdown temporal", e)
 
 
 def regenerate_integration_htmls() -> None:

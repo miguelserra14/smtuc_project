@@ -91,11 +91,10 @@ python scripts/build_feeds.py      # constrói data/gtfs/... e confirma as pasta
 
 O catálogo do Município só serve a versão mais recente. Se o Ep225 já tiver sido substituído, deixa de se poder descarregar dali; o sha256 esperado está em `data/raw/MANIFEST.csv`.
 
-**Regenerar todos os HTML e ver no browser.** O script falha sem `PYTHONPATH`. O separador `;` é o do Windows; em Linux/macOS usa-se `src:.`.
+**Regenerar todos os HTML e ver no browser.** Não precisa de `PYTHONPATH`: o script põe `src/` no caminho.
 
 ```bash
-PYTHONPATH="src;." python src/tests/regenerate_all_htmls.py          # Git Bash
-$env:PYTHONPATH="src;."; python src/tests/regenerate_all_htmls.py    # PowerShell
+python scripts/regenerate.py
 
 python -m http.server 8000
 # http://localhost:8000/outputs/dashboard.html
@@ -141,8 +140,8 @@ src/
   population/            BGRI, subserviço, pontos de interesse
   visualizations/        mapas Folium, gráficos Plotly, dashboards; textos dos slides em presentation_content.py
   feednplay/             ponte para a parede (pywebview + câmara via Kafka)
-  tests/                 testes pytest e regenerate_all_htmls.py
-scripts/                 fetch_feeds, build_feeds, snapshot_metrics, search_phase_shift, FeedNPlay local
+  tests/                 testes pytest
+scripts/                 regenerate, fetch_feeds, build_feeds, snapshot_metrics, search_phase_shift, FeedNPlay local
 data/                    feeds GTFS, ficheiros oficiais congelados (raw/), BGRI, pontos de interesse
 outputs/                 HTML e CSV gerados (versionados)
 reports/

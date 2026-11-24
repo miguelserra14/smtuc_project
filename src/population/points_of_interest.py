@@ -54,6 +54,7 @@ from pathlib import Path
 import pandas as pd
 
 from config import POINTS_OF_INTEREST_CSV
+from paths import project_path
 
 
 @dataclass(frozen=True)
@@ -563,7 +564,7 @@ def export_to_csv(output_path: str | Path = POINTS_OF_INTEREST_CSV) -> Path:
 
     Correr manualmente sempre que a lista acima for editada - o CSV não se atualiza sozinho.
     """
-    out_path = Path(output_path)
+    out_path = project_path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     with out_path.open("w", newline="", encoding="utf-8-sig") as f:
@@ -616,7 +617,7 @@ def load_points_of_interest(
     MANUALLY_INCLUDED_LOW_CONFIDENCE_POI). Passa `include_names=()` para voltar ao filtro
     estrito por confiança.
     """
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(project_path(csv_path))
     mask = df["confianca"].isin(min_confidence)
     if include_names:
         mask = mask | df["nome"].isin(include_names)

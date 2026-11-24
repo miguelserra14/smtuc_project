@@ -9,6 +9,7 @@ import pandas as pd
 import geopandas as gpd
 
 from config import STADIUM_COORD
+from paths import PROJECT_ROOT
 
 if TYPE_CHECKING:
     pass
@@ -16,15 +17,7 @@ if TYPE_CHECKING:
 
 def project_root() -> Path:
     """Get the root directory of the project."""
-    return Path(__file__).resolve().parents[2]
-
-
-def resolve_path(rel_or_abs: str) -> Path:
-    """Resolve relative or absolute path."""
-    p = Path(rel_or_abs)
-    if p.is_absolute():
-        return p
-    return (project_root() / p).resolve()
+    return PROJECT_ROOT
 
 
 def ensure_crs(gdf: gpd.GeoDataFrame, target_crs: str = "EPSG:3763") -> gpd.GeoDataFrame:
@@ -115,7 +108,6 @@ def load_bgri_file(
 
 __all__ = [
     "project_root",
-    "resolve_path",
     "ensure_crs",
     "create_stadium_point",
     "infer_bgri_id_col",

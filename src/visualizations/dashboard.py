@@ -14,6 +14,7 @@ from config import (
     LINE_METRICS_DB_PATH,
 )
 from gtfs_processing.scenarios import scenario_output_path
+from overlap.overlap_db import line_metrics_db_path
 
 from .presentation_content import PRESENTATION_TABS
 
@@ -33,10 +34,10 @@ def _to_float(value: str | None) -> float:
         return 0.0
 
 
-def _load_overlap_stats(
-    metrics_path: str | Path = "outputs/overlap/line_metrics_db.csv",
+def load_overlap_stats(
+    metrics_path: str | Path | None = None,
 ) -> dict[str, list[dict[str, str]]] | None:
-    metrics_path = Path(metrics_path)
+    metrics_path = line_metrics_db_path(metrics_path)
     if not metrics_path.exists():
         return None
 
@@ -192,7 +193,7 @@ def _add_cache_busting(obj: Any, root: Path) -> Any:
 
 def _default_dashboard_tabs() -> list[dict[str, Any]]:
     # Put population and overlap first (displayed on top of the page), integrations below
-    overlap_stats = _load_overlap_stats()
+    overlap_stats = load_overlap_stats()
     return [
         {
             "id": "summary",
@@ -329,6 +330,59 @@ _OVERLAP_TAB_SCENARIO = {
 }
 
 
+def overlap_stats_footer_html(stats: dict | None) -> str:
+    """HTML do rodapé de estatísticas (top 5, bottom 5 junto ao estádio e resumo temporal) que
+    vai por baixo do mapa de isócronas do slide "Overlap"; "" se não houver estatísticas.
+    Antes era montado dentro do script de regenerate."""
+    if not stats:
+        return ""
+    top5 = stats.get("top5", [])
+    bottom5 = stats.get("bottom5", [])
+    bottom5_stadium = stats.get("bottom5_stadium", [])
+    temporal = stats.get("temporal_summary", {})
+
+    def _table_html(title, rows):
+        html_rows = """
+                    <div style="margin:12px 6px; padding:8px; border-top:1px solid #ddd;">
+                      <h3 style="margin:6px 0;">%s</h3>
+                      <table style="border-collapse:collapse; width:100%%; font-size:12px">
+                        <thead>
+                          <tr>
+                            <th style="text-align:left; padding:4px; border-bottom:1px solid #ccc">Linha</th>
+                            <th style="text-align:right; padding:4px; border-bottom:1px solid #ccc">Overlap %%</th>
+                            <th style="text-align:right; padding:4px; border-bottom:1px solid #ccc">Overlap m</th>
+                            <th style="text-align:right; padding:4px; border-bottom:1px solid #ccc">Extensão m</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                    """ % (html.escape(title))
+        for r in rows:
+            html_rows += "<tr>"
+            html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee\">{html.escape(str(r.get('line','-')))}</td>"
+            html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee;text-align:right\">{html.escape(str(r.get('overlap_pct','-')))}</td>"
+            html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee;text-align:right\">{html.escape(str(r.get('overlap_m','-')))}</td>"
+            html_rows += f"<td style=\"padding:4px;border-bottom:1px solid #eee;text-align:right\">{html.escape(str(r.get('extension_m','-')))}</td>"
+            html_rows += "</tr>"
+        html_rows += "</tbody></table></div>"
+        return html_rows
+
+    footer_parts = []
+    footer_parts.append(_table_html("Top 5: linhas com maior overlap espacial", top5))
+    footer_parts.append(_table_html("Bottom 5 (estádios): possíveis redundâncias locais", bottom5_stadium))
+
+    temporal_html = "<div style=\"margin:12px 6px;padding:8px;border-top:1px solid #ddd;font-size:12px\">"
+    temporal_html += f"<h3 style=\"margin:6px 0\">Resumo temporal</h3>"
+    temporal_html += f"<div>Total candidatos espaciais: {temporal.get('total_spatial_candidates',0)}</div>"
+    temporal_html += f"<div>Estações com overlap temporal: {temporal.get('temporal_overlap_stations',0)}</div>"
+    temporal_html += f"<div>Ocorrências temporais: {temporal.get('temporal_overlap_times',0)}</div>"
+    temporal_html += f"<div>% sobre candidatos espaciais: {temporal.get('temporal_overlap_pct',0)}%</div>"
+    temporal_html += f"<div>Tempo máximo temporal configurado (min): {temporal.get('TEMPORAL_OVERLAP_MAX_MIN')}</div>"
+    temporal_html += f"<div>Distância de caminhada (m) usada p/ overlap espacial: {temporal.get('walk_distance_threshold',0):.1f}</div>"
+    temporal_html += "</div>"
+
+    return "<div id=\"overlap-stats-footer\" style=\"max-width:980px;margin:8px auto 28px;background:#fff;padding:6px;border:1px solid #ddd;border-radius:4px;\">" + "\n".join(footer_parts) + temporal_html + "</div>"
+
+
 def _overlap_tab_metrics_path(tab_id: str) -> str:
     return scenario_output_path(LINE_METRICS_DB_PATH, _OVERLAP_TAB_SCENARIO.get(tab_id))
 
@@ -345,7 +399,7 @@ def _default_presentation_tabs() -> list[dict[str, Any]]:
     for tab in tabs:
         if tab.get("kind") == "overlap":
             metrics_path = _overlap_tab_metrics_path(str(tab.get("id")))
-            tab["stats"] = _load_overlap_stats(metrics_path)
+            tab["stats"] = load_overlap_stats(metrics_path)
     return tabs
 
 

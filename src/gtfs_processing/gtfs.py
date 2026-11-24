@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+from paths import PROJECT_ROOT
 
 from gtfs_processing.timeutil import series_hhmmss_to_seconds
 
@@ -70,7 +71,7 @@ def dataset_dir(dataset: str, root: Path | None = None) -> Path:
 
     if dataset not in DATASET_DIRS:
         raise KeyError(f"dataset GTFS desconhecido: {dataset!r} (conhecidos: {', '.join(sorted(DATASET_DIRS))}; ver config.DATASET_DIRS)")
-    root = Path(root) if root is not None else Path(__file__).resolve().parents[2]
+    root = Path(root) if root is not None else PROJECT_ROOT
     return root / GTFS_DIR / DATASET_DIRS[dataset]
 
 
@@ -85,7 +86,7 @@ def _find_gtfs_dir(dataset: str, root: Path) -> Path:
 
 
 def _resolve_source_dir(source_dir: Optional[str], dataset: str) -> Path:
-    root = Path(__file__).resolve().parents[2]  # raiz do projeto
+    root = PROJECT_ROOT
 
     if source_dir:
         p = Path(source_dir)
@@ -191,7 +192,7 @@ def _main() -> None:
     p_ins.add_argument("--source-dir", default=None, help="Override de diretório GTFS")
 
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[2]
+    root = PROJECT_ROOT
 
     if args.cmd == "integrate":
         source = Path(args.source).expanduser().resolve()

@@ -7,22 +7,19 @@ diferença com transbordo não seria atribuível só ao transbordo.
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from tests.script_loader import load_script
 from tests.reference_data import require_reference_data
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def _load_script():
-    spec = importlib.util.spec_from_file_location("search_phase_shift", ROOT / "scripts" / "search_phase_shift.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("search_phase_shift")
 
 
 def _schedule(bus: list[tuple[str, str]], metro: list[str]) -> pd.DataFrame:

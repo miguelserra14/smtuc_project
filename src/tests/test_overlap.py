@@ -39,7 +39,7 @@ from overlap.overlap import (
 )
 from overlap import overlap_db
 from population.data_processing import compute_underserved_zones
-from visualizations import create_overlap_reachability_map, _write_folium_html
+from visualizations import create_overlap_reachability_map, write_folium_html
 
 OVERLAP_RENAME = {
     "line": "Linha",
@@ -285,7 +285,7 @@ def test_overlap_reachability_map_now(tmp_path: Path) -> None:
     )
 
     output_html = tmp_path / "overlap_reachability_now.html"
-    _write_folium_html(fig_map, output_html)
+    write_folium_html(fig_map, output_html)
 
     print(f"Mapa overlap reachability gerado: {output_html}")
 

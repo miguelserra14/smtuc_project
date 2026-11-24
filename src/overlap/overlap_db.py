@@ -19,6 +19,7 @@ from config import (
     SPATIAL_OVERLAP_WALK_MIN,
     TEMPORAL_OVERLAP_MAX_MIN,
 )
+from paths import PROJECT_ROOT, project_path
 from gtfs_processing.geo import haversine_m
 from gtfs_processing.gtfs import load_gtfs_cached
 from gtfs_processing.gtfs_probe import active_service_ids
@@ -248,12 +249,23 @@ def _line_numeric_prefix(line: object) -> float | None:
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    return PROJECT_ROOT
 
 
 def _resolve_db_path(path: str | None = None) -> Path:
     rel = path if path is not None else LINE_METRICS_DB_PATH
     return (_project_root() / rel).resolve()
+
+
+def line_metrics_db_path(path: str | Path | None = None, scenario: str | Scenario | None = None) -> Path:
+    """Caminho ABSOLUTO do CSV de métricas de linha, para quem o lê do disco (dashboards, mapa de
+    linhas, breakdown temporal, snapshots): `path` se for dado (relativo = à raiz do projeto, não
+    à pasta onde se corre o comando) ou, sem ele, o do cenário
+    (`outputs/overlap/line_metrics_db<sufixo>.csv`). Quem o lê assume que `load_line_metrics_db`
+    já o validou/atualizou (o regenerate fá-lo antes de gerar as páginas)."""
+    if path is None:
+        path = scenario_output_path(LINE_METRICS_DB_PATH, get_scenario(scenario))
+    return project_path(path)
 
 
 def _atomic_write_csv(df: pd.DataFrame, path: Path) -> None:

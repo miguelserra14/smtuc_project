@@ -7,12 +7,12 @@ import numpy as np
 import pandas as pd
 
 from gtfs_processing.gtfs import load_gtfs_cached
+from paths import project_path
 from gtfs_processing.gtfs_probe import active_service_ids, parse_day
 from population._common import (
     ensure_crs,
     infer_bgri_id_col,
     load_bgri_file,
-    resolve_path,
 )
 from config import CATCHMENT_M, DEFAULT_BGRI_GPKG_PATH, DEFAULT_BGRI_LAYER, DEFAULT_OUTPUT_GAP_CSV, UNDERSERVED_TOP_N
 from gtfs_processing.scenarios import DEFAULT_DATASETS
@@ -69,7 +69,7 @@ def compute_bgri_population_transport_gap(
     _require_geopandas()
 
     d = parse_day(day_str)
-    gpkg = resolve_path(bgri_gpkg_path)
+    gpkg = project_path(bgri_gpkg_path)
     if not gpkg.exists():
         raise FileNotFoundError(f"Ficheiro BGRI não encontrado: {gpkg}")
 
@@ -94,7 +94,7 @@ def compute_bgri_population_transport_gap(
     if not dep_frames:
         out = pd.DataFrame(columns=[bgri_id_col, population_col, "supply_departures", "dep_per_1000_pop", "pop_per_departure", "underservice_score"])
         if output_csv_path:
-            out_path = resolve_path(output_csv_path)
+            out_path = project_path(output_csv_path)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out.to_csv(out_path, index=False)
         return out
@@ -145,7 +145,7 @@ def compute_bgri_population_transport_gap(
     out = out.sort_values(["underservice_score", population_col], ascending=[False, False]).reset_index(drop=True)
 
     if output_csv_path:
-        out_path = resolve_path(output_csv_path)
+        out_path = project_path(output_csv_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out.to_csv(out_path, index=False)
 

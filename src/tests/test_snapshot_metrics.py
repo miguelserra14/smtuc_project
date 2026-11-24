@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from tests.script_loader import load_script
 from tests.reference_data import require_reference_data
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,10 +22,7 @@ BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1_t3.csv"
 
 
 def _load_script():
-    spec = importlib.util.spec_from_file_location("snapshot_metrics", ROOT / "scripts" / "snapshot_metrics.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("snapshot_metrics")
 
 
 snap_mod = _load_script()

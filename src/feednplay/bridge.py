@@ -181,7 +181,7 @@ def main(argv: list[str] | None = None) -> None:
     if url is None:
         default_path = Path(__file__).resolve().parents[2] / "outputs" / "feednplay_dashboard.html"
         if not default_path.exists():
-            print(f"[ERRO] Dashboard não encontrado em {default_path}. Corre regenerate_all_htmls.py primeiro, ou passa --url.")
+            print(f"[ERRO] Dashboard não encontrado em {default_path}. Corre scripts/regenerate.py primeiro, ou passa --url.")
             sys.exit(1)
         url = str(default_path)
     else:
