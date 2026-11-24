@@ -6,8 +6,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from gtfs_processing.timeutil import hhmmss_to_seconds
 from gtfs_processing.gtfs import extract_or_copy_gtfs, load_gtfs
-from gtfs_processing.gtfs_probe import _active_service_ids
+from gtfs_processing.gtfs_probe import active_service_ids
 DATASETS = ["smtuc", "metrobus"]
 
 def _dataset_dir(dataset: str) -> Path:
@@ -28,11 +29,6 @@ def _hash_txt(folder: Path) -> dict[str, str]:
     return {f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(folder.glob("*.txt"))}
 
 
-def _to_seconds(hhmmss: str) -> int:
-    h, m, s = map(int, hhmmss.split(":"))
-    return h * 3600 + m * 60 + s
-
-
 def _pick_valid_day(gtfs) -> date:
     if gtfs.calendar.empty or not {"start_date", "end_date"}.issubset(gtfs.calendar.columns):
         return date.today()
@@ -49,7 +45,7 @@ def _pick_valid_day(gtfs) -> date:
 
 def _direct_options(gtfs, origin: str, dest: str, day: date, after: str) -> pd.DataFrame:
     trips = gtfs.trips.copy()
-    sids = _active_service_ids(gtfs, day)
+    sids = active_service_ids(gtfs, day)
     if sids and "service_id" in trips.columns:
         trips = trips[trips["service_id"].astype(str).isin(sids)]
 
@@ -62,7 +58,7 @@ def _direct_options(gtfs, origin: str, dest: str, day: date, after: str) -> pd.D
         (m["origin_stop_id"].astype(str) == origin)
         & (m["dest_stop_id"].astype(str) == dest)
         & (m["origin_seq"] < m["dest_seq"])
-        & (m["origin_dep_s"] >= _to_seconds(after))
+        & (m["origin_dep_s"] >= hhmmss_to_seconds(after))
     ]
 
 
@@ -110,7 +106,7 @@ def _find_case_with_direct_options(gtfs, after: str = "00:00:00") -> tuple[date,
     candidate_days = _candidate_days(gtfs)
 
     for day in candidate_days:
-        active_sids = _active_service_ids(gtfs, day)
+        active_sids = active_service_ids(gtfs, day)
         trips = gtfs.trips.copy()
         if active_sids and "service_id" in trips.columns:
             trips = trips[trips["service_id"].astype(str).isin(active_sids)]

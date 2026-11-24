@@ -17,9 +17,9 @@ import pandas as pd
 
 # Importar as funções de geração
 from population.data_processing import (
-    _project_root,
-    _require_bgri_data,
-    _require_geo_stack,
+    project_root,
+    require_bgri_data,
+    require_geo_stack,
     compute_poi_underservice,
     compute_underserved_zones,
     filter_zones_by_distance,
@@ -55,10 +55,10 @@ from src.config import (
     COMPARISON_SCENARIOS,
 )
 from overlap.transit import build_line_stop_vs_metro_table, resolve_reference_day
-from overlap.overlap_db import _load_gtfs_cached
+from overlap.overlap_db import load_gtfs_cached
 from gtfs_processing.gtfs_probe import (
     ServiceCalendarError,
-    _active_service_ids,
+    active_service_ids,
     feed_service_period,
     is_public_holiday,
 )
@@ -145,10 +145,10 @@ def _validate_reference_day() -> bool:
         for dataset in sc.datasets:
             if not _require_dataset(dataset):
                 continue
-            gtfs = _load_gtfs_cached(dataset)
+            gtfs = load_gtfs_cached(dataset)
             period = feed_service_period(gtfs)
             try:
-                services = _active_service_ids(gtfs, day)
+                services = active_service_ids(gtfs, day)
             except ServiceCalendarError as exc:
                 print(f"[ERROR] {name}/{dataset}: {exc}")
                 ok = False
@@ -164,7 +164,7 @@ def _require_dataset(dataset: str) -> Path:
     """Verifica se um dataset GTFS está disponível."""
     from gtfs_processing.gtfs import dataset_dir
 
-    d = dataset_dir(dataset, _project_root())
+    d = dataset_dir(dataset, project_root())
     required = ["routes.txt", "trips.txt", "stops.txt", "stop_times.txt"]
     if not d.exists() or any(not (d / f).exists() for f in required):
         print(f"[WARNING] Dataset GTFS inválido/incompleto: {d}")
@@ -179,13 +179,13 @@ def regenerate_population_htmls() -> None:
     print("=" * 60)
     
     try:
-        _require_geo_stack()
+        require_geo_stack()
     except Exception as e:
         _record_skip("população", f"geostack não disponível: {e}")
         return
     
     try:
-        gpkg = _require_bgri_data()
+        gpkg = require_bgri_data()
     except Exception as e:
         _record_skip("população", f"dataset BGRI não disponível: {e}")
         return
@@ -210,7 +210,7 @@ def regenerate_population_htmls() -> None:
             output_csv_path=scenario_output_path(f"{OUTPUTS_POPULATION_DIR}/bgri_transport_gap.csv", sc),
         )
         
-        out_dir = _project_root() / OUTPUTS_POPULATION_DIR
+        out_dir = project_root() / OUTPUTS_POPULATION_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         
         # Filtrar zonas ao raio do painel "Estádio a X km" (POPULATION_STADIUM_MAP_RADIUS_M,
@@ -251,7 +251,7 @@ def regenerate_overlap_htmls() -> None:
     print("=" * 60)
     
     try:
-        out_dir = _project_root() / "outputs" / "overlap"
+        out_dir = project_root() / "outputs" / "overlap"
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # Garantir que outputs/overlap/line_metrics_db.csv está atualizado antes de qualquer
@@ -401,14 +401,14 @@ def regenerate_overlap_scenario_htmls(scenario: str) -> None:
         return
 
     try:
-        _require_geo_stack()
-        gpkg = _require_bgri_data()
+        require_geo_stack()
+        gpkg = require_bgri_data()
     except Exception as e:
         _record_skip(section, f"geostack/BGRI não disponível: {e}")
         return
 
     try:
-        out_dir = _project_root() / "outputs" / "overlap"
+        out_dir = project_root() / "outputs" / "overlap"
         out_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"[INFO] Verificando cache de métricas de linha ({scenario})...")
@@ -521,7 +521,7 @@ _COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao")
 def _load_snapshot_module():
     """`scripts/snapshot_metrics.py` carregado por caminho (scripts/ não é um pacote): a página de
     comparação usa EXATAMENTE os números de controlo de reports/metricas/, não uma cópia do cálculo."""
-    path = _project_root() / "scripts" / "snapshot_metrics.py"
+    path = project_root() / "scripts" / "snapshot_metrics.py"
     spec = importlib.util.spec_from_file_location("snapshot_metrics", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -544,8 +544,8 @@ def regenerate_comparison_html() -> None:
             _record_skip(section, f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
             return
     try:
-        _require_geo_stack()
-        _require_bgri_data()
+        require_geo_stack()
+        require_bgri_data()
     except Exception as e:
         _record_skip(section, f"geostack/BGRI não disponível (isócronas e população): {e}")
         return
@@ -556,7 +556,7 @@ def regenerate_comparison_html() -> None:
             name: snapshot_metrics.take_snapshot(f"pagina_{name}", scenario=name, sections=_COMPARISON_SECTIONS)
             for name in COMPARISON_SCENARIOS
         }
-        out_dir = _project_root() / OUTPUTS_COMPARISON_DIR
+        out_dir = project_root() / OUTPUTS_COMPARISON_DIR
         stem = f"{before_name}_vs_{after_name}"
         created = create_scenario_comparison_html(
             out_dir / f"{stem}.html",
@@ -576,7 +576,7 @@ def regenerate_master_dashboard() -> None:
     print("=" * 60)
     
     try:
-        root = _project_root()
+        root = project_root()
         dashboard_path = root / "outputs" / "dashboard.html"
         
         print("[INFO] Gerando dashboard master...")
@@ -594,7 +594,7 @@ def regenerate_presentation_dashboard() -> None:
     print("=" * 60)
 
     try:
-        root = _project_root()
+        root = project_root()
         dashboard_path = root / "outputs" / "mockups_dashboard.html"
 
         print("[INFO] Gerando dashboard de mockups...")
@@ -612,7 +612,7 @@ def regenerate_feednplay_dashboard() -> None:
     print("=" * 60)
 
     try:
-        root = _project_root()
+        root = project_root()
         dashboard_path = root / "outputs" / "feednplay_dashboard.html"
 
         print("[INFO] Gerando dashboard FeedNPlay...")

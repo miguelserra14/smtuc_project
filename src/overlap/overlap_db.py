@@ -4,7 +4,6 @@ import hashlib
 import os
 import re
 from datetime import date
-from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -20,8 +19,9 @@ from config import (
     SPATIAL_OVERLAP_WALK_MIN,
     TEMPORAL_OVERLAP_MAX_MIN,
 )
-from gtfs_processing.gtfs import load_gtfs
-from gtfs_processing.gtfs_probe import _active_service_ids
+from gtfs_processing.geo import haversine_m
+from gtfs_processing.gtfs import load_gtfs_cached
+from gtfs_processing.gtfs_probe import active_service_ids
 from gtfs_processing.scenarios import Scenario, get_scenario, scenario_output_path
 
 # Versão do cálculo guardada no cache (line_metrics_db.csv). Incrementar SEMPRE que a fórmula de
@@ -32,48 +32,13 @@ from gtfs_processing.scenarios import Scenario, get_scenario, scenario_output_pa
 LINE_METRICS_SCHEMA_VERSION = 2
 
 
-@lru_cache(maxsize=8)
-def _load_gtfs_cached(dataset: str):
-    return load_gtfs(dataset=dataset)
-
-
-def _haversine_pairwise_m(
-    from_lat: np.ndarray,
-    from_lon: np.ndarray,
-    to_lat: np.ndarray,
-    to_lon: np.ndarray,
-) -> np.ndarray:
-    r = 6371000.0
-    from_lat_r = np.radians(from_lat)
-    from_lon_r = np.radians(from_lon)
-    to_lat_r = np.radians(to_lat)
-    to_lon_r = np.radians(to_lon)
-
-    dlat = to_lat_r - from_lat_r
-    dlon = to_lon_r - from_lon_r
-    a = np.sin(dlat / 2.0) ** 2 + np.cos(from_lat_r) * np.cos(to_lat_r) * (np.sin(dlon / 2.0) ** 2)
-    c = 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
-    return r * c
-
-
 def _min_distance_to_points_m(
     query_lat: np.ndarray,
     query_lon: np.ndarray,
     ref_lat: np.ndarray,
     ref_lon: np.ndarray,
 ) -> np.ndarray:
-    r = 6371000.0
-
-    q_lat_r = np.radians(query_lat)[:, None]
-    q_lon_r = np.radians(query_lon)[:, None]
-    r_lat_r = np.radians(ref_lat)[None, :]
-    r_lon_r = np.radians(ref_lon)[None, :]
-
-    dlat = r_lat_r - q_lat_r
-    dlon = r_lon_r - q_lon_r
-    a = np.sin(dlat / 2.0) ** 2 + np.cos(q_lat_r) * np.cos(r_lat_r) * (np.sin(dlon / 2.0) ** 2)
-    c = 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
-    dists = r * c
+    dists = haversine_m(query_lat[:, None], query_lon[:, None], ref_lat[None, :], ref_lon[None, :])
     return dists.min(axis=1)
 
 
@@ -81,14 +46,14 @@ def _representative_route_stops_for_subset(gtfs, route_trips: pd.DataFrame) -> p
     if route_trips.empty:
         return pd.DataFrame()
 
-    st = gtfs.stop_times[gtfs.stop_times["trip_id"].astype(str).isin(route_trips["trip_id"].astype(str))].copy()
+    st = gtfs.stop_times[gtfs.stop_times["trip_id"].isin(route_trips["trip_id"])].copy()
     if st.empty:
         return pd.DataFrame()
 
     trip_sizes = st.groupby("trip_id", as_index=False).agg(n_stops=("stop_id", "count"))
     best_trip = str(trip_sizes.sort_values("n_stops", ascending=False).iloc[0]["trip_id"])
 
-    best = st[st["trip_id"].astype(str) == best_trip].sort_values("stop_sequence")
+    best = st[st["trip_id"] == best_trip].sort_values("stop_sequence")
     best = best.merge(
         gtfs.stops[["stop_id", "stop_lat", "stop_lon"]],
         on="stop_id",
@@ -97,11 +62,11 @@ def _representative_route_stops_for_subset(gtfs, route_trips: pd.DataFrame) -> p
     return best[["stop_id", "stop_sequence", "stop_lat", "stop_lon"]].drop_duplicates(subset=["stop_sequence"])
 
 
-def _iter_route_direction_stop_arrays(
+def iter_route_direction_stop_arrays(
     gtfs_smtuc,
     route_id: str,
 ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, int]]:
-    route_trips = gtfs_smtuc.trips[gtfs_smtuc.trips["route_id"].astype(str) == str(route_id)].copy()
+    route_trips = gtfs_smtuc.trips[gtfs_smtuc.trips["route_id"] == str(route_id)].copy()
     if route_trips.empty:
         return []
 
@@ -121,7 +86,7 @@ def _iter_route_direction_stop_arrays(
 
         route_lat = route_stops["stop_lat"].astype(float).to_numpy()
         route_lon = route_stops["stop_lon"].astype(float).to_numpy()
-        route_stop_ids = route_stops["stop_id"].astype(str).to_numpy()
+        route_stop_ids = route_stops["stop_id"].to_numpy()
         directions.append((route_lat, route_lon, route_stop_ids, int(len(route_stops))))
 
     return directions
@@ -137,12 +102,12 @@ def _route_direction_summaries(
     metro_lon = metro_stops["stop_lon"].astype(float).to_numpy()
     summaries: list[dict] = []
 
-    for route_lat, route_lon, route_stop_ids, _total_stops in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
+    for route_lat, route_lon, route_stop_ids, _total_stops in iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
 
         min_dist = _min_distance_to_points_m(route_lat, route_lon, metro_lat, metro_lon)
         is_overlap = min_dist <= walk_catchment_m
 
-        seg_lengths = _haversine_pairwise_m(route_lat[:-1], route_lon[:-1], route_lat[1:], route_lon[1:])
+        seg_lengths = haversine_m(route_lat[:-1], route_lon[:-1], route_lat[1:], route_lon[1:])
         overlap_segments = is_overlap[:-1] & is_overlap[1:]
 
         total_ext_m = float(seg_lengths.sum())
@@ -178,7 +143,7 @@ def _direction_headway_median_min(
     trips_per_stop = stop_times.groupby("stop_id")["trip_id"].nunique()
     max_trips = trips_per_stop.max()
     ref_stop = sorted(trips_per_stop[trips_per_stop == max_trips].index.astype(str))[0]
-    at_ref = stop_times[stop_times["stop_id"].astype(str) == ref_stop]
+    at_ref = stop_times[stop_times["stop_id"] == ref_stop]
     times = pd.to_numeric(at_ref["departure_seconds"], errors="coerce").dropna()
     times = times[(times >= window_start_s) & (times < window_end_s)]
     passages = np.sort(times.unique())
@@ -191,9 +156,9 @@ def _line_trips_on_day(gtfs_smtuc, route_ids: list[str], reference_day: date) ->
     """Nº de viagens (ambos os sentidos) da linha no dia de referência - acompanha avg_freq_min
     porque, numa linha esporádica (ex.: 5 viagens/dia), um intervalo mediano de "275 min" diz pouco
     sozinho."""
-    active = _active_service_ids(gtfs_smtuc, reference_day)
+    active = active_service_ids(gtfs_smtuc, reference_day)
     trips = gtfs_smtuc.trips
-    mask = trips["route_id"].astype(str).isin([str(r) for r in route_ids]) & trips["service_id"].astype(str).isin(active)
+    mask = trips["route_id"].isin([str(r) for r in route_ids]) & trips["service_id"].isin(active)
     return int(mask.sum())
 
 
@@ -215,23 +180,23 @@ def _line_avg_frequency_min(
     if not route_ids:
         return None
 
-    active = _active_service_ids(gtfs_smtuc, reference_day)
+    active = active_service_ids(gtfs_smtuc, reference_day)
     trips = gtfs_smtuc.trips[
-        gtfs_smtuc.trips["route_id"].astype(str).isin([str(r) for r in route_ids])
-        & gtfs_smtuc.trips["service_id"].astype(str).isin(active)
+        gtfs_smtuc.trips["route_id"].isin([str(r) for r in route_ids])
+        & gtfs_smtuc.trips["service_id"].isin(active)
     ]
     if trips.empty or "departure_seconds" not in gtfs_smtuc.stop_times.columns:
         return None
 
-    stop_times = gtfs_smtuc.stop_times[gtfs_smtuc.stop_times["trip_id"].astype(str).isin(trips["trip_id"].astype(str))]
+    stop_times = gtfs_smtuc.stop_times[gtfs_smtuc.stop_times["trip_id"].isin(trips["trip_id"])]
     if stop_times.empty:
         return None
 
     if "direction_id" in trips.columns and trips["direction_id"].notna().any():
-        direction_by_trip = dict(zip(trips["trip_id"].astype(str), trips["direction_id"].fillna(-1).astype(str)))
+        direction_by_trip = dict(zip(trips["trip_id"], trips["direction_id"].fillna(-1).astype(str)))
     else:
         direction_by_trip = {str(t): "na" for t in trips["trip_id"]}
-    directions = stop_times["trip_id"].astype(str).map(direction_by_trip)
+    directions = stop_times["trip_id"].map(direction_by_trip)
 
     window_start_s = int(float(window_start_h) * 3600)
     window_end_s = int(float(window_end_h) * 3600)
@@ -245,18 +210,16 @@ def _line_avg_frequency_min(
     return round(float(np.mean(medians)), 1)
 
 
-def _line_to_route_ids(gtfs_smtuc) -> dict[str, list[str]]:
+def line_to_route_ids(gtfs_smtuc) -> dict[str, list[str]]:
     routes_map_df = gtfs_smtuc.routes.copy()
     if routes_map_df.empty or "route_id" not in routes_map_df.columns:
         return {}
 
     name_col = "route_short_name" if "route_short_name" in routes_map_df.columns else "route_id"
     routes_map_df = routes_map_df[["route_id", name_col]].copy()
-    routes_map_df["route_id"] = routes_map_df["route_id"].astype(str)
     routes_map_df["line"] = routes_map_df[name_col].astype(str)
 
     trips_enriched = gtfs_smtuc.trips.copy()
-    trips_enriched["route_id"] = trips_enriched["route_id"].astype(str)
     trips_enriched = trips_enriched.merge(routes_map_df[["route_id", "line"]], on="route_id", how="left")
     trips_enriched["line"] = trips_enriched["line"].fillna(trips_enriched["route_id"])
 
@@ -328,9 +291,9 @@ def _route_direction_radius_coverage_summaries(
 ) -> list[dict]:
     summaries: list[dict] = []
 
-    for route_lat, route_lon, _stop_ids, _ in _iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
+    for route_lat, route_lon, _stop_ids, _ in iter_route_direction_stop_arrays(gtfs_smtuc, route_id):
 
-        dist_to_center = _haversine_pairwise_m(
+        dist_to_center = haversine_m(
             np.full(route_lat.shape, center_lat, dtype=float),
             np.full(route_lon.shape, center_lon, dtype=float),
             route_lat,
@@ -338,7 +301,7 @@ def _route_direction_radius_coverage_summaries(
         )
         in_radius = dist_to_center <= radius_m
 
-        seg_lengths = _haversine_pairwise_m(route_lat[:-1], route_lon[:-1], route_lat[1:], route_lon[1:])
+        seg_lengths = haversine_m(route_lat[:-1], route_lon[:-1], route_lat[1:], route_lon[1:])
         in_radius_segments = in_radius[:-1] & in_radius[1:]
 
         total_ext_m = float(seg_lengths.sum())
@@ -361,20 +324,20 @@ def _compute_line_metrics(
     radius_m: float,
     reference_day: date,
 ) -> pd.DataFrame:
-    gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
-    gtfs_metro = _load_gtfs_cached(metrobus_dataset)
+    gtfs_smtuc = load_gtfs_cached(smtuc_dataset)
+    gtfs_metro = load_gtfs_cached(metrobus_dataset)
 
     walk_catchment_m = walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
     if metro_stops.empty:
         return pd.DataFrame()
 
-    line_to_route_ids = _line_to_route_ids(gtfs_smtuc)
-    if not line_to_route_ids:
+    routes_by_line = line_to_route_ids(gtfs_smtuc)
+    if not routes_by_line:
         return pd.DataFrame()
 
     out_rows: list[dict] = []
-    for line, route_ids in line_to_route_ids.items():
+    for line, route_ids in routes_by_line.items():
         line_summaries: list[dict] = []
         radius_summaries: list[dict] = []
         for route_id in route_ids:
@@ -493,7 +456,7 @@ def build_line_metrics_db(
             if meta_ok:
                 return cached.drop(columns=[c for c in cached.columns if c.startswith("__meta_")], errors="ignore")
 
-    _load_gtfs_cached.cache_clear()
+    load_gtfs_cached.cache_clear()
 
     fresh = _compute_line_metrics(
         smtuc_dataset=smtuc_dataset,

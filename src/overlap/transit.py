@@ -4,7 +4,6 @@ import math
 import random
 import re
 from datetime import date, datetime, timedelta
-from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
@@ -15,15 +14,15 @@ from config import (
     TRANSFER_BUFFER_MIN,
     WALK_SPEED_M_MIN,
 )
-from gtfs_processing.gtfs import load_gtfs
+from gtfs_processing.geo import haversine_m
+from gtfs_processing.gtfs import load_gtfs_cached
 from gtfs_processing.gtfs_probe import (
     NearestStopResult,
-    _active_service_ids,
-    _haversine_m,
-    _parse_day,
-    _resolve_stop_id,
-    _to_seconds,
+    active_service_ids,
+    parse_day,
+    resolve_stop_id,
 )
+from gtfs_processing.timeutil import hhmmss_to_seconds, seconds_to_hhmmss
 from gtfs_processing.scenarios import (
     DEFAULT_DATASETS,
     Scenario,
@@ -33,15 +32,10 @@ from gtfs_processing.scenarios import (
 )
 
 
-@lru_cache(maxsize=8)
-def _load_gtfs_cached(dataset: str):
-    return load_gtfs(dataset=dataset)
-
-
 # Nota: a resolução de service_id ativos para um dia (incluindo o fallback por alias de
 # dia-da-semana para feeds como o metrobus, onde trips.txt usa "WD"/"SAT"/"SUN" mas
 # calendar.txt usa "Dias Uteis"/"Sabados"/"Domingos e Feriados") vive agora em
-# `gtfs_processing.gtfs_probe._active_service_ids` - único sítio, usado por todos os
+# `gtfs_processing.gtfs_probe.active_service_ids` - único sítio, usado por todos os
 # chamadores (antes só este módulo tinha o fallback, deixando reachability/isócronas,
 # sugestões de percurso e o score de população a excluir sempre o metrobus).
 
@@ -55,7 +49,6 @@ def _matching_stop_ids(gtfs, stop_ref: str) -> list[str]:
     if stops.empty or "stop_id" not in stops.columns:
         return []
 
-    stops["stop_id"] = stops["stop_id"].astype(str)
 
     out: list[str] = []
 
@@ -86,12 +79,11 @@ def _node_stop_ids(gtfs, stop_ref: str, radius_m: float = INTEGRATION_STOP_RADIU
     if not base or not radius_m:
         return base
     stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].copy()
-    stops["stop_id"] = stops["stop_id"].astype(str)
     stops = stops.dropna(subset=["stop_lat", "stop_lon"])
     lat, lon = stops["stop_lat"].astype(float), stops["stop_lon"].astype(float)
     near: set[str] = set()
     for _, b in stops[stops["stop_id"].isin(base)].iterrows():
-        dist = _haversine_m(float(b["stop_lat"]), float(b["stop_lon"]), lat, lon)
+        dist = haversine_m(float(b["stop_lat"]), float(b["stop_lon"]), lat.to_numpy(), lon.to_numpy())
         near |= set(stops.loc[dist <= float(radius_m), "stop_id"])
     return base + sorted(near - set(base))
 
@@ -128,9 +120,7 @@ def _arrival_times_for_stop(
         return []
 
     st = gtfs.stop_times.copy()
-    st["trip_id"] = st["trip_id"].astype(str)
-    st["stop_id"] = st["stop_id"].astype(str)
-    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
+    st = st[st["trip_id"].isin(trips["trip_id"])]
     if st.empty:
         return []
 
@@ -170,9 +160,7 @@ def _arrival_events_for_stop(
         return []
 
     st = gtfs.stop_times.copy()
-    st["trip_id"] = st["trip_id"].astype(str)
-    st["stop_id"] = st["stop_id"].astype(str)
-    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
+    st = st[st["trip_id"].isin(trips["trip_id"])]
     if st.empty:
         return []
 
@@ -206,7 +194,7 @@ def _arrival_events_for_stop(
 
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
-    for ev in sorted(out, key=lambda r: (_hhmmss_to_seconds(str(r["time"])), str(r["line"]))):
+    for ev in sorted(out, key=lambda r: (hhmmss_to_seconds(str(r["time"])), str(r["line"]))):
         k = (str(ev["time"]), str(ev["line"]))
         if k in seen:
             continue
@@ -228,9 +216,7 @@ def _pick_best_target_stop_id(
         return str(target_candidates[0])
 
     st = gtfs.stop_times.copy()
-    st["trip_id"] = st["trip_id"].astype(str)
-    st["stop_id"] = st["stop_id"].astype(str)
-    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
+    st = st[st["trip_id"].isin(trips["trip_id"])]
 
     origin_set = {str(v) for v in (origin_candidates or [])}
     use_origin = bool(origin_set)
@@ -261,23 +247,13 @@ def _pick_best_target_stop_id(
     return best_stop
 
 
-def _safe_slug(value: str) -> str:
+def safe_slug(value: str) -> str:
+    """Texto -> slug ASCII [a-z0-9_] para nomes de ficheiros. É o que nomeia os CSV de
+    `outputs/integration/`, por isso visualizations.integration usa ESTA função para os voltar a
+    encontrar (antes tinha uma cópia própria que mantinha letras acentuadas - nomes divergentes)."""
     cleaned = re.sub(r"[^a-zA-Z0-9]+", "_", str(value).strip().lower())
     cleaned = cleaned.strip("_")
     return cleaned or "value"
-
-
-def _hhmmss_to_seconds(value: str) -> int:
-    h, m, s = (int(part) for part in str(value).split(":"))
-    return h * 3600 + m * 60 + s
-
-
-def _seconds_to_hhmmss(value: int) -> str:
-    value = int(value)
-    h = value // 3600
-    m = (value % 3600) // 60
-    s = value % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 def _normalize_line_numbers(line_number: str | int | list[str | int] | tuple[str | int, ...]) -> list[str]:
@@ -319,9 +295,7 @@ def _towards_arrival_times_for_stop(
     if trips.empty or not towards_candidates:
         return []
     st = gtfs.stop_times.copy()
-    st["trip_id"] = st["trip_id"].astype(str)
-    st["stop_id"] = st["stop_id"].astype(str)
-    st = st[st["trip_id"].isin(trips["trip_id"].astype(str))]
+    st = st[st["trip_id"].isin(trips["trip_id"])]
     if st.empty:
         return []
     st["seq"] = pd.to_numeric(st["stop_sequence"], errors="coerce")
@@ -334,16 +308,10 @@ def _towards_arrival_times_for_stop(
 
 
 def _stop_latlon(gtfs, stop_id: str) -> tuple[float, float]:
-    row = gtfs.stops[gtfs.stops["stop_id"].astype(str) == str(stop_id)]
+    row = gtfs.stops[gtfs.stops["stop_id"] == str(stop_id)]
     if row.empty:
         raise ValueError(f"Paragem sem coordenadas: {stop_id}")
     return float(row.iloc[0]["stop_lat"]), float(row.iloc[0]["stop_lon"])
-
-
-def _distance_m(a: tuple[float, float], b: tuple[float, float]) -> float:
-    lat1, lon1, lat2, lon2 = map(math.radians, (a[0], a[1], b[0], b[1]))
-    h = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
-    return 2 * 6371000.0 * math.asin(math.sqrt(h))
 
 
 def transfer_minutes(
@@ -356,7 +324,7 @@ def transfer_minutes(
 ) -> float:
     """Tempo mínimo (min) para mudar entre duas paragens (de feeds possivelmente diferentes):
     distância real a pé ÷ velocidade + margem fixa (ver config.TRANSFER_BUFFER_MIN)."""
-    dist = _distance_m(_stop_latlon(gtfs_a, stop_a), _stop_latlon(gtfs_b, stop_b))
+    dist = haversine_m(*_stop_latlon(gtfs_a, stop_a), *_stop_latlon(gtfs_b, stop_b))
     return round(dist / float(walk_speed_m_min) + float(buffer_min), 2)
 
 
@@ -401,10 +369,10 @@ def compute_transfer_waits(schedule_df: pd.DataFrame) -> list[dict]:
         target_time = _non_empty_time(row.get("bus_time"))
         if target_time:
             line = str(row.get(line_col, "")).strip() if line_col else ""
-            targets.append((_hhmmss_to_seconds(target_time), _optional_minutes(row.get("target_transfer_min")), target_time, line))
+            targets.append((hhmmss_to_seconds(target_time), _optional_minutes(row.get("target_transfer_min")), target_time, line))
         trigger_time = _non_empty_time(row.get("metro_time_from_origin"))
         if trigger_time:
-            triggers.add((_hhmmss_to_seconds(trigger_time), _optional_minutes(row.get("trigger_transfer_min"))))
+            triggers.add((hhmmss_to_seconds(trigger_time), _optional_minutes(row.get("trigger_transfer_min"))))
     targets.sort(key=lambda tg: (tg[0], tg[3]))
 
     out: list[dict] = []
@@ -449,27 +417,24 @@ def _resolve_bus_arrival_events(
     if not line_values:
         raise ValueError("Linha(s) não indicada(s).")
     line_label = "+".join(line_values)
-    line_slug = "_".join(_safe_slug(v) for v in line_values)
+    line_slug = "_".join(safe_slug(v) for v in line_values)
 
     routes = gtfs_bus.routes.copy()
-    routes["route_id"] = routes["route_id"].astype(str)
     if "route_short_name" in routes.columns:
         routes["route_short_name"] = routes["route_short_name"].astype(str)
     else:
         routes["route_short_name"] = ""
 
-    bus_services = _active_service_ids(gtfs_bus, day)
+    bus_services = active_service_ids(gtfs_bus, day)
     all_bus_trips = gtfs_bus.trips.copy()
-    all_bus_trips["route_id"] = all_bus_trips["route_id"].astype(str)
-    all_bus_trips["service_id"] = all_bus_trips["service_id"].astype(str)
-    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
     all_bus_trips = all_bus_trips[all_bus_trips["service_id"].isin(bus_services)]
 
     route_to_line = {}
     if "route_short_name" in routes.columns:
         route_to_line = dict(
             zip(
-                routes["route_id"].astype(str).tolist(),
+                routes["route_id"].tolist(),
                 routes["route_short_name"].astype(str).str.strip().tolist(),
             )
         )
@@ -526,7 +491,7 @@ def _resolve_bus_arrival_events(
             ev["stop_id"] = str(line_target_stop_id)
         bus_events.extend(line_events)
 
-    bus_events = sorted(bus_events, key=lambda ev: (_hhmmss_to_seconds(str(ev["time"])), str(ev["line"])))
+    bus_events = sorted(bus_events, key=lambda ev: (hhmmss_to_seconds(str(ev["time"])), str(ev["line"])))
     return bus_events, line_label, line_slug
 
 
@@ -559,8 +524,8 @@ def build_line_stop_vs_metro_table(
     sc = get_scenario(scenario)
     day = resolve_reference_day(day_str, scenario=sc)
 
-    gtfs_bus = _load_gtfs_cached(sc.smtuc)
-    gtfs_metro = _load_gtfs_cached(sc.metro)
+    gtfs_bus = load_gtfs_cached(sc.smtuc)
+    gtfs_metro = load_gtfs_cached(sc.metro)
 
     # Candidate ids para filtrar sentido (ex.: Portagem -> Portela)
     line_values = _normalize_line_numbers(line_number)
@@ -575,10 +540,9 @@ def build_line_stop_vs_metro_table(
         raise ValueError(f"Paragem de metro não encontrada: {metro_stop_ref}")
 
     # Trips do metro
-    metro_services = _active_service_ids(gtfs_metro, day)
+    metro_services = active_service_ids(gtfs_metro, day)
     metro_trips = gtfs_metro.trips.copy()
-    metro_trips["service_id"] = metro_trips["service_id"].astype(str)
-    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
     metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
 
     metro_stop_id = _pick_best_target_stop_id(
@@ -627,8 +591,8 @@ def build_line_stop_vs_metro_table(
         )
         out_dir.mkdir(parents=True, exist_ok=True)
         csv_name = output_csv_name or (
-            f"line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
-            f"_metro_{_safe_slug(metro_stop_ref)}.csv"
+            f"line_{line_slug}_bus_{safe_slug(bus_stop_ref)}"
+            f"_metro_{safe_slug(metro_stop_ref)}.csv"
         )
         out_df.to_csv(out_dir / csv_name, index=False)
         return out_df
@@ -661,8 +625,8 @@ def build_line_stop_vs_metro_table(
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
-        f"line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
-        f"_metro_{_safe_slug(metro_stop_ref)}.csv"
+        f"line_{line_slug}_bus_{safe_slug(bus_stop_ref)}"
+        f"_metro_{safe_slug(metro_stop_ref)}.csv"
     )
     out_df.to_csv(out_dir / csv_name, index=False)
 
@@ -702,8 +666,8 @@ def build_reverse_stop_vs_metro_table(
     sc = get_scenario(scenario)
     day = resolve_reference_day(day_str, scenario=sc)
 
-    gtfs_bus = _load_gtfs_cached(sc.smtuc)
-    gtfs_metro = _load_gtfs_cached(sc.metro)
+    gtfs_bus = load_gtfs_cached(sc.smtuc)
+    gtfs_metro = load_gtfs_cached(sc.metro)
 
     bus_origin_by_line = _origin_candidates_by_line(gtfs_bus, bus_origin_ref, _normalize_line_numbers(line_number))
     bus_target_candidates = _node_stop_ids(gtfs_bus, str(bus_stop_ref))
@@ -717,10 +681,9 @@ def build_reverse_stop_vs_metro_table(
     if not metro_towards_candidates:
         raise ValueError(f"Paragem de metro (sentido) não encontrada: {metro_towards_ref}")
 
-    metro_services = _active_service_ids(gtfs_metro, day)
+    metro_services = active_service_ids(gtfs_metro, day)
     metro_trips = gtfs_metro.trips.copy()
-    metro_trips["service_id"] = metro_trips["service_id"].astype(str)
-    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
     metro_trips = metro_trips[metro_trips["service_id"].isin(metro_services)]
 
     metro_stop_id = _pick_best_target_stop_id(
@@ -742,7 +705,7 @@ def build_reverse_stop_vs_metro_table(
     # cada uma com o seu tempo de transbordo até ao metro.
     bus_arrivals = sorted(
         {(str(ev["time"]), str(ev.get("stop_id", ""))) for ev in bus_events},
-        key=lambda a: (_hhmmss_to_seconds(a[0]), a[1]),
+        key=lambda a: (hhmmss_to_seconds(a[0]), a[1]),
     )
     bus_arrival_times = [time for time, _ in bus_arrivals]
     transfer_by_stop = {
@@ -770,8 +733,8 @@ def build_reverse_stop_vs_metro_table(
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_name = output_csv_name or (
-        f"reverse_line_{line_slug}_bus_{_safe_slug(bus_stop_ref)}"
-        f"_metro_{_safe_slug(metro_stop_ref)}.csv"
+        f"reverse_line_{line_slug}_bus_{safe_slug(bus_stop_ref)}"
+        f"_metro_{safe_slug(metro_stop_ref)}.csv"
     )
 
     if n == 0:
@@ -852,7 +815,7 @@ def build_metro_bus_connection_metrics(
     else:
         bus_times = sorted(
             {
-                _hhmmss_to_seconds(v)
+                hhmmss_to_seconds(v)
                 for v in schedule_df["bus_time"].astype(str).tolist()
                 if str(v).strip()
             }
@@ -970,14 +933,14 @@ def build_metro_bus_connection_metrics(
                     {
                         "scope": "overall",
                         "metric": "critical_window_start",
-                        "value": _seconds_to_hhmmss(start_s),
+                        "value": seconds_to_hhmmss(start_s),
                         "unit": "hh:mm:ss",
                         "note": "inicio da maior janela continua de ligacoes perdidas",
                     },
                     {
                         "scope": "overall",
                         "metric": "critical_window_end",
-                        "value": _seconds_to_hhmmss(end_s),
+                        "value": seconds_to_hhmmss(end_s),
                         "unit": "hh:mm:ss",
                         "note": "fim da maior janela continua de ligacoes perdidas",
                     },
@@ -1046,11 +1009,11 @@ def build_metro_bus_connection_metrics(
 
     sample_date = resolve_reference_day(day_str, scenario=scenario).strftime("%Y-%m-%d")
     line_values = _normalize_line_numbers(line_number)
-    line_slug = "_".join(_safe_slug(v) for v in line_values) if line_values else _safe_slug(str(line_number))
+    line_slug = "_".join(safe_slug(v) for v in line_values) if line_values else safe_slug(str(line_number))
 
     csv_name = output_csv_name or (
         f"line_{line_slug}_connection_metrics_"
-        f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}.csv"
+        f"{safe_slug(bus_stop_ref)}_vs_{safe_slug(metro_stop_ref)}.csv"
     )
 
     out_dir = Path(output_dir) if output_dir is not None else (
@@ -1063,17 +1026,16 @@ def build_metro_bus_connection_metrics(
 
 
 def find_direct_options(dataset: str, origin_ref: str, dest_ref: str, day_str: str, time_str: str) -> pd.DataFrame:
-    gtfs = _load_gtfs_cached(dataset)
-    d = _parse_day(day_str)
-    t0 = _to_seconds(time_str)
+    gtfs = load_gtfs_cached(dataset)
+    d = parse_day(day_str)
+    t0 = hhmmss_to_seconds(time_str)
 
-    origin_id = _resolve_stop_id(gtfs, origin_ref)
-    dest_id = _resolve_stop_id(gtfs, dest_ref)
+    origin_id = resolve_stop_id(gtfs, origin_ref)
+    dest_id = resolve_stop_id(gtfs, dest_ref)
 
-    services = _active_service_ids(gtfs, d)
+    services = active_service_ids(gtfs, d)
     trips = gtfs.trips.copy()
-    trips["service_id"] = trips["service_id"].astype(str)
-    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
     trips = trips[trips["service_id"].isin(services)]
 
     st = gtfs.stop_times.copy()
@@ -1145,13 +1107,13 @@ def find_direct_options(dataset: str, origin_ref: str, dest_ref: str, day_str: s
 
 
 def nearest_stop_for_dataset(dataset: str, lat: float, lon: float) -> NearestStopResult:
-    gtfs = _load_gtfs_cached(dataset)
+    gtfs = load_gtfs_cached(dataset)
     stops = gtfs.stops.copy()
 
     if stops.empty or not {"stop_id", "stop_lat", "stop_lon"}.issubset(stops.columns):
         raise ValueError(f"Dataset sem paragens válidas: {dataset}")
 
-    dists = _haversine_m(lat, lon, stops["stop_lat"], stops["stop_lon"])
+    dists = pd.Series(haversine_m(lat, lon, stops["stop_lat"].to_numpy(), stops["stop_lon"].to_numpy()), index=stops.index)
     idx = dists.idxmin()
 
     stop_id = str(stops.loc[idx, "stop_id"])

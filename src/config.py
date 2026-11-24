@@ -15,7 +15,7 @@ REACHABILITY_MAX_TRANSFERS = 2
 # útil mais próximo de "hoje" em todos os cenários (dinâmico - só serve com feeds em vigor hoje).
 USE_FIXED_REFERENCE_DAY: bool = True
 
-# Feriados (ver gtfs_processing/gtfs_probe._active_service_ids): os feeds GTFS deste projeto não
+# Feriados (ver gtfs_processing/gtfs_probe.active_service_ids): os feeds GTFS deste projeto não
 # marcam os feriados em calendar_dates.txt, por isso sem isto um feriado a uma 6ª feira era
 # avaliado com o horário de dia útil. Com FERIADOS_COMO_DOMINGO=True, nesses dias usa-se o
 # serviço de domingo ("Domingos e Feriados") - exceto se o próprio feed já tiver uma exceção em

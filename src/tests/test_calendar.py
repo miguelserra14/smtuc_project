@@ -18,7 +18,7 @@ from gtfs_processing import gtfs_probe
 from gtfs_processing.gtfs import GTFSData
 from gtfs_processing.gtfs_probe import (
     ServiceCalendarError,
-    _active_service_ids,
+    active_service_ids,
     _calendar_active_service_ids,
     _easter_sunday,
     feed_service_period,
@@ -118,13 +118,13 @@ def test_reference_day_is_not_a_holiday() -> None:
     [(WEEKDAY, {"Dias Uteis"}, {"WD"}), (SATURDAY, {"Sabados"}, {"SAT"}), (SUNDAY, {"Domingos e Feriados"}, {"SUN"})],
 )
 def test_normal_days(day: date, smtuc_expected: set[str], metro_expected: set[str]) -> None:
-    assert _active_service_ids(_gtfs(SMTUC_LIKE), day) == smtuc_expected
-    assert _active_service_ids(_gtfs(METRO_LIKE), day) == metro_expected
+    assert active_service_ids(_gtfs(SMTUC_LIKE), day) == smtuc_expected
+    assert active_service_ids(_gtfs(METRO_LIKE), day) == metro_expected
 
 
 def test_service_id_matching_is_case_and_underscore_insensitive() -> None:
     gtfs = _gtfs(["DIAS_UTEIS", "SABADOS"])
-    assert _active_service_ids(gtfs, WEEKDAY) == {"DIAS_UTEIS"}
+    assert active_service_ids(gtfs, WEEKDAY) == {"DIAS_UTEIS"}
 
 
 # --------------------------------------------------------------------------------------------
@@ -132,19 +132,19 @@ def test_service_id_matching_is_case_and_underscore_insensitive() -> None:
 # --------------------------------------------------------------------------------------------
 
 def test_holiday_on_weekday_uses_sunday_service() -> None:
-    assert _active_service_ids(_gtfs(SMTUC_LIKE), CHRISTMAS) == {"Domingos e Feriados"}
-    assert _active_service_ids(_gtfs(METRO_LIKE), CHRISTMAS) == {"SUN"}
+    assert active_service_ids(_gtfs(SMTUC_LIKE), CHRISTMAS) == {"Domingos e Feriados"}
+    assert active_service_ids(_gtfs(METRO_LIKE), CHRISTMAS) == {"SUN"}
 
 
 def test_holiday_on_saturday_uses_sunday_service() -> None:
     coimbra_day = date(2026, 7, 4)  # sábado, feriado municipal
-    assert _active_service_ids(_gtfs(SMTUC_LIKE), coimbra_day) == {"Domingos e Feriados"}
+    assert active_service_ids(_gtfs(SMTUC_LIKE), coimbra_day) == {"Domingos e Feriados"}
 
 
 def test_holiday_handling_can_be_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gtfs_probe, "FERIADOS_COMO_DOMINGO", False)
-    assert _active_service_ids(_gtfs(SMTUC_LIKE), CHRISTMAS) == {"Dias Uteis"}
-    assert _active_service_ids(_gtfs(METRO_LIKE), CHRISTMAS) == {"WD"}
+    assert active_service_ids(_gtfs(SMTUC_LIKE), CHRISTMAS) == {"Dias Uteis"}
+    assert active_service_ids(_gtfs(METRO_LIKE), CHRISTMAS) == {"WD"}
 
 
 def test_feed_exception_on_holiday_wins_over_sunday_substitution() -> None:
@@ -153,7 +153,7 @@ def test_feed_exception_on_holiday_wins_over_sunday_substitution() -> None:
         SMTUC_LIKE + ["Natal"],
         calendar_dates_rows=[("Natal", 20261225, 1), ("Dias Uteis", 20261225, 2)],
     )
-    assert _active_service_ids(gtfs, CHRISTMAS) == {"Natal"}
+    assert active_service_ids(gtfs, CHRISTMAS) == {"Natal"}
 
 
 # --------------------------------------------------------------------------------------------
@@ -166,27 +166,27 @@ def test_calendar_dates_added_and_removed_service() -> None:
         SMTUC_LIKE + ["23/03/2026"],
         calendar_dates_rows=[("23/03/2026", 20260323, 1), ("Dias Uteis", 20260323, 2)],
     )
-    assert _active_service_ids(gtfs, date(2026, 3, 23)) == {"23/03/2026"}
-    assert _active_service_ids(gtfs, date(2026, 3, 24)) == {"Dias Uteis"}
+    assert active_service_ids(gtfs, date(2026, 3, 23)) == {"23/03/2026"}
+    assert active_service_ids(gtfs, date(2026, 3, 24)) == {"Dias Uteis"}
 
 
 def test_calendar_dates_removal_with_namespace_mismatch_falls_back_to_alias(capsys: pytest.CaptureFixture[str]) -> None:
     # Caso real Metrobus: a exceção adiciona um service_id que nenhuma trip usa.
     gtfs = _gtfs(METRO_LIKE, calendar_dates_rows=[("07/01/2026", 20260107, 1), ("Dias Uteis", 20260107, 2)])
-    assert _active_service_ids(gtfs, date(2026, 1, 7)) == {"WD"}
+    assert active_service_ids(gtfs, date(2026, 1, 7)) == {"WD"}
     assert "[WARNING]" in capsys.readouterr().out
 
 
 def test_calendar_dates_only_feed() -> None:
     gtfs = _gtfs(["S1", "S2"], calendar_rows=None, calendar_dates_rows=[("S1", 20260511, 1), ("S2", 20260512, 1)])
     assert feed_service_period(gtfs) == (20260511, 20260512)
-    assert _active_service_ids(gtfs, WEEKDAY) == {"S1"}
-    assert _active_service_ids(gtfs, date(2026, 5, 12)) == {"S2"}
+    assert active_service_ids(gtfs, WEEKDAY) == {"S1"}
+    assert active_service_ids(gtfs, date(2026, 5, 12)) == {"S2"}
 
 
 def test_all_services_removed_gives_empty_set_not_everything() -> None:
     gtfs = _gtfs(SMTUC_LIKE, calendar_dates_rows=[("Dias Uteis", 20260511, 2)])
-    assert _active_service_ids(gtfs, WEEKDAY) == set()
+    assert active_service_ids(gtfs, WEEKDAY) == set()
 
 
 # --------------------------------------------------------------------------------------------
@@ -202,23 +202,23 @@ def test_feed_service_period() -> None:
 def test_day_outside_feed_period_raises(day: date) -> None:
     for trips in (SMTUC_LIKE, METRO_LIKE):
         with pytest.raises(ServiceCalendarError, match="fora do período") as exc_info:
-            _active_service_ids(_gtfs(trips), day)
+            active_service_ids(_gtfs(trips), day)
         assert "20260104..20261231" in str(exc_info.value)
 
 
 def test_last_and_first_day_of_period_are_inside() -> None:
-    assert _active_service_ids(_gtfs(SMTUC_LIKE), date(2026, 12, 31)) == {"Dias Uteis"}  # quinta
-    assert _active_service_ids(_gtfs(SMTUC_LIKE), date(2026, 1, 4)) == {"Domingos e Feriados"}  # domingo
+    assert active_service_ids(_gtfs(SMTUC_LIKE), date(2026, 12, 31)) == {"Dias Uteis"}  # quinta
+    assert active_service_ids(_gtfs(SMTUC_LIKE), date(2026, 1, 4)) == {"Domingos e Feriados"}  # domingo
 
 
 def test_feed_without_any_calendar_raises() -> None:
     with pytest.raises(ServiceCalendarError, match="sem calendar"):
-        _active_service_ids(_gtfs(SMTUC_LIKE, calendar_rows=None), WEEKDAY)
+        active_service_ids(_gtfs(SMTUC_LIKE, calendar_rows=None), WEEKDAY)
 
 
 def test_unmappable_service_ids_raise() -> None:
     with pytest.raises(ServiceCalendarError, match="Nenhum service_id"):
-        _active_service_ids(_gtfs(["X1", "X2"]), WEEKDAY)
+        active_service_ids(_gtfs(["X1", "X2"]), WEEKDAY)
 
 
 def test_service_calendar_error_is_a_value_error() -> None:
@@ -228,9 +228,9 @@ def test_service_calendar_error_is_a_value_error() -> None:
 
 def test_in_range_day_without_service_is_empty_not_error() -> None:
     weekday_only = [("Dias Uteis", 1, 1, 1, 1, 1, 0, 0, 20260104, 20261231)]
-    assert _active_service_ids(_gtfs(["Dias Uteis"], calendar_rows=weekday_only), SUNDAY) == set()
+    assert active_service_ids(_gtfs(["Dias Uteis"], calendar_rows=weekday_only), SUNDAY) == set()
     # Mesmo com trips "SUN" (espaço de nomes diferente), manda o calendário: domingo sem serviço.
-    assert _active_service_ids(_gtfs(["WD", "SUN"], calendar_rows=weekday_only), SUNDAY) == set()
+    assert active_service_ids(_gtfs(["WD", "SUN"], calendar_rows=weekday_only), SUNDAY) == set()
 
 
 def test_calendar_service_outside_its_own_range_is_inactive() -> None:
@@ -240,11 +240,11 @@ def test_calendar_service_outside_its_own_range_is_inactive() -> None:
     ]
     gtfs = _gtfs(["Inverno", "Verao"], calendar_rows=rows)
     assert _calendar_active_service_ids(gtfs, WEEKDAY) == {"Inverno"}
-    assert _active_service_ids(gtfs, date(2026, 7, 6)) == {"Verao"}
+    assert active_service_ids(gtfs, date(2026, 7, 6)) == {"Verao"}
 
 
 def test_empty_trips_gives_empty_set() -> None:
-    assert _active_service_ids(_gtfs([]), WEEKDAY) == set()
+    assert active_service_ids(_gtfs([]), WEEKDAY) == set()
 
 
 # --------------------------------------------------------------------------------------------
@@ -256,9 +256,9 @@ def _real(dataset: str):
 
     if not (dataset_dir(dataset) / "trips.txt").exists():
         pytest.skip(f"dataset {dataset} não disponível")
-    from overlap.overlap_db import _load_gtfs_cached
+    from overlap.overlap_db import load_gtfs_cached
 
-    return _load_gtfs_cached(dataset)
+    return load_gtfs_cached(dataset)
 
 
 # Feriado de teste por feed: o GTFS oficial do Metro (fase 1) só vai até 2026-09-09, por isso
@@ -281,14 +281,14 @@ def test_real_feeds(dataset: str, weekday_trips: int, sunday_ids: set[str], holi
     require_reference_data(dataset)  # contagens fixas: só valem para os feeds calibrados
     trip_sids = gtfs.trips["service_id"].astype(str)
 
-    active = _active_service_ids(gtfs, WEEKDAY)
+    active = active_service_ids(gtfs, WEEKDAY)
     assert int(trip_sids.isin(active).sum()) == weekday_trips  # igual ao valor antes da alteração
 
-    assert _active_service_ids(gtfs, holiday) == sunday_ids
-    assert _active_service_ids(gtfs, SUNDAY) == sunday_ids
+    assert active_service_ids(gtfs, holiday) == sunday_ids
+    assert active_service_ids(gtfs, SUNDAY) == sunday_ids
 
     with pytest.raises(ServiceCalendarError):
-        _active_service_ids(gtfs, OUT_OF_RANGE)
+        active_service_ids(gtfs, OUT_OF_RANGE)
 
 
 @pytest.mark.integration
@@ -297,9 +297,9 @@ def test_official_phase1_metro_refuses_phase2_dates() -> None:
     tem de dar erro, nunca o horário da fase 1."""
     gtfs = _real("metrobus")
     require_reference_data("metrobus")
-    assert _active_service_ids(gtfs, date(2026, 9, 9)) == {"3"}
+    assert active_service_ids(gtfs, date(2026, 9, 9)) == {"3"}
     with pytest.raises(ServiceCalendarError):
-        _active_service_ids(gtfs, date(2026, 9, 10))
+        active_service_ids(gtfs, date(2026, 9, 10))
 
 
 @pytest.mark.integration

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from datetime import datetime, date, timedelta
 from functools import lru_cache
-from typing import Iterable
 
 import pandas as pd
 
@@ -34,46 +32,8 @@ class NearestStopResult:
 # 1) Helpers básicos de parsing/normalização (baixo nível)
 # -----------------------------------------------------------------------------
 
-def _to_seconds(hhmmss: str) -> int:
-    """Parse a "HH:MM:SS" query time string to seconds-from-midnight.
-
-    Deliberately strict (raises on malformed input) - this parses user-supplied query time
-    strings, not raw feed rows, so failing fast on bad input is correct here. Contrast with
-    `gtfs_processing.gtfs._to_seconds`, which is lenient on purpose (parses the entire raw
-    stop_times feed at load time, where one bad row must not abort ingestion).
-    """
-    try:
-        h, m, s = map(int, str(hhmmss).split(":"))
-    except (ValueError, AttributeError) as exc:
-        raise ValueError(f"Hora inválida (esperado HH:MM:SS): {hhmmss!r}") from exc
-    return h * 3600 + m * 60 + s
-
-
-def _parse_day(day_str: str) -> date:
+def parse_day(day_str: str) -> date:
     return datetime.strptime(day_str, "%Y-%m-%d").date()
-
-
-def _weekday_col(d: date) -> str:
-    return d.strftime("%A").lower()  # monday, tuesday, ...
-
-
-def _haversine_m(lat1: float, lon1: float, lat2: Iterable[float], lon2: Iterable[float]) -> pd.Series:
-    r = 6371000.0
-    lat1r = math.radians(lat1)
-    lon1r = math.radians(lon1)
-
-    lat2s = pd.Series(lat2, dtype="float64").apply(math.radians)
-    lon2s = pd.Series(lon2, dtype="float64").apply(math.radians)
-
-    dlat = lat2s - lat1r
-    dlon = lon2s - lon1r
-
-    a = (dlat / 2).apply(math.sin) ** 2 + pd.Series(
-        [math.cos(lat1r) * math.cos(v) for v in lat2s], dtype="float64"
-    ) * (dlon / 2).apply(math.sin) ** 2
-
-    c = 2 * a.apply(lambda x: math.atan2(math.sqrt(x), math.sqrt(1 - x)))
-    return r * c
 
 
 # -----------------------------------------------------------------------------
@@ -139,7 +99,6 @@ def _calendar_dates_frame(gtfs) -> pd.DataFrame:
     if cd is None or cd.empty or not {"service_id", "date", "exception_type"}.issubset(cd.columns):
         return pd.DataFrame(columns=["service_id", "date", "exception_type"])
     out = cd[["service_id", "date", "exception_type"]].copy()
-    out["service_id"] = out["service_id"].astype(str)
     out["date"] = pd.to_numeric(out["date"], errors="coerce")
     out["exception_type"] = pd.to_numeric(out["exception_type"], errors="coerce")
     return out.dropna(subset=["date", "exception_type"]).astype({"date": int, "exception_type": int})
@@ -190,10 +149,10 @@ def _service_id_aliases_for_day(day: date, weekday: int | None = None) -> set[st
     return set(_SUNDAY_ALIASES)
 
 
-def _alias_day_mask(service_id: str) -> tuple[int, ...] | None:
+def alias_day_mask(service_id: str) -> tuple[int, ...] | None:
     """Resolve a service_id like "WD"/"SAT"/"SUN" straight to a (mon..sun) weekly mask,
     without needing a calendar.txt row - used as a fallback when a service_id's own
-    calendar.txt entry can't be found under a matching key (see _active_service_ids)."""
+    calendar.txt entry can't be found under a matching key (see active_service_ids)."""
     norm = _normalize_service_id(service_id)
     if norm in _WEEKDAY_ALIASES:
         return _ALIAS_WEEKDAY_MASK
@@ -206,7 +165,7 @@ def _alias_day_mask(service_id: str) -> tuple[int, ...] | None:
 
 def _calendar_active_service_ids(gtfs, d: date) -> set[str]:
     """Service ids ativos em `d` segundo calendar.txt/calendar_dates.txt, no espaço de nomes
-    próprio de calendar.txt (pode não bater certo com o de trips.txt - ver _active_service_ids).
+    próprio de calendar.txt (pode não bater certo com o de trips.txt - ver active_service_ids).
 
     Levanta ServiceCalendarError se o feed não tiver calendário nenhum ou se `d` estiver fora do
     período que o feed cobre (ver `feed_service_period`). Antes, ambos os casos acabavam a
@@ -231,7 +190,6 @@ def _calendar_active_service_ids(gtfs, d: date) -> set[str]:
     active: set[str] = set()
     if _has_calendar(gtfs):
         cal = gtfs.calendar.copy()
-        cal["service_id"] = cal["service_id"].astype(str)
         wd = _DAY_COLS[_effective_weekday(gtfs, d)]
         day_flag = pd.to_numeric(cal[wd], errors="coerce") if wd in cal.columns else pd.Series(0, index=cal.index)
         start = pd.to_numeric(cal.get("start_date", pd.Series(0, index=cal.index)), errors="coerce")
@@ -250,7 +208,7 @@ def _calendar_active_service_ids(gtfs, d: date) -> set[str]:
     return active
 
 
-def _active_service_ids(gtfs, d: date) -> set[str]:
+def active_service_ids(gtfs, d: date) -> set[str]:
     """Service ids ativos em `d`, garantidamente no espaço de nomes de trips.txt (para que os
     chamadores possam filtrar `trips` com segurança via `.isin(...)`).
 
@@ -277,7 +235,7 @@ def _active_service_ids(gtfs, d: date) -> set[str]:
 
     calendar_ids_norm = set()
     if _has_calendar(gtfs):
-        calendar_ids_norm |= {_normalize_service_id(v) for v in gtfs.calendar["service_id"].astype(str)}
+        calendar_ids_norm |= {_normalize_service_id(v) for v in gtfs.calendar["service_id"]}
     calendar_ids_norm |= {_normalize_service_id(v) for v in _calendar_dates_frame(gtfs)["service_id"]}
     trips_norm = {_normalize_service_id(sid) for sid in trip_service_ids}
     all_aliases = _WEEKDAY_ALIASES | _SATURDAY_ALIASES | _SUNDAY_ALIASES
@@ -328,11 +286,11 @@ def _active_service_ids(gtfs, d: date) -> set[str]:
     return fallback
 
 
-def _resolve_stop_id(gtfs, ref: str) -> str:
+def resolve_stop_id(gtfs, ref: str) -> str:
     ref = str(ref).strip()
 
     # 1) id direto
-    ids = gtfs.stops["stop_id"].astype(str)
+    ids = gtfs.stops["stop_id"]
     if (ids == ref).any():
         return ref
 

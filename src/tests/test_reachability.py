@@ -31,7 +31,7 @@ import pytest
 import overlap.overlap as ov
 from gtfs_processing.gtfs import GTFSData
 
-M_PER_DEG_LAT = 6371000.0 * np.pi / 180.0  # mesma esfera que _distances_from_point_m
+M_PER_DEG_LAT = 6371000.0 * np.pi / 180.0  # mesma esfera que gtfs_processing.geo.haversine_m
 LON = -8.4
 LAT_X = 40.0
 
@@ -84,7 +84,7 @@ def _synthetic_gtfs() -> GTFSData:
 @pytest.fixture
 def synthetic(monkeypatch: pytest.MonkeyPatch) -> None:
     gtfs = _synthetic_gtfs()
-    monkeypatch.setattr(ov, "_load_gtfs_cached", lambda dataset: gtfs)
+    monkeypatch.setattr(ov, "load_gtfs_cached", lambda dataset: gtfs)
 
 
 def _reach(max_transfers: int = 2) -> dict[str, float]:
@@ -162,7 +162,7 @@ def test_real_reachability_is_deterministic_across_hash_seeds() -> None:
 _SYNTH_SNIPPET = (
     "import sys; sys.path[:0] = [r'%s'];"
     "import overlap.overlap as ov, tests.test_reachability as t;"
-    "ov._load_gtfs_cached = lambda d: t._synthetic_gtfs();"
+    "ov.load_gtfs_cached = lambda d: t._synthetic_gtfs();"
     "print('RESULT', sorted(t._reach().items()))"
 ) % (_ROOT / "src")
 

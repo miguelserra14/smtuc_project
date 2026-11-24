@@ -110,7 +110,7 @@ def test_line_54_tables_load_the_scenario_feeds(two_scenarios, monkeypatch, tmp_
             raise _Loaded
         return None
 
-    monkeypatch.setattr(transit, "_load_gtfs_cached", fake_load)
+    monkeypatch.setattr(transit, "load_gtfs_cached", fake_load)
     for build in (transit.build_line_stop_vs_metro_table, transit.build_reverse_stop_vs_metro_table):
         loaded.clear()
         kwargs = {"metro_towards_ref": "X"} if build is transit.build_reverse_stop_vs_metro_table else {}
@@ -153,7 +153,7 @@ def test_regenerate_validates_each_scenario_on_its_own_day(two_scenarios, monkey
             self.trips = pd.DataFrame({"service_id": ["s"]})
 
     monkeypatch.setattr(regen, "_require_dataset", lambda d: True)
-    monkeypatch.setattr(regen, "_load_gtfs_cached", FakeFeed)
+    monkeypatch.setattr(regen, "load_gtfs_cached", FakeFeed)
     monkeypatch.setattr(regen, "feed_service_period", lambda g: (20260101, 20261231))
 
     def fake_active(gtfs, day):
@@ -162,7 +162,7 @@ def test_regenerate_validates_each_scenario_on_its_own_day(two_scenarios, monkey
             raise regen.ServiceCalendarError("fora do período")
         return {"s"}
 
-    monkeypatch.setattr(regen, "_active_service_ids", fake_active)
+    monkeypatch.setattr(regen, "active_service_ids", fake_active)
     assert regen._validate_reference_day() is True
     assert set(checked) == {
         ("smtuc", date(2026, 5, 11)), ("metrobus", date(2026, 5, 11)),

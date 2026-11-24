@@ -13,8 +13,8 @@ import pandas as pd
 
 from config import STADIUM_COORD, STADIUM_RADIUS_M, STADIUM_MIN_EXTENSION_PCT, POINTS_OF_INTEREST_CSV
 from gtfs_processing.scenarios import DEFAULT_METRO_DATASET, DEFAULT_SMTUC_DATASET
-from gtfs_processing.gtfs import load_gtfs
-from overlap.overlap_db import _line_to_route_ids, _iter_route_direction_stop_arrays
+from gtfs_processing.gtfs import load_gtfs_cached
+from overlap.overlap_db import line_to_route_ids, iter_route_direction_stop_arrays
 from visualizations.io import _write_folium_html
 
 
@@ -74,8 +74,8 @@ def create_overlap_lines_map(
         )
 
     # Load GTFS
-    gtfs_smtuc = load_gtfs(dataset=smtuc_dataset)
-    gtfs_metro = load_gtfs(dataset=metrobus_dataset)
+    gtfs_smtuc = load_gtfs_cached(smtuc_dataset)
+    gtfs_metro = load_gtfs_cached(metrobus_dataset)
 
     center = _safe_center(*STADIUM_COORD)
     m = folium.Map(location=center, zoom_start=13, tiles="cartodbpositron")
@@ -94,9 +94,9 @@ def create_overlap_lines_map(
             # de deixar só pontos soltos.
             try:
                 if hasattr(gtfs_metro, "routes") and not gtfs_metro.routes.empty:
-                    metro_route_ids = gtfs_metro.routes["route_id"].astype(str).tolist()
+                    metro_route_ids = gtfs_metro.routes["route_id"].tolist()
                     for rid in metro_route_ids:
-                        for lat_arr, lon_arr, _stop_ids, _count in _iter_route_direction_stop_arrays(gtfs_metro, rid):
+                        for lat_arr, lon_arr, _stop_ids, _count in iter_route_direction_stop_arrays(gtfs_metro, rid):
                             pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
                             if len(pts) >= 2:
                                 folium.PolyLine(pts, color="#1976d2", weight=3, opacity=0.8).add_to(metro_fg)
@@ -171,10 +171,10 @@ def create_overlap_lines_map(
             fg = FeatureGroup(name=f"{prefix} {line}", show=False)
             try:
                 # get route ids for this line
-                line_map = _line_to_route_ids(gtfs_smtuc)
+                line_map = line_to_route_ids(gtfs_smtuc)
                 route_ids = line_map.get(str(line), [])
                 for rid in route_ids:
-                    for lat_arr, lon_arr, _stop_ids, _count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
+                    for lat_arr, lon_arr, _stop_ids, _count in iter_route_direction_stop_arrays(gtfs_smtuc, rid):
                         pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
                         if len(pts) >= 2:
                             folium.PolyLine(pts, color=color, weight=3, opacity=0.85).add_to(fg)
@@ -201,7 +201,7 @@ def create_overlap_lines_map(
 
     lines_data: dict = {}
     try:
-        line_map_all = _line_to_route_ids(gtfs_smtuc)
+        line_map_all = line_to_route_ids(gtfs_smtuc)
         for line in sorted(set(metrics_df["line"].tolist())):
             if line not in line_map_all:
                 continue
@@ -210,7 +210,7 @@ def create_overlap_lines_map(
             # vira um segmento da mesma polyline multi-parte no mapa.
             directions_coords: list[list[tuple[float, float]]] = []
             for rid in route_ids:
-                for lat_arr, lon_arr, _stop_ids, _count in _iter_route_direction_stop_arrays(gtfs_smtuc, rid):
+                for lat_arr, lon_arr, _stop_ids, _count in iter_route_direction_stop_arrays(gtfs_smtuc, rid):
                     if len(lat_arr) >= 2:
                         directions_coords.append(list(zip(lat_arr.tolist(), lon_arr.tolist())))
             if not directions_coords:

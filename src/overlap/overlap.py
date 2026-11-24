@@ -22,11 +22,13 @@ from gtfs_processing.scenarios import DEFAULT_DATASETS, DEFAULT_METRO_DATASET, D
 from overlap.overlap_db import (
     build_line_metrics_db,
     load_line_metrics_db,
-    _load_gtfs_cached,
-    _line_to_route_ids,
+    load_gtfs_cached,
+    line_to_route_ids,
     _line_numeric_prefix,
 )
-from gtfs_processing.gtfs_probe import _active_service_ids, _alias_day_mask, _parse_day, _to_seconds
+from gtfs_processing.geo import haversine_m
+from gtfs_processing.gtfs_probe import active_service_ids, alias_day_mask, parse_day
+from gtfs_processing.timeutil import hhmmss_to_seconds
 
 
 def _filter_numeric_bus_lines(df: pd.DataFrame) -> pd.DataFrame:
@@ -135,13 +137,13 @@ def _resolve_service_day_mask(
 
     Tries a direct calendar.txt lookup first, then falls back to alias-based resolution
     (e.g. "WD"/"SAT"/"SUN") for feeds where trips.txt's service_id namespace doesn't match
-    calendar.txt's - same mismatch fixed in `_active_service_ids`, needed here too since this
+    calendar.txt's - same mismatch fixed in `active_service_ids`, needed here too since this
     compares service_id values taken straight from trips.txt/stop_times, not from calendar.txt.
     """
     mask = calendar_masks.get(str(service_id))
     if mask is not None:
         return mask
-    return _alias_day_mask(service_id)
+    return alias_day_mask(service_id)
 
 
 def _service_days_overlap(
@@ -157,25 +159,6 @@ def _service_days_overlap(
         return True
 
     return any((a == 1 and b == 1) for a, b in zip(smtuc_mask, metro_mask))
-
-
-def _distances_from_point_m(
-    query_lat: float,
-    query_lon: float,
-    ref_lat: np.ndarray,
-    ref_lon: np.ndarray,
-) -> np.ndarray:
-    r = 6371000.0
-    q_lat_r = np.radians(float(query_lat))
-    q_lon_r = np.radians(float(query_lon))
-    ref_lat_r = np.radians(ref_lat)
-    ref_lon_r = np.radians(ref_lon)
-
-    dlat = ref_lat_r - q_lat_r
-    dlon = ref_lon_r - q_lon_r
-    a = np.sin(dlat / 2.0) ** 2 + np.cos(q_lat_r) * np.cos(ref_lat_r) * (np.sin(dlon / 2.0) ** 2)
-    c = 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
-    return r * c
 
 
 def _normalize_line_value(raw_line: object) -> str | None:
@@ -213,13 +196,12 @@ def compute_temporal_overlaps_for_db(
     if "temporal_overlap_stop_ids" not in metrics_df.columns:
         metrics_df["temporal_overlap_stop_ids"] = ""
 
-    gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
-    gtfs_metro = _load_gtfs_cached(metrobus_dataset)
+    gtfs_smtuc = load_gtfs_cached(smtuc_dataset)
+    gtfs_metro = load_gtfs_cached(metrobus_dataset)
 
     walk_catchment_m = walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN
     temporal_threshold_s = int(float(temporal_overlap_max_min) * 60)
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
-    metro_stops["stop_id"] = metro_stops["stop_id"].astype(str)
 
     metro_trips = gtfs_metro.trips[["trip_id", "service_id"]].copy()
     metro_stop_times = gtfs_metro.stop_times.copy().merge(metro_trips, on="trip_id", how="left")
@@ -229,8 +211,6 @@ def compute_temporal_overlaps_for_db(
     
     # Preparar dados Metrobus
     metro_stop_times_with_times = metro_stop_times.copy()
-    metro_stop_times_with_times["stop_id"] = metro_stop_times_with_times["stop_id"].astype(str)
-    metro_stop_times_with_times["service_id"] = metro_stop_times_with_times["service_id"].astype(str)
     metro_stop_times_with_times["time_sec"] = metro_stop_times_with_times.apply(_get_time_seconds, axis=1)
     metro_stop_times_with_times = metro_stop_times_with_times.dropna(subset=["time_sec"])
 
@@ -238,7 +218,7 @@ def compute_temporal_overlaps_for_db(
         subset=["stop_lat", "stop_lon"]
     )
 
-    metro_stop_ids = metro_stops["stop_id"].astype(str).to_numpy()
+    metro_stop_ids = metro_stops["stop_id"].to_numpy()
     metro_stop_lats = metro_stops["stop_lat"].astype(float).to_numpy()
     metro_stop_lons = metro_stops["stop_lon"].astype(float).to_numpy()
 
@@ -246,35 +226,32 @@ def compute_temporal_overlaps_for_db(
     metro_services_by_stop: dict[str, np.ndarray] = {}
     for stop_id, group in metro_passages.groupby("stop_id"):
         metro_times_by_stop[str(stop_id)] = group["time_sec"].astype(int).to_numpy()
-        metro_services_by_stop[str(stop_id)] = group["service_id"].astype(str).to_numpy()
+        metro_services_by_stop[str(stop_id)] = group["service_id"].to_numpy()
 
     smtuc_day_masks = _service_day_masks(gtfs_smtuc.calendar)
     metro_day_masks = _service_day_masks(gtfs_metro.calendar)
     
     # Calcular para cada linha
-    line_to_route_ids = _line_to_route_ids(gtfs_smtuc)
+    routes_by_line = line_to_route_ids(gtfs_smtuc)
     
     for idx, row in metrics_df.iterrows():
         line = _normalize_line_value(row.get("line"))
         if not line:
             continue
         
-        if line not in line_to_route_ids:
+        if line not in routes_by_line:
             continue
         
-        route_ids = line_to_route_ids[line]
+        route_ids = routes_by_line[line]
         
         # Obter stop_times para esta linha
         smtuc_trips = gtfs_smtuc.trips[
-            gtfs_smtuc.trips["route_id"].astype(str).isin([str(r) for r in route_ids])
+            gtfs_smtuc.trips["route_id"].isin([str(r) for r in route_ids])
         ][["trip_id", "service_id"]].copy()
-        smtuc_trips["trip_id"] = smtuc_trips["trip_id"].astype(str)
-        smtuc_trips["service_id"] = smtuc_trips["service_id"].astype(str)
         
         smtuc_stop_times = gtfs_smtuc.stop_times[
-            gtfs_smtuc.stop_times["trip_id"].astype(str).isin(smtuc_trips["trip_id"])
+            gtfs_smtuc.stop_times["trip_id"].isin(smtuc_trips["trip_id"])
         ].copy()
-        smtuc_stop_times["trip_id"] = smtuc_stop_times["trip_id"].astype(str)
         smtuc_stop_times = smtuc_stop_times.merge(smtuc_trips, on="trip_id", how="left")
         
         # Juntar com stops
@@ -297,7 +274,7 @@ def compute_temporal_overlaps_for_db(
             smtuc_time_s = int(passage["time_sec"])
             smtuc_service_id = str(passage.get("service_id", ""))
 
-            distances = _distances_from_point_m(smtuc_lat, smtuc_lon, metro_stop_lats, metro_stop_lons)
+            distances = haversine_m(smtuc_lat, smtuc_lon, metro_stop_lats, metro_stop_lons)
             nearby_stop_ids = metro_stop_ids[distances <= walk_catchment_m]
 
             if len(nearby_stop_ids) == 0:
@@ -375,14 +352,13 @@ def temporal_overlap_events_for_metrics(
             ]
         )
 
-    gtfs_smtuc = _load_gtfs_cached(smtuc_dataset)
-    gtfs_metro = _load_gtfs_cached(metrobus_dataset)
+    gtfs_smtuc = load_gtfs_cached(smtuc_dataset)
+    gtfs_metro = load_gtfs_cached(metrobus_dataset)
 
     walk_catchment_m = walk_speed_m_min * spatial_overlap_walk_min
     temporal_threshold_s = int(float(temporal_overlap_max_min) * 60)
 
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
-    metro_stops["stop_id"] = metro_stops["stop_id"].astype(str)
     metro_trips = gtfs_metro.trips[["trip_id", "service_id"]].copy()
     metro_stop_times = gtfs_metro.stop_times.copy().merge(metro_trips, on="trip_id", how="left")
 
@@ -399,14 +375,12 @@ def temporal_overlap_events_for_metrics(
             ]
         )
 
-    metro_stop_times["stop_id"] = metro_stop_times["stop_id"].astype(str)
-    metro_stop_times["service_id"] = metro_stop_times["service_id"].astype(str)
     metro_stop_times["time_sec"] = metro_stop_times.apply(_get_time_seconds, axis=1)
     metro_stop_times = metro_stop_times.dropna(subset=["time_sec"])
 
     metro_passages = metro_stop_times.merge(metro_stops, on="stop_id", how="left").dropna(subset=["stop_lat", "stop_lon"])
 
-    metro_stop_ids = metro_stops["stop_id"].astype(str).to_numpy()
+    metro_stop_ids = metro_stops["stop_id"].to_numpy()
     metro_stop_lats = metro_stops["stop_lat"].astype(float).to_numpy()
     metro_stop_lons = metro_stops["stop_lon"].astype(float).to_numpy()
 
@@ -414,11 +388,11 @@ def temporal_overlap_events_for_metrics(
     metro_services_by_stop: dict[str, np.ndarray] = {}
     for stop_id, group in metro_passages.groupby("stop_id"):
         metro_times_by_stop[str(stop_id)] = group["time_sec"].astype(int).to_numpy()
-        metro_services_by_stop[str(stop_id)] = group["service_id"].astype(str).to_numpy()
+        metro_services_by_stop[str(stop_id)] = group["service_id"].to_numpy()
 
     smtuc_day_masks = _service_day_masks(gtfs_smtuc.calendar)
     metro_day_masks = _service_day_masks(gtfs_metro.calendar)
-    line_to_route_ids = _line_to_route_ids(gtfs_smtuc)
+    routes_by_line = line_to_route_ids(gtfs_smtuc)
 
     stop_name_col = "stop_name" if "stop_name" in gtfs_smtuc.stops.columns else None
     stop_cols = ["stop_id", "stop_lat", "stop_lon"]
@@ -429,20 +403,17 @@ def temporal_overlap_events_for_metrics(
 
     for _, row in metrics_df.iterrows():
         line = _normalize_line_value(row.get("line"))
-        if not line or line not in line_to_route_ids:
+        if not line or line not in routes_by_line:
             continue
 
-        route_ids = line_to_route_ids[line]
+        route_ids = routes_by_line[line]
         smtuc_trips = gtfs_smtuc.trips[
-            gtfs_smtuc.trips["route_id"].astype(str).isin([str(r) for r in route_ids])
+            gtfs_smtuc.trips["route_id"].isin([str(r) for r in route_ids])
         ][["trip_id", "service_id"]].copy()
-        smtuc_trips["trip_id"] = smtuc_trips["trip_id"].astype(str)
-        smtuc_trips["service_id"] = smtuc_trips["service_id"].astype(str)
 
         smtuc_stop_times = gtfs_smtuc.stop_times[
-            gtfs_smtuc.stop_times["trip_id"].astype(str).isin(smtuc_trips["trip_id"])
+            gtfs_smtuc.stop_times["trip_id"].isin(smtuc_trips["trip_id"])
         ].copy()
-        smtuc_stop_times["trip_id"] = smtuc_stop_times["trip_id"].astype(str)
         smtuc_stop_times = smtuc_stop_times.merge(smtuc_trips, on="trip_id", how="left")
         smtuc_stop_times = smtuc_stop_times.merge(gtfs_smtuc.stops[stop_cols], on="stop_id", how="left").dropna(
             subset=["stop_lat", "stop_lon"]
@@ -457,7 +428,7 @@ def temporal_overlap_events_for_metrics(
             smtuc_time_s = int(passage["time_sec"])
             smtuc_service_id = str(passage.get("service_id", ""))
 
-            distances = _distances_from_point_m(smtuc_lat, smtuc_lon, metro_stop_lats, metro_stop_lons)
+            distances = haversine_m(smtuc_lat, smtuc_lon, metro_stop_lats, metro_stop_lons)
             nearby_stop_ids = metro_stop_ids[distances <= walk_catchment_m]
             if len(nearby_stop_ids) == 0:
                 continue
@@ -533,22 +504,21 @@ def _next_service_relevant_time(
 
     If no relevant departure is found, keeps the original time.
     """
-    day = _parse_day(day_str)
-    t0 = int(_to_seconds(from_time_str))
-    t1 = int(_to_seconds(latest_time_str)) if latest_time_str else None
+    day = parse_day(day_str)
+    t0 = int(hhmmss_to_seconds(from_time_str))
+    t1 = int(hhmmss_to_seconds(latest_time_str)) if latest_time_str else None
     board_walk_m = float(walk_speed_m_min) * float(max_board_walk_min)
 
     best_departure_s: int | None = None
 
     for dataset in datasets:
-        gtfs = _load_gtfs_cached(dataset)
+        gtfs = load_gtfs_cached(dataset)
 
         stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
         if stops.empty:
             continue
 
-        stops["stop_id"] = stops["stop_id"].astype(str)
-        d_m = _distances_from_point_m(
+        d_m = haversine_m(
             origin_lat,
             origin_lon,
             stops["stop_lat"].astype(float).to_numpy(),
@@ -558,18 +528,14 @@ def _next_service_relevant_time(
         if not boardable_ids:
             continue
 
-        active_services = _active_service_ids(gtfs, day)
+        active_services = active_service_ids(gtfs, day)
         trips = gtfs.trips[["trip_id", "service_id"]].copy()
-        trips["trip_id"] = trips["trip_id"].astype(str)
-        trips["service_id"] = trips["service_id"].astype(str)
-        # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+        # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
         trips = trips[trips["service_id"].isin(active_services)]
         if trips.empty:
             continue
 
         st = gtfs.stop_times[["trip_id", "stop_id", "departure_seconds"]].copy()
-        st["trip_id"] = st["trip_id"].astype(str)
-        st["stop_id"] = st["stop_id"].astype(str)
         st = st.merge(trips, on="trip_id", how="inner")
         if st.empty:
             continue
@@ -622,30 +588,27 @@ def _reachable_stops_for_dataset_now(
     max_min: float = REACHABILITY_MAX_MIN,
     max_board_walk_min: float = REACHABILITY_MAX_BOARDING_WALK_MIN,
 ) -> pd.DataFrame:
-    gtfs = _load_gtfs_cached(dataset)
+    gtfs = load_gtfs_cached(dataset)
 
     stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
     if stops.empty:
         return pd.DataFrame(columns=["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"])
 
-    stops["stop_id"] = stops["stop_id"].astype(str)
     stop_ids = stops["stop_id"].to_numpy()
     stop_lats = stops["stop_lat"].astype(float).to_numpy()
     stop_lons = stops["stop_lon"].astype(float).to_numpy()
 
-    direct_walk_m = _distances_from_point_m(origin_lat, origin_lon, stop_lats, stop_lons)
+    direct_walk_m = haversine_m(origin_lat, origin_lon, stop_lats, stop_lons)
     direct_walk_min = direct_walk_m / float(walk_speed_m_min)
 
     reach_by_stop = pd.Series(direct_walk_min, index=stop_ids, dtype="float64")
 
-    day = _parse_day(day_str)
-    t0 = int(_to_seconds(time_str))
-    active_services = _active_service_ids(gtfs, day)
+    day = parse_day(day_str)
+    t0 = int(hhmmss_to_seconds(time_str))
+    active_services = active_service_ids(gtfs, day)
 
     trips = gtfs.trips[["trip_id", "service_id"]].copy()
-    trips["trip_id"] = trips["trip_id"].astype(str)
-    trips["service_id"] = trips["service_id"].astype(str)
-    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
     trips = trips[trips["service_id"].isin(active_services)]
     if trips.empty:
         out = stops.copy()
@@ -655,8 +618,6 @@ def _reachable_stops_for_dataset_now(
 
     st_cols = ["trip_id", "stop_id", "stop_sequence", "departure_seconds", "arrival_seconds"]
     st = gtfs.stop_times[st_cols].copy()
-    st["trip_id"] = st["trip_id"].astype(str)
-    st["stop_id"] = st["stop_id"].astype(str)
     st = st.merge(trips, on="trip_id", how="inner")
     if st.empty:
         out = stops.copy()
@@ -745,37 +706,32 @@ def _reachable_stops_multimodal_now(
     - Ride on a trip to any downstream stop.
     - Walk transfer between nearby stops, then board another trip.
     """
-    day = _parse_day(day_str)
-    t0 = int(_to_seconds(time_str))
+    day = parse_day(day_str)
+    t0 = int(hhmmss_to_seconds(time_str))
 
     all_stops_parts: list[pd.DataFrame] = []
     trip_tables: list[pd.DataFrame] = []
 
     for dataset in datasets:
-        gtfs = _load_gtfs_cached(dataset)
+        gtfs = load_gtfs_cached(dataset)
 
         stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
         if stops.empty:
             continue
 
-        stops["stop_id"] = stops["stop_id"].astype(str)
         stops["global_stop_id"] = dataset + ":" + stops["stop_id"]
         stops["dataset"] = dataset
         all_stops_parts.append(stops[["dataset", "stop_id", "global_stop_id", "stop_lat", "stop_lon"]])
 
         trips = gtfs.trips[["trip_id", "service_id"]].copy()
-        trips["trip_id"] = trips["trip_id"].astype(str)
-        trips["service_id"] = trips["service_id"].astype(str)
-        active_services = _active_service_ids(gtfs, day)
-        # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+        active_services = active_service_ids(gtfs, day)
+        # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
         trips = trips[trips["service_id"].isin(active_services)]
         if trips.empty:
             continue
 
         st_cols = ["trip_id", "stop_id", "stop_sequence", "departure_seconds", "arrival_seconds"]
         stop_times = gtfs.stop_times[st_cols].copy()
-        stop_times["trip_id"] = stop_times["trip_id"].astype(str)
-        stop_times["stop_id"] = stop_times["stop_id"].astype(str)
         stop_times = stop_times.merge(trips[["trip_id"]], on="trip_id", how="inner")
         if stop_times.empty:
             continue
@@ -805,7 +761,7 @@ def _reachable_stops_multimodal_now(
     stop_lons = all_stops["stop_lon"].to_numpy(dtype=float)
 
     # Initial access walk: restrict to boardable radius to avoid unrealistic long pre-walks.
-    direct_walk_m = _distances_from_point_m(origin_lat, origin_lon, stop_lats, stop_lons)
+    direct_walk_m = haversine_m(origin_lat, origin_lon, stop_lats, stop_lons)
     direct_walk_min = direct_walk_m / float(walk_speed_m_min)
 
     inf_s = float("inf")
@@ -886,7 +842,7 @@ def _reachable_stops_multimodal_now(
                 if not np.isfinite(base_arrival_s):
                     continue
 
-                dists_m = _distances_from_point_m(stop_lats[src_idx], stop_lons[src_idx], stop_lats, stop_lons)
+                dists_m = haversine_m(stop_lats[src_idx], stop_lons[src_idx], stop_lats, stop_lons)
                 near_idx = np.where(dists_m <= transfer_walk_m)[0]
                 if len(near_idx) == 0:
                     continue
@@ -994,11 +950,11 @@ def compute_bgri_reachability_now(
     cent_lat = centroids_ll.y.astype(float).to_numpy()
     cent_lon = centroids_ll.x.astype(float).to_numpy()
 
-    direct_walk_min = _distances_from_point_m(origin_lat, origin_lon, cent_lat, cent_lon) / float(walk_speed_m_min)
+    direct_walk_min = haversine_m(origin_lat, origin_lon, cent_lat, cent_lon) / float(walk_speed_m_min)
 
     pt_best_min = np.full(shape=len(gdf_3763), fill_value=np.inf, dtype="float64")
     for idx in range(len(gdf_3763)):
-        d_to_stops_m = _distances_from_point_m(cent_lat[idx], cent_lon[idx], stop_lat, stop_lon)
+        d_to_stops_m = haversine_m(cent_lat[idx], cent_lon[idx], stop_lat, stop_lon)
         candidate = stop_reach + (d_to_stops_m / float(walk_speed_m_min))
         if len(candidate) > 0:
             pt_best_min[idx] = float(np.min(candidate))

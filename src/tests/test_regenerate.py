@@ -179,9 +179,9 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
             return {"antes": BEFORE, "fase2": AFTER}[scenario]
 
     monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
-    monkeypatch.setattr(regen, "_require_geo_stack", lambda: None)
-    monkeypatch.setattr(regen, "_require_bgri_data", lambda: Path("."))
-    monkeypatch.setattr(regen, "_project_root", lambda: tmp_path)
+    monkeypatch.setattr(regen, "require_geo_stack", lambda: None)
+    monkeypatch.setattr(regen, "require_bgri_data", lambda: Path("."))
+    monkeypatch.setattr(regen, "project_root", lambda: tmp_path)
     monkeypatch.setattr(regen, "_load_snapshot_module", lambda: _FakeSnapshot)
     regen.regenerate_comparison_html()
     assert regen._FAILURES == []

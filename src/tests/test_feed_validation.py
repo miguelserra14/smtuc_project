@@ -106,7 +106,7 @@ def test_referential_integrity(dataset: str) -> None:
         "paragens repetidas": int(g.stops["stop_id"].astype(str).duplicated().sum()),
         "viagens repetidas": int(g.trips["trip_id"].astype(str).duplicated().sum()),
     }
-    # service_ids das viagens que nem o calendário nem os aliases resolvem: o _active_service_ids já
+    # service_ids das viagens que nem o calendário nem os aliases resolvem: o active_service_ids já
     # rebenta com ServiceCalendarError; aqui só se exige que cada viagem tenha um service_id.
     problems["viagens sem service_id"] = int(g.trips["service_id"].isna().sum())
     assert not any(problems.values()), problems

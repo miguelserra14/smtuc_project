@@ -244,6 +244,6 @@ def test_old_format_cache_is_recomputed(tmp_path: Path, fake_compute: list[date]
 @pytest.mark.parametrize("line, expected", [("7", 20.0), ("54", 40.0), ("10", 75.0)])
 def test_real_line_frequencies(line: str, expected: float) -> None:
     require_reference_data("smtuc")  # valores conferidos à mão para ESTE feed
-    gtfs = odb._load_gtfs_cached("smtuc")
-    route_ids = odb._line_to_route_ids(gtfs)[line]
+    gtfs = odb.load_gtfs_cached("smtuc")
+    route_ids = odb.line_to_route_ids(gtfs)[line]
     assert odb._line_avg_frequency_min(gtfs, route_ids, MONDAY) == expected

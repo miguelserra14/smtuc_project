@@ -10,9 +10,9 @@ import pytest
 
 from overlap.transit import resolve_reference_day
 from population.data_processing import (
-    _project_root,
-    _require_bgri_data,
-    _require_geo_stack,
+    project_root,
+    require_bgri_data,
+    require_geo_stack,
     compute_poi_underservice,
     compute_underserved_zones,
     filter_zones_by_distance,
@@ -26,17 +26,17 @@ from src.config import CATCHMENT_M, STADIUM_RADIUS_M, POPULATION_STADIUM_MAP_RAD
 
 
 def _require_geo_stack_or_skip() -> None:
-    """`_require_geo_stack` raises a plain RuntimeError (it's also called from production
+    """`require_geo_stack` raises a plain RuntimeError (it's also called from production
     code); tests want pytest to skip instead, so translate here."""
     try:
-        _require_geo_stack()
+        require_geo_stack()
     except RuntimeError as exc:
         pytest.skip(str(exc))
 
 
 def _require_bgri_data_or_skip() -> Path:
     try:
-        return _require_bgri_data()
+        return require_bgri_data()
     except RuntimeError as exc:
         pytest.skip(str(exc))
 

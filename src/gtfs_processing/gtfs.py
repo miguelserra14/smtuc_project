@@ -4,10 +4,13 @@ import argparse
 import shutil
 import zipfile
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+
+from gtfs_processing.timeutil import series_hhmmss_to_seconds
 
 # Fonte única para o projeto inteiro
 REQUIRED_GTFS = ("routes", "trips", "stop_times", "stops")
@@ -29,30 +32,30 @@ class GTFSData:
     calendar_dates: pd.DataFrame
 
 
+# Colunas de identificadores lidas SEMPRE como texto. Os feeds atuais têm ids numéricos, que o
+# pandas lia como int64 - o código fazia depois ~120 `astype(str)` espalhados para conseguir
+# juntar tabelas e comparar com ids vindos de CSV/config. `route_short_name` entra porque é o
+# número público da linha ("54", "5F"): lido como número, uma célula vazia tornava a coluna float
+# e "54" passava a "54.0".
+ID_COLUMNS = (
+    "agency_id",
+    "route_id",
+    "route_short_name",
+    "trip_id",
+    "service_id",
+    "shape_id",
+    "block_id",
+    "stop_id",
+    "parent_station",
+    "zone_id",
+)
+
+
 def _read_csv(source: Path, stem: str) -> pd.DataFrame:
     file_path = source / f"{stem}.txt"
     if not file_path.exists():
         return pd.DataFrame()
-    return pd.read_csv(file_path)
-
-
-def _to_seconds(hhmmss: str) -> int:
-    """Parse a GTFS HH:MM:SS string to seconds-from-midnight.
-
-    Deliberately lenient (returns 0 instead of raising) because this runs via
-    `.apply()` over the entire raw stop_times feed at load time: one malformed/blank row deep
-    in a third-party GTFS export must not abort ingestion of the whole dataset. Contrast with
-    `gtfs_processing.gtfs_probe._to_seconds`, which raises - that one parses user-supplied query
-    time strings, where failing fast on bad input is what you want. Do not merge these two
-    without also merging their different error-handling intents.
-    """
-    if not isinstance(hhmmss, str) or ":" not in hhmmss:
-        return 0
-    parts = hhmmss.split(":")
-    if len(parts) != 3:
-        return 0
-    h, m, s = (int(parts[0]), int(parts[1]), int(parts[2]))
-    return h * 3600 + m * 60 + s
+    return pd.read_csv(file_path, dtype={col: str for col in ID_COLUMNS})
 
 
 def _looks_like_gtfs_folder(folder: Path) -> bool:
@@ -120,8 +123,10 @@ def load_gtfs(source_dir: Optional[str] = None, dataset: str = "nd") -> GTFSData
         if col not in st.columns:
             raise ValueError(f"stop_times.txt sem coluna obrigatória: {col}")
 
-    st["arrival_seconds"] = st["arrival_time"].apply(_to_seconds)
-    st["departure_seconds"] = st["departure_time"].apply(_to_seconds)
+    # Estrito: uma hora vazia/malformada levanta ValueError (antes valia 0 = meia-noite em
+    # silêncio). O projeto não interpola horários de paragens sem ponto de controlo.
+    st["arrival_seconds"] = series_hhmmss_to_seconds(st["arrival_time"], f"arrival_time em {source}")
+    st["departure_seconds"] = series_hhmmss_to_seconds(st["departure_time"], f"departure_time em {source}")
 
     return GTFSData(
         routes=frames["routes"],
@@ -132,6 +137,15 @@ def load_gtfs(source_dir: Optional[str] = None, dataset: str = "nd") -> GTFSData
         calendar=frames["calendar"],
         calendar_dates=frames["calendar_dates"],
     )
+
+
+@lru_cache(maxsize=8)
+def load_gtfs_cached(dataset: str) -> GTFSData:
+    """`load_gtfs(dataset=...)` com cache em memória - a ÚNICA cache de feeds do projeto (antes
+    overlap_db e transit tinham cada um a sua, e lines_map/operations_population voltavam a ler
+    os ficheiros). O GTFSData devolvido é partilhado: quem o usa NÃO pode alterar os DataFrames no
+    lugar (trabalhar sobre `.copy()`). `load_gtfs_cached.cache_clear()` força nova leitura."""
+    return load_gtfs(dataset=dataset)
 
 
 def extract_or_copy_gtfs(src: Path, dst: Path) -> None:

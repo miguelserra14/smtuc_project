@@ -25,12 +25,7 @@ if TYPE_CHECKING:
     import geopandas as gpd
 
 
-def _project_root() -> Path:
-    """Wrapper for project_root() to match test imports."""
-    return project_root()
-
-
-def _require_geo_stack() -> None:
+def require_geo_stack() -> None:
     """Check if the geospatial stack is available.
 
     Raises a plain RuntimeError (not pytest.skip - this module is imported by production
@@ -47,8 +42,8 @@ def _require_geo_stack() -> None:
         raise RuntimeError("GeoPandas or Shapely não está disponível") from exc
 
 
-def _require_bgri_data() -> Path:
-    """Require the BGRI GeoPackage file to exist (see _require_geo_stack for why this
+def require_bgri_data() -> Path:
+    """Require the BGRI GeoPackage file to exist (see require_geo_stack for why this
     raises RuntimeError instead of calling pytest.skip directly)."""
     gpkg = project_root() / "data" / "dadospopulacaoBGRI" / "BGRI2021_0603.gpkg"
     if not gpkg.exists():
@@ -104,7 +99,7 @@ def compute_underserved_zones(
         Merged GeoDataFrame with BGRI geometries and underservice scores
     """
     if bgri_gpkg_path is None:
-        bgri_gpkg_path = str(_require_bgri_data())
+        bgri_gpkg_path = str(require_bgri_data())
 
     gap = compute_bgri_population_transport_gap(
         day_str=day_str,
@@ -194,7 +189,7 @@ def get_population_near_stadium(
         Tuple of (total_population, population_in_radius, percentage)
     """
     if bgri_gpkg_path is None:
-        bgri_gpkg_path = str(_require_bgri_data())
+        bgri_gpkg_path = str(require_bgri_data())
 
     bgri = load_and_prepare_bgri(bgri_gpkg_path, layer)
     stadium_geo = create_stadium_point(bgri.crs)

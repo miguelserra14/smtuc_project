@@ -136,10 +136,10 @@ def current_snapshot(tmp_path_factory: pytest.TempPathFactory) -> pd.DataFrame:
     if not BASELINE.exists():
         pytest.skip(f"linha de base em falta: {BASELINE}")
     try:
-        from population.data_processing import _require_bgri_data, _require_geo_stack
+        from population.data_processing import require_bgri_data, require_geo_stack
 
-        _require_geo_stack()
-        _require_bgri_data()
+        require_geo_stack()
+        require_bgri_data()
     except Exception as exc:  # geostack/BGRI são opcionais
         pytest.skip(f"geostack/BGRI não disponível: {exc}")
     df = snap_mod.take_snapshot("teste", workdir=tmp_path_factory.mktemp("snapshot"))

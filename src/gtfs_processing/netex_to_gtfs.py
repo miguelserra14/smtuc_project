@@ -39,6 +39,8 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from datetime import date, timedelta
 
+from gtfs_processing.timeutil import hhmmss_to_seconds, seconds_to_hhmmss
+
 NS = "{http://www.netex.org.uk/netex}"
 
 Table = tuple[list[str], list[dict[str, str]]]
@@ -82,15 +84,6 @@ def _bool(value: str, what: str) -> bool:
     if value in ("false", "0"):
         return False
     raise NetexError(f"{what}: valor booleano inesperado {value!r}")
-
-
-def _seconds(hhmmss: str) -> int:
-    h, m, s = hhmmss.split(":")
-    return int(h) * 3600 + int(m) * 60 + int(s)
-
-
-def _hhmmss(seconds: int) -> str:
-    return f"{seconds // 3600:02d}:{seconds % 3600 // 60:02d}:{seconds % 60:02d}"
 
 
 def _day(value: str) -> date:
@@ -254,7 +247,7 @@ def netex_to_gtfs(xml_bytes: bytes, night_start_before: str = "04:00:00") -> tup
         }
 
     # trips + stop_times
-    night_cutoff = _seconds(night_start_before)
+    night_cutoff = hhmmss_to_seconds(night_start_before)
     trip_rows, stop_time_rows = [], []
     wrapped_trips = night_trips = offset_trips = 0
     pickup_none = dropoff_none = 0
@@ -281,7 +274,7 @@ def netex_to_gtfs(xml_bytes: bytes, night_start_before: str = "04:00:00") -> tup
             arr_off = int(_text(tpt, f"{NS}ArrivalDayOffset", "0") or 0)
             dep_off = int(_text(tpt, f"{NS}DepartureDayOffset", "0") or 0)
             has_offset |= bool(arr_off or dep_off)
-            passings.append((points[point_ref], _seconds(arr) + arr_off * 86400, _seconds(dep) + dep_off * 86400))
+            passings.append((points[point_ref], hhmmss_to_seconds(arr) + arr_off * 86400, hhmmss_to_seconds(dep) + dep_off * 86400))
         passings.sort(key=lambda p: p[0][0])
         if not passings:
             raise NetexError(f"ServiceJourney {jid}: sem horários")
@@ -313,7 +306,7 @@ def netex_to_gtfs(xml_bytes: bytes, night_start_before: str = "04:00:00") -> tup
             pickup_none += not boarding
             dropoff_none += not alighting
             stop_time_rows.append({
-                "trip_id": trip_id, "arrival_time": _hhmmss(arr), "departure_time": _hhmmss(dep),
+                "trip_id": trip_id, "arrival_time": seconds_to_hhmmss(arr), "departure_time": seconds_to_hhmmss(dep),
                 "stop_id": stop_id, "stop_sequence": str(order),
                 "pickup_type": "0" if boarding else "1", "drop_off_type": "0" if alighting else "1",
             })

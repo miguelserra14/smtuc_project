@@ -214,9 +214,12 @@ def netex_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     def put(counts: dict | None = None, with_validation: bool = True, versionado: bool = True) -> "bf.Build":
         buf = io.BytesIO()
+        # Data fixa nas entradas: com writestr(nome, ...) o zip leva a hora atual (resolução de
+        # 2 s) e dois put() seguidos davam sha256 diferentes quando cruzavam essa fronteira.
+        stamp = (2026, 1, 1, 0, 0, 0)
         with zipfile.ZipFile(buf, "w") as zf:
-            zf.writestr("netex.xml", netex())
-            zf.writestr("metadata.jsonld", json.dumps({"dcterms:identifier": "urn:agit:Dataset:metro-mondego"}))
+            zf.writestr(zipfile.ZipInfo("netex.xml", stamp), netex())
+            zf.writestr(zipfile.ZipInfo("metadata.jsonld", stamp), json.dumps({"dcterms:identifier": "urn:agit:Dataset:metro-mondego"}))
         data = buf.getvalue()
         (raw / rel).parent.mkdir(parents=True, exist_ok=True)
         (raw / rel).write_bytes(data)
@@ -294,9 +297,9 @@ def _real(dataset: str):
 
 
 def _trips_on(gtfs, day: date) -> tuple[list[str], int]:
-    from gtfs_processing.gtfs_probe import _active_service_ids
+    from gtfs_processing.gtfs_probe import active_service_ids
 
-    services = _active_service_ids(gtfs, day)
+    services = active_service_ids(gtfs, day)
     return sorted(services), int(gtfs.trips["service_id"].astype(str).isin(services).sum())
 
 

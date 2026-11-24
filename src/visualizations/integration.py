@@ -7,14 +7,15 @@ import pandas as pd
 
 from config import OUTPUTS_INTEGRATION_DIR
 from overlap.transit import (
-    _hhmmss_to_seconds,
     build_line_stop_vs_metro_table,
     build_metro_bus_connection_metrics,
     build_reverse_stop_vs_metro_table,
     compute_transfer_waits,
     resolve_reference_day,
+    safe_slug,
 )
 from gtfs_processing.scenarios import Scenario, get_scenario
+from gtfs_processing.timeutil import hhmmss_to_seconds, seconds_to_hhmmss
 
 try:
     import plotly.express as px
@@ -32,22 +33,6 @@ _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 def _read_template(template_name: str) -> str:
     template_path = _TEMPLATE_DIR / template_name
     return template_path.read_text(encoding="utf-8")
-
-
-def _safe_slug(value: str) -> str:
-    out = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(value).strip())
-    while "__" in out:
-        out = out.replace("__", "_")
-    out = out.strip("_")
-    return out or "value"
-
-
-def _seconds_to_hhmmss(value: int) -> str:
-    value = int(value)
-    h = value // 3600
-    m = (value % 3600) // 60
-    s = value % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 def _line_display(line_number: str | int | list[str | int] | tuple[str | int, ...]) -> str:
@@ -90,7 +75,7 @@ def _build_waits_table(schedule_df: pd.DataFrame) -> pd.DataFrame:
             class_label = ">15"
         rows.append(
             {
-                "metro_time": _seconds_to_hhmmss(w["trigger_s"]),
+                "metro_time": seconds_to_hhmmss(w["trigger_s"]),
                 "next_bus_time": w["target_time"],
                 "next_bus_line": w["target_line"],
                 "wait_min": wait_min,
@@ -112,7 +97,7 @@ def _shift_schedule_bus_times(schedule_df: pd.DataFrame, line_value: str, shift_
     line_col = out["bus_line_passage"] if "bus_line_passage" in out.columns else out["bus_line"]
     mask = (line_col.astype(str).str.strip() == str(line_value)) & (out["bus_time"].astype(str).str.strip() != "")
     shifted = out.loc[mask, "bus_time"].astype(str).map(
-        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + shift_minutes * 60)))
+        lambda t: seconds_to_hhmmss(int(round(hhmmss_to_seconds(t) + shift_minutes * 60)))
     )
     out.loc[mask, "bus_time"] = shifted
     return out
@@ -128,7 +113,7 @@ def _shift_reverse_schedule_bus_arrivals(schedule_df: pd.DataFrame, shift_minute
     out = schedule_df.copy()
     mask = out["metro_time_from_origin"].astype(str).str.strip() != ""
     shifted = out.loc[mask, "metro_time_from_origin"].astype(str).map(
-        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + shift_minutes * 60)))
+        lambda t: seconds_to_hhmmss(int(round(hhmmss_to_seconds(t) + shift_minutes * 60)))
     )
     out.loc[mask, "metro_time_from_origin"] = shifted
     return out
@@ -149,11 +134,11 @@ def _double_and_shift_schedule_bus_times(
     base_rows = out.loc[mask]
     dup_rows = base_rows.copy()
     dup_rows["bus_time"] = dup_rows["bus_time"].astype(str).map(
-        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + 20 * 60)) % 86400)
+        lambda t: seconds_to_hhmmss(int(round(hhmmss_to_seconds(t) + 20 * 60)) % 86400)
     )
     doubled = pd.concat([base_rows, dup_rows], ignore_index=True)
     doubled["bus_time"] = doubled["bus_time"].astype(str).map(
-        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + shift_minutes * 60)) % 86400)
+        lambda t: seconds_to_hhmmss(int(round(hhmmss_to_seconds(t) + shift_minutes * 60)) % 86400)
     )
     if "idx" in doubled.columns:
         doubled["idx"] = range(1, len(doubled) + 1)
@@ -171,11 +156,11 @@ def _double_and_shift_reverse_schedule_bus_arrivals(schedule_df: pd.DataFrame, s
     base_rows = out.loc[mask]
     dup_rows = base_rows.copy()
     dup_rows["metro_time_from_origin"] = dup_rows["metro_time_from_origin"].astype(str).map(
-        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + 20 * 60)) % 86400)
+        lambda t: seconds_to_hhmmss(int(round(hhmmss_to_seconds(t) + 20 * 60)) % 86400)
     )
     doubled = pd.concat([base_rows, dup_rows], ignore_index=True)
     doubled["metro_time_from_origin"] = doubled["metro_time_from_origin"].astype(str).map(
-        lambda t: _seconds_to_hhmmss(int(round(_hhmmss_to_seconds(t) + shift_minutes * 60)) % 86400)
+        lambda t: seconds_to_hhmmss(int(round(hhmmss_to_seconds(t) + shift_minutes * 60)) % 86400)
     )
     if "idx" in doubled.columns:
         doubled["idx"] = range(1, len(doubled) + 1)
@@ -220,7 +205,7 @@ def _wait_chart_traces(
     rótulos do "atual" - ver `config.LINE_54_MELHORADO_PHASE_SHIFT_MIN`. Se omitido, usa-se a
     ordem posicional própria deste `waits_df` (comportamento antigo)."""
     waits_df_sorted = waits_df.copy()
-    waits_df_sorted["metro_time_s"] = waits_df_sorted["metro_time"].apply(_hhmmss_to_seconds)
+    waits_df_sorted["metro_time_s"] = waits_df_sorted["metro_time"].apply(hhmmss_to_seconds)
     waits_df_sorted = waits_df_sorted.sort_values("metro_time_s").reset_index(drop=True)
     if x_categories:
         position_by_time = {t: i for i, t in enumerate(x_categories)}
@@ -371,7 +356,7 @@ def _build_direction_figures(
     all_times: set[str] = set()
     for wdf in waits_df_by_key.values():
         all_times.update(str(v) for v in wdf["metro_time"].tolist() if str(v).strip())
-    x_categories = sorted(all_times, key=_hhmmss_to_seconds)
+    x_categories = sorted(all_times, key=hhmmss_to_seconds)
 
     # 1) Wait-time bar plot with point overlays for special cases
     waits_traces_current, _ = _wait_chart_traces(
@@ -634,7 +619,7 @@ def generate_connection_visualizations(
     # Data mostrada = dia de referência do cenário (o mesmo das tabelas acima).
     sample_date = resolve_reference_day(scenario=sc).strftime("%Y-%m-%d")
     line_display = _line_display(line_number)
-    prefix = output_prefix or f"l{_safe_slug(line_display)}"
+    prefix = output_prefix or f"l{safe_slug(line_display)}"
 
     if "bus_line_passage" in schedule_df.columns:
         bus_line_col = schedule_df["bus_line_passage"].astype(str).str.strip()
@@ -751,12 +736,12 @@ def generate_connection_visualizations(
 
     waits_csv_path = atual_dir / f"{prefix}_wt.csv"
     schedule_csv_path = atual_dir / (
-        f"line_{_safe_slug(line_number)}_bus_{_safe_slug(bus_stop_ref)}"
-        f"_metro_{_safe_slug(metro_stop_ref)}.csv"
+        f"line_{safe_slug(line_number)}_bus_{safe_slug(bus_stop_ref)}"
+        f"_metro_{safe_slug(metro_stop_ref)}.csv"
     )
     metrics_csv_path = atual_dir / (
-        f"line_{_safe_slug(line_number)}_connection_metrics_"
-        f"{_safe_slug(bus_stop_ref)}_vs_{_safe_slug(metro_stop_ref)}.csv"
+        f"line_{safe_slug(line_number)}_connection_metrics_"
+        f"{safe_slug(bus_stop_ref)}_vs_{safe_slug(metro_stop_ref)}.csv"
     )
 
     waits_df.to_csv(waits_csv_path, index=False)
@@ -774,8 +759,8 @@ def generate_connection_visualizations(
         melhorado_dir.mkdir(parents=True, exist_ok=True)
         schedule_df_melhorado.to_csv(
             melhorado_dir / (
-                f"line_{_safe_slug(line_number)}_bus_{_safe_slug(bus_stop_ref)}"
-                f"_metro_{_safe_slug(metro_stop_ref)}_melhorado.csv"
+                f"line_{safe_slug(line_number)}_bus_{safe_slug(bus_stop_ref)}"
+                f"_metro_{safe_slug(metro_stop_ref)}_melhorado.csv"
             ),
             index=False,
         )
@@ -787,8 +772,8 @@ def generate_connection_visualizations(
         melhorado_dir.mkdir(parents=True, exist_ok=True)
         schedule_df_rev_melhorado.to_csv(
             melhorado_dir / (
-                f"reverse_line_{_safe_slug(line_number)}_bus_{_safe_slug(bus_stop_ref)}"
-                f"_metro_{_safe_slug(metro_stop_ref)}_melhorado.csv"
+                f"reverse_line_{safe_slug(line_number)}_bus_{safe_slug(bus_stop_ref)}"
+                f"_metro_{safe_slug(metro_stop_ref)}_melhorado.csv"
             ),
             index=False,
         )

@@ -6,8 +6,8 @@ from typing import Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from gtfs_processing.gtfs import load_gtfs
-from gtfs_processing.gtfs_probe import _active_service_ids, _parse_day
+from gtfs_processing.gtfs import load_gtfs_cached
+from gtfs_processing.gtfs_probe import active_service_ids, parse_day
 from population._common import (
     ensure_crs,
     infer_bgri_id_col,
@@ -31,19 +31,18 @@ def _require_geopandas() -> None:
 
 
 def _departures_per_stop_for_day(dataset: str, day: date) -> pd.DataFrame:
-    gtfs = load_gtfs(dataset=dataset)
+    gtfs = load_gtfs_cached(dataset)
 
-    active_services = _active_service_ids(gtfs, day)
+    active_services = active_service_ids(gtfs, day)
     trips = gtfs.trips.copy()
-    trips["service_id"] = trips["service_id"].astype(str)
-    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver _active_service_ids.
+    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
     trips = trips[trips["service_id"].isin(active_services)]
 
     if trips.empty:
         return pd.DataFrame(columns=["stop_id", "departures", "stop_lat", "stop_lon", "dataset"])
 
-    active_trip_ids = set(trips["trip_id"].astype(str))
-    st = gtfs.stop_times[gtfs.stop_times["trip_id"].astype(str).isin(active_trip_ids)].copy()
+    active_trip_ids = set(trips["trip_id"])
+    st = gtfs.stop_times[gtfs.stop_times["trip_id"].isin(active_trip_ids)].copy()
     if st.empty:
         return pd.DataFrame(columns=["stop_id", "departures", "stop_lat", "stop_lon", "dataset"])
 
@@ -69,7 +68,7 @@ def compute_bgri_population_transport_gap(
 ) -> pd.DataFrame:
     _require_geopandas()
 
-    d = _parse_day(day_str)
+    d = parse_day(day_str)
     gpkg = resolve_path(bgri_gpkg_path)
     if not gpkg.exists():
         raise FileNotFoundError(f"Ficheiro BGRI não encontrado: {gpkg}")
@@ -176,7 +175,7 @@ def compute_poi_transport_gap(
         out["poi_underservice_score"] = pd.Series(dtype=float)
         return out
 
-    d = _parse_day(day_str)
+    d = parse_day(day_str)
 
     dep_frames: list[pd.DataFrame] = []
     for dataset in datasets:
