@@ -16,8 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 # Linha de base ATUAL (dados e desvios em uso). Registos anteriores em reports/metricas/ (ver o
 # README de lá): sintetico.csv (metro sintético) -> oficial_fase1.csv (metro oficial, desvios
 # antigos) -> oficial_fase1_desvios.csv (desvios decididos a 2026-11-16) -> oficial_fase1_d24.csv
-# (D2.4: a 38 conta em Portagem com origem própria; nós por distância).
-BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1_d24.csv"
+# (D2.4: a 38 conta em Portagem com origem própria; nós por distância) -> oficial_fase1_t3.csv
+# (T3: overlap temporal só com o serviço do dia de referência; só mudam as colunas temporal_*).
+BASELINE = ROOT / "reports" / "metricas" / "oficial_fase1_t3.csv"
 
 
 def _load_script():
@@ -171,3 +172,8 @@ def test_baseline_covers_every_section_and_known_values(current_snapshot: pd.Dat
     assert base[("busca_fase_54", "otimizado", "shift_min")] == "0"
     assert base[("busca_fase_54", "melhorado", "shift_min")] == "-10"
     assert base[("esperas_54", "Portagem metro→bus | otimizado", "shift_min")] == "-10"
+    # T3 (aprovado 2026-11-24): overlap temporal do dia de referência (2026-05-11), não da semana
+    # somada - antes 14115 de 15292 (92.3 %).
+    assert base[("overlap_resumo", "total", "temporal_overlap_times")] == "4651"
+    assert base[("overlap_resumo", "total", "total_spatial_candidates")] == "4971"
+    assert base[("overlap_resumo", "total", "temporal_overlap_pct")] == "93.56"

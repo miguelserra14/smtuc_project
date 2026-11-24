@@ -29,7 +29,9 @@ from gtfs_processing.scenarios import Scenario, get_scenario, scenario_output_pa
 # sem isto um CSV calculado com a fórmula antiga continuava a ser servido até um force_refresh.
 #   2 - avg_freq_min por dia de referência + sentido + mediana 7h-20h, + coluna ref_day_trips
 #       (passo 0.1 do roadmap)
-LINE_METRICS_SCHEMA_VERSION = 2
+#   3 - overlap temporal (temporal_*) só com o serviço do dia de referência, dos dois lados;
+#       serviço desconhecido deixa de contar como partilhado (passo 3.4 / T3)
+LINE_METRICS_SCHEMA_VERSION = 3
 
 
 def _min_distance_to_points_m(
@@ -481,6 +483,7 @@ def build_line_metrics_db(
             metrobus_dataset=metrobus_dataset,
             walk_speed_m_min=walk_speed_m_min,
             temporal_overlap_max_min=TEMPORAL_OVERLAP_MAX_MIN,
+            reference_day=reference_day,
         )
     except Exception as exc:
         # NÃO se grava nada: antes gravava-se o CSV com zeros nas colunas temporais, que ficava

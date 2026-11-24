@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,13 @@ from config import (
     TEMPORAL_OVERLAP_MAX_MIN,
     WALK_SPEED_M_MIN,
 )
-from gtfs_processing.scenarios import DEFAULT_DATASETS, DEFAULT_METRO_DATASET, DEFAULT_SMTUC_DATASET
+from gtfs_processing.scenarios import (
+    DEFAULT_DATASETS,
+    DEFAULT_METRO_DATASET,
+    DEFAULT_SMTUC_DATASET,
+    get_scenario,
+    scenario_reference_day,
+)
 from overlap.overlap_db import (
     build_line_metrics_db,
     load_line_metrics_db,
@@ -27,7 +33,7 @@ from overlap.overlap_db import (
     _line_numeric_prefix,
 )
 from gtfs_processing.geo import haversine_m
-from gtfs_processing.gtfs_probe import active_service_ids, alias_day_mask, parse_day
+from gtfs_processing.gtfs_probe import active_service_ids, parse_day
 from gtfs_processing.timeutil import hhmmss_to_seconds
 
 
@@ -97,54 +103,6 @@ def line_low_overlap_near_stadium_top(
     )
 
 
-def _service_day_masks(calendar_df: pd.DataFrame) -> dict[str, tuple[int, ...]]:
-    day_cols = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-    if calendar_df is None or calendar_df.empty or "service_id" not in calendar_df.columns:
-        return {}
-
-    cal = calendar_df.copy()
-    for day_col in day_cols:
-        if day_col not in cal.columns:
-            cal[day_col] = 0
-
-    out: dict[str, tuple[int, ...]] = {}
-    for row in cal[["service_id", *day_cols]].itertuples(index=False):
-        out[str(row[0])] = tuple(int(v) for v in row[1:])
-    return out
-
-
-def _resolve_service_day_mask(
-    service_id: str,
-    calendar_masks: dict[str, tuple[int, ...]],
-) -> tuple[int, ...] | None:
-    """Resolve a service_id to its (mon..sun) weekly mask.
-
-    Tries a direct calendar.txt lookup first, then falls back to alias-based resolution
-    (e.g. "WD"/"SAT"/"SUN") for feeds where trips.txt's service_id namespace doesn't match
-    calendar.txt's - same mismatch fixed in `active_service_ids`, needed here too since this
-    compares service_id values taken straight from trips.txt/stop_times, not from calendar.txt.
-    """
-    mask = calendar_masks.get(str(service_id))
-    if mask is not None:
-        return mask
-    return alias_day_mask(service_id)
-
-
-def _service_days_overlap(
-    smtuc_service_id: str,
-    metro_service_id: str,
-    smtuc_masks: dict[str, tuple[int, ...]],
-    metro_masks: dict[str, tuple[int, ...]],
-) -> bool:
-    smtuc_mask = _resolve_service_day_mask(smtuc_service_id, smtuc_masks)
-    metro_mask = _resolve_service_day_mask(metro_service_id, metro_masks)
-
-    if smtuc_mask is None or metro_mask is None:
-        return True
-
-    return any((a == 1 and b == 1) for a, b in zip(smtuc_mask, metro_mask))
-
-
 def _normalize_line_value(raw_line: object) -> str | None:
     if pd.isna(raw_line):
         return None
@@ -171,6 +129,11 @@ _TEMPORAL_EVENT_COLUMNS = [
 ]
 
 
+def _default_reference_day(reference_day: date | None) -> date:
+    # Por omissão, o dia do cenário por omissão - o mesmo a que pertencem DEFAULT_*_DATASET.
+    return reference_day if reference_day is not None else scenario_reference_day(get_scenario())
+
+
 def _temporal_overlap_passages(
     lines: list[str],
     smtuc_dataset: str,
@@ -178,16 +141,19 @@ def _temporal_overlap_passages(
     walk_speed_m_min: float,
     temporal_overlap_max_min: float,
     spatial_overlap_walk_min: float,
+    reference_day: date,
 ) -> tuple[pd.DataFrame, set[str]] | None:
     """Regra ÚNICA do overlap temporal (usada pelas métricas por linha e pela lista de eventos).
 
-    Para cada linha pedida, considera TODAS as passagens SMTUC (cada linha de stop_times de cada
-    viagem da linha, em qualquer serviço). Uma passagem é:
+    Só conta o serviço do DIA DE REFERÊNCIA (passo 3.4 / T3): viagens SMTUC e do metro cujo
+    service_id esteja ativo nesse dia (`active_service_ids` - calendário, calendar_dates e
+    feriados como domingo; dia fora do período do feed = ServiceCalendarError). Para cada linha
+    pedida, cada passagem SMTUC desse dia (cada linha de stop_times) é:
     - candidata espacial se houver alguma paragem do metro a <= velocidade x minutos a pé;
-    - sobreposição temporal se, numa dessas paragens do metro, houver uma passagem do metro a
-      <= `temporal_overlap_max_min` minutos (|diferença|) cujo serviço partilhe algum dia da
-      semana com o da passagem SMTUC (`_service_days_overlap`; serviço impossível de resolver
-      conta como partilhado - ver passo 3.4 do roadmap).
+    - sobreposição temporal se, numa dessas paragens, passar um metro do mesmo dia a
+      <= `temporal_overlap_max_min` minutos (|diferença|).
+    Antes (até ao schema 2 da cache) comparavam-se padrões semanais - dias úteis, sábados e
+    domingos somados - e um serviço impossível de resolver contava como partilhado.
 
     Devolve (passagens, linhas_conhecidas): uma linha por passagem SMTUC com coordenadas, por
     ordem das linhas pedidas e, dentro de cada linha, pela ordem de stop_times.txt, com as
@@ -195,9 +161,8 @@ def _temporal_overlap_passages(
     temporal_overlap (bool); e o conjunto de linhas pedidas que existem no feed. None se o metro
     não tiver paragens ou horários (os chamadores mantêm então o que já tinham).
 
-    Vetorizado (passo 5.1): distâncias numa matriz por coordenada única de paragem SMTUC e, por
-    paragem SMTUC x serviço do metro, `searchsorted` sobre os horários ordenados do metro - em
-    vez de um ciclo Python por passagem (~170 mil) com um ciclo interno por passagem do metro.
+    Vetorizado (passo 5.1): distâncias numa matriz por coordenada única de paragem SMTUC e
+    `searchsorted` sobre os horários ordenados do metro nas paragens próximas.
     """
     gtfs_smtuc = load_gtfs_cached(smtuc_dataset)
     gtfs_metro = load_gtfs_cached(metrobus_dataset)
@@ -206,18 +171,20 @@ def _temporal_overlap_passages(
     threshold_s = int(float(temporal_overlap_max_min) * 60)
 
     metro_stops = gtfs_metro.stops[["stop_id", "stop_lat", "stop_lon"]].dropna()
-    metro_st = gtfs_metro.stop_times[["trip_id", "stop_id", "arrival_seconds"]].merge(
-        gtfs_metro.trips[["trip_id", "service_id"]], on="trip_id", how="left"
-    )
-    if metro_stops.empty or metro_st.empty:
+    if metro_stops.empty or gtfs_metro.stop_times.empty:
         return None
 
-    # Horários do metro por paragem e por serviço, já ordenados (para o searchsorted).
+    # Filtra SEMPRE pelo dia (conjunto vazio = dia sem serviço -> nada conta).
+    metro_trips = gtfs_metro.trips.loc[
+        gtfs_metro.trips["service_id"].isin(active_service_ids(gtfs_metro, reference_day)), ["trip_id"]
+    ]
+    metro_st = gtfs_metro.stop_times[["trip_id", "stop_id", "arrival_seconds"]].merge(metro_trips, on="trip_id")
     metro_st = metro_st[metro_st["stop_id"].isin(metro_stops["stop_id"])]
-    metro_sid = metro_st["service_id"].astype(str)  # serviço em falta -> "nan", como antes
-    metro_times: dict[str, dict[str, np.ndarray]] = {}
-    for (stop_id, sid), grp in metro_st.groupby([metro_st["stop_id"], metro_sid], sort=False)["arrival_seconds"]:
-        metro_times.setdefault(stop_id, {})[sid] = np.sort(grp.to_numpy(dtype="int64"))
+    # Horários do metro do dia por paragem, já ordenados (para o searchsorted).
+    metro_times: dict[str, np.ndarray] = {
+        stop_id: np.sort(grp.to_numpy(dtype="int64"))
+        for stop_id, grp in metro_st.groupby("stop_id", sort=False)["arrival_seconds"]
+    }
 
     metro_stop_ids = metro_stops["stop_id"].to_numpy()
     metro_lat = metro_stops["stop_lat"].to_numpy(dtype="float64")
@@ -230,13 +197,14 @@ def _temporal_overlap_passages(
         [(rank, line, str(rid)) for rank, line in enumerate(wanted) for rid in routes_by_line[line]],
         columns=["_line_rank", "line", "route_id"],
     )
-    trips = gtfs_smtuc.trips[["trip_id", "service_id", "route_id"]].merge(line_routes, on="route_id")
+    day_trips = gtfs_smtuc.trips[gtfs_smtuc.trips["service_id"].isin(active_service_ids(gtfs_smtuc, reference_day))]
+    trips = day_trips[["trip_id", "route_id"]].merge(line_routes, on="route_id")
 
     stop_cols = ["stop_id", "stop_lat", "stop_lon"] + (["stop_name"] if "stop_name" in gtfs_smtuc.stops.columns else [])
     st = gtfs_smtuc.stop_times[["trip_id", "stop_id", "arrival_seconds"]].copy()
     st["_pos"] = np.arange(len(st))
     passages = (
-        st.merge(trips[["_line_rank", "line", "trip_id", "service_id"]], on="trip_id")
+        st.merge(trips[["_line_rank", "line", "trip_id"]], on="trip_id")
         .merge(gtfs_smtuc.stops[stop_cols], on="stop_id", how="left")
         .dropna(subset=["stop_lat", "stop_lon"])
         .sort_values(["_line_rank", "_pos"], kind="stable")
@@ -244,7 +212,6 @@ def _temporal_overlap_passages(
     )
     passages["stop_name"] = passages["stop_name"].astype(str) if "stop_name" in passages.columns else ""
     passages["time_sec"] = passages["arrival_seconds"].astype("int64")
-    smtuc_sid = passages["service_id"].astype(str).to_numpy()
 
     # Espacial: matriz (coordenadas únicas SMTUC x paragens do metro).
     coords = passages[["stop_lat", "stop_lon"]].to_numpy(dtype="float64")
@@ -254,38 +221,21 @@ def _temporal_overlap_passages(
     nearby_count = near.sum(axis=1)
     passages["nearby_metro_stops_count"] = nearby_count[coord_idx].astype("int64")
 
-    # Compatibilidade de dias entre serviços (poucos valores distintos de cada lado).
-    smtuc_masks = _service_day_masks(gtfs_smtuc.calendar)
-    metro_masks = _service_day_masks(gtfs_metro.calendar)
-    metro_sids = sorted({sid for by_sid in metro_times.values() for sid in by_sid})
-    compatible = {
-        (s, m): _service_days_overlap(s, m, smtuc_masks, metro_masks)
-        for s in set(smtuc_sid)
-        for m in metro_sids
-    }
-
     times = passages["time_sec"].to_numpy()
     overlap = np.zeros(len(passages), dtype=bool)
     order = np.argsort(coord_idx, kind="stable")
     bounds = np.searchsorted(coord_idx[order], np.arange(len(uniq) + 1))
     for u in np.flatnonzero(nearby_count):
+        arrays = [metro_times[stop_id] for stop_id in metro_stop_ids[near[u]] if stop_id in metro_times]
+        if not arrays:
+            continue
         rows = order[bounds[u]:bounds[u + 1]]
-        # horários do metro nas paragens próximas, juntados por serviço
-        by_sid: dict[str, list[np.ndarray]] = {}
-        for stop_id in metro_stop_ids[near[u]]:
-            for sid, arr in metro_times.get(stop_id, {}).items():
-                by_sid.setdefault(sid, []).append(arr)
-        for sid, arrays in by_sid.items():
-            ok_rows = rows[np.fromiter((compatible[(s, sid)] for s in smtuc_sid[rows]), dtype=bool, count=len(rows))]
-            ok_rows = ok_rows[~overlap[ok_rows]]
-            if len(ok_rows) == 0:
-                continue
-            metro = np.sort(np.concatenate(arrays))
-            t = times[ok_rows]
-            pos = np.searchsorted(metro, t)
-            before = np.abs(t - metro[np.clip(pos - 1, 0, len(metro) - 1)])
-            after = np.abs(metro[np.clip(pos, 0, len(metro) - 1)] - t)
-            overlap[ok_rows] |= np.minimum(before, after) <= threshold_s
+        metro = np.sort(np.concatenate(arrays))
+        t = times[rows]
+        pos = np.searchsorted(metro, t)
+        before = np.abs(t - metro[np.clip(pos - 1, 0, len(metro) - 1)])
+        after = np.abs(metro[np.clip(pos, 0, len(metro) - 1)] - t)
+        overlap[rows] = np.minimum(before, after) <= threshold_s
     passages["temporal_overlap"] = overlap
 
     cols = ["line", "stop_id", "stop_name", "time_sec", "nearby_metro_stops_count", "temporal_overlap"]
@@ -299,9 +249,11 @@ def compute_temporal_overlaps_for_db(
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     temporal_overlap_max_min: float = TEMPORAL_OVERLAP_MAX_MIN,
     spatial_overlap_walk_min: float = SPATIAL_OVERLAP_WALK_MIN,
+    reference_day: date | None = None,
 ) -> pd.DataFrame:
-    """Adiciona ao DataFrame de métricas, por linha, as colunas de overlap temporal (regra em
-    `_temporal_overlap_passages`): candidatos espaciais, passagens com overlap, % e paragens."""
+    """Adiciona ao DataFrame de métricas, por linha, as colunas de overlap temporal do dia de
+    referência (regra em `_temporal_overlap_passages`): candidatos espaciais, passagens com
+    overlap, % e paragens. `reference_day` por omissão = dia do cenário por omissão."""
     if metrics_df.empty:
         return metrics_df
 
@@ -322,6 +274,7 @@ def compute_temporal_overlaps_for_db(
         walk_speed_m_min,
         temporal_overlap_max_min,
         spatial_overlap_walk_min,
+        _default_reference_day(reference_day),
     )
     if result is None:
         return metrics_df
@@ -353,9 +306,10 @@ def temporal_overlap_events_for_metrics(
     walk_speed_m_min: float = WALK_SPEED_M_MIN,
     temporal_overlap_max_min: float = TEMPORAL_OVERLAP_MAX_MIN,
     spatial_overlap_walk_min: float = SPATIAL_OVERLAP_WALK_MIN,
+    reference_day: date | None = None,
 ) -> pd.DataFrame:
-    """Uma linha por passagem SMTUC com overlap temporal (mesma regra das métricas, ver
-    `_temporal_overlap_passages`), pela ordem das linhas de `metrics_df` (uma linha repetida em
+    """Uma linha por passagem SMTUC do dia de referência com overlap temporal (mesma regra das
+    métricas, ver `_temporal_overlap_passages`), pela ordem das linhas de `metrics_df` (uma linha repetida em
     `metrics_df` repete os seus eventos)."""
     empty = pd.DataFrame(columns=_TEMPORAL_EVENT_COLUMNS)
     if metrics_df.empty or "line" not in metrics_df.columns:
@@ -369,6 +323,7 @@ def temporal_overlap_events_for_metrics(
         walk_speed_m_min,
         temporal_overlap_max_min,
         spatial_overlap_walk_min,
+        _default_reference_day(reference_day),
     )
     if result is None:
         return empty

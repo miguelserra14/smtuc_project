@@ -33,14 +33,14 @@ Já feito:
 
 ## Principais números
 
-Valores de `reports/metricas/oficial_fase1_d24.csv` (antes) e `oficial_fase2.csv` (fase 2). Entre os dois cenários mudam o metro **e** o horário do SMTUC.
+Valores de `reports/metricas/oficial_fase1_t3.csv` (antes) e `oficial_fase2_t3.csv` (fase 2). Entre os dois cenários mudam o metro **e** o horário do SMTUC.
 
 | | Antes (11/05/2026) | Fase 2 (09/11/2026) |
 |---|---|---|
 | Linhas SMTUC com troços a ≤ 240 m do metro | 68 | 86 |
 | Paragens SMTUC a ≤ 240 m de uma estação | 59 | 94 |
 | Extensão de linhas SMTUC a par do metro (soma por linha) | 103,6 km | 338,1 km |
-| Passagens nessas paragens com um metro a ≤ 5 min | 92,3 % | 97,8 % |
+| Passagens nessas paragens com um metro a ≤ 5 min (no dia de referência) | 93,6 % | 95,6 % |
 | Tempo médio a partir do estádio, às 08:20 (ponderado pela população) | 39,5 min | 35,7 min |
 | População a ≤ 10 min do estádio | 14 141 | 16 633 |
 | População em subsecções sem oferta | 13 701 | 13 534 |

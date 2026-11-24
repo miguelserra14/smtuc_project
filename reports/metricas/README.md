@@ -11,7 +11,10 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `oficial_fase1.csv` | **Depois** (D1 passo 4, 2026-11-16): SMTUC Ep212 + **GTFS oficial** do Metro (fase 1), ainda com os desvios da 54 do sintético (−11 / −10) e o critério de busca antigo |
 | `diff_sintetico_vs_oficial_fase1.csv` | Todas as diferenças entre os dois (305 números) |
 | `oficial_fase1_desvios.csv` | O mesmo com os desvios **decididos** (−10 / 0) e o critério novo |
-| `oficial_fase1_d24.csv` | D2.4 (mesmos dados): a 38 conta em Portagem com origem própria (Santa Clara) e as paragens do nó incluem as que ficam a ≤ 250 m. É a linha de base atual (`test_snapshot_metrics.py`) |
+| `oficial_fase1_d24.csv` | D2.4 (mesmos dados): a 38 conta em Portagem com origem própria (Santa Clara) e as paragens do nó incluem as que ficam a ≤ 250 m. Linha de base até ao T3 |
+| `oficial_fase1_t3.csv` | T3 (2026-11-24, mesmos dados): overlap temporal só com o serviço do dia de referência. É a linha de base atual (`test_snapshot_metrics.py`) |
+| `oficial_fase2_t3.csv` | O mesmo para o cenário `fase2` |
+| `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
 | `busca_fase_54_fase2_oficial.csv` | Busca de desvio na rede da **fase 2 oficial** (cenário `fase2_oficial`): −10 / 0, os valores adotados |
@@ -99,3 +102,17 @@ Mudam o metro (NeTEx oficial), o SMTUC (Ep225) e o dia (2026-11-09). Os números
 - **Overlap espacial:** estações em overlap 88 → 94 e linhas SMTUC com overlap 94 → 86. A extensão em overlap fica igual (338 km). O salto face aos 104 km da fase 1 vem da rede da fase 2 (Baixa, Coimbra B) e já existia no sintético.
 - **Isócronas e população:** o tempo médio ponderado a partir do estádio passa de 37,9 para 35,7 min; as partidas por dia sobem 1,5 %.
 - **Esperas da 54** (novas no slide): Portagem metro→autocarro 19,0 min e autocarro→metro 4,5 min; Portela 19,8 e 6,3 min (mediana).
+
+## Overlap temporal só no dia de referência (T3, 2026-11-24)
+
+Mesmos dados e parâmetros; muda só a regra do overlap temporal, aprovada pelo utilizador. Antes comparavam-se padrões semanais: as passagens de dias úteis, sábados e domingos somavam-se, e um serviço sem calendário contava como "partilhado". Agora contam só as viagens SMTUC e do metro que circulam no dia de referência (feriados como domingo), como nas outras métricas. Mudam só as colunas `temporal_*`; frequências, esperas, isócronas e população ficam iguais.
+
+| | Antes: semana | Antes: dia | Fase 2: semana | Fase 2: dia |
+|---|---|---|---|---|
+| Passagens SMTUC junto ao metro | 15 292 | 4 971 | 35 553 | 10 294 |
+| …com um metro a ≤ 5 min | 14 115 | 4 651 | 34 785 | 9 840 |
+| % | 92,3 % | 93,6 % | 97,8 % | 95,6 % |
+| Linhas com overlap temporal | 82 | 74 | 88 | 82 |
+
+- As contagens descem cerca de 70 % por passarem de uma semana somada a um dia útil; a percentagem quase não muda.
+- Deixam de ter overlap as linhas que não circulam no dia de referência: no `antes` 5F, 10F, 18F, 22F, 23F, 28F, 47F e 50M; na fase 2 18F, 22F, 23F, 28F, 36F e 47F.
