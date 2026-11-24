@@ -8,7 +8,11 @@ import pytest
 
 import config
 from gtfs_processing import gtfs as gtfs_mod
-from gtfs_processing.gtfs import _find_gtfs_dir, dataset_dir
+from gtfs_processing.gtfs import _find_gtfs_dir, _looks_like_gtfs_folder, dataset_dir
+# Importado aqui e não dentro dos testes: importar `overlap` com config.DATASET_DIRS trocado pelo
+# fixture `fake` corre a validação de cenários de scenarios.py contra o mapa falso e rebenta (o
+# teste só passava quando outro já tinha importado o módulo antes).
+from overlap import overlap_db
 
 _MIN_GTFS = {
     "agency.txt": "agency_id,agency_name\nA,Teste\n",
@@ -50,8 +54,6 @@ def test_files_must_be_directly_in_the_folder(fake: Path) -> None:
 
 
 def test_cache_signature_reads_the_same_folder_as_the_loader(fake: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from overlap import overlap_db
-
     monkeypatch.setattr(overlap_db, "_project_root", lambda: fake)
     folder = dataset_dir("plano", fake)
     _write_gtfs(folder)
@@ -88,9 +90,15 @@ def test_cache_signature_depends_on_content_not_mtime(fake: Path, monkeypatch: p
 
 def test_real_datasets_exist_where_config_says() -> None:
     root = Path(__file__).resolve().parents[2]
+    absent = []
     for name in config.DATASET_DIRS:
         folder = dataset_dir(name)
         assert folder == root / config.GTFS_DIR / config.DATASET_DIRS[name]
-        if not folder.exists():
-            pytest.skip(f"{name}: {folder} não existe nesta máquina")
+        # Pasta ausente, ou só com o PROVENANCE.json num clone (os .txt do SMTUC Ep225 estão fora do
+        # git): não há nada a verificar nesta máquina - mas continua com os outros datasets.
+        if not _looks_like_gtfs_folder(folder):
+            absent.append(name)
+            continue
         assert _find_gtfs_dir(name, root) == folder
+    if len(absent) == len(config.DATASET_DIRS):
+        pytest.skip(f"nenhum dataset GTFS nesta máquina: {absent}")

@@ -27,7 +27,6 @@ from gtfs_processing.scenarios import (
 )
 from overlap.overlap_db import (
     build_line_metrics_db,
-    load_line_metrics_db,
     load_gtfs_cached,
     line_to_route_ids,
     _line_numeric_prefix,
@@ -443,114 +442,6 @@ def _reach_bin_label(minutes: float) -> str:
     if minutes <= 60.0:
         return "30-60"
     return ">60"
-
-
-def _reachable_stops_for_dataset_now(
-    dataset: str,
-    origin_lat: float,
-    origin_lon: float,
-    day_str: str,
-    time_str: str,
-    walk_speed_m_min: float = WALK_SPEED_M_MIN,
-    max_min: float = REACHABILITY_MAX_MIN,
-    max_board_walk_min: float = REACHABILITY_MAX_BOARDING_WALK_MIN,
-) -> pd.DataFrame:
-    gtfs = load_gtfs_cached(dataset)
-
-    stops = gtfs.stops[["stop_id", "stop_lat", "stop_lon"]].dropna().copy()
-    if stops.empty:
-        return pd.DataFrame(columns=["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"])
-
-    stop_ids = stops["stop_id"].to_numpy()
-    stop_lats = stops["stop_lat"].astype(float).to_numpy()
-    stop_lons = stops["stop_lon"].astype(float).to_numpy()
-
-    direct_walk_m = haversine_m(origin_lat, origin_lon, stop_lats, stop_lons)
-    direct_walk_min = direct_walk_m / float(walk_speed_m_min)
-
-    reach_by_stop = pd.Series(direct_walk_min, index=stop_ids, dtype="float64")
-
-    day = parse_day(day_str)
-    t0 = int(hhmmss_to_seconds(time_str))
-    active_services = active_service_ids(gtfs, day)
-
-    trips = gtfs.trips[["trip_id", "service_id"]].copy()
-    # Filtra SEMPRE (mesmo com o conjunto vazio = dia sem serviço) - ver active_service_ids.
-    trips = trips[trips["service_id"].isin(active_services)]
-    if trips.empty:
-        out = stops.copy()
-        out["dataset"] = dataset
-        out["reach_min"] = reach_by_stop.reindex(out["stop_id"]).astype(float).to_numpy()
-        return out[["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"]]
-
-    st_cols = ["trip_id", "stop_id", "stop_sequence", "departure_seconds", "arrival_seconds"]
-    st = gtfs.stop_times[st_cols].copy()
-    st = st.merge(trips, on="trip_id", how="inner")
-    if st.empty:
-        out = stops.copy()
-        out["dataset"] = dataset
-        out["reach_min"] = reach_by_stop.reindex(out["stop_id"]).astype(float).to_numpy()
-        return out[["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"]]
-
-    walk_df = pd.DataFrame({"stop_id": stop_ids, "walk_to_board_min": direct_walk_min})
-    boardable_ids = set(walk_df.loc[walk_df["walk_to_board_min"] <= float(max_board_walk_min), "stop_id"].astype(str))
-
-    board = st[
-        st["stop_id"].isin(boardable_ids)
-        & st["departure_seconds"].notna()
-        & (st["departure_seconds"].astype(float) >= float(t0))
-    ][["trip_id", "stop_id", "stop_sequence", "departure_seconds"]].copy()
-
-    if not board.empty:
-        board = board.merge(walk_df, on="stop_id", how="left")
-
-        alight = st[["trip_id", "stop_id", "stop_sequence", "arrival_seconds"]].copy()
-        alight = alight.rename(
-            columns={
-                "stop_id": "alight_stop_id",
-                "stop_sequence": "alight_seq",
-                "arrival_seconds": "alight_arrival_s",
-            }
-        )
-
-        board = board.rename(
-            columns={
-                "stop_sequence": "board_seq",
-                "departure_seconds": "board_dep_s",
-            }
-        )
-
-        pairs = board.merge(alight, on="trip_id", how="inner")
-        pairs = pairs[
-            pairs["alight_arrival_s"].notna()
-            & (pairs["alight_seq"].astype(float) > pairs["board_seq"].astype(float))
-        ].copy()
-
-        if not pairs.empty:
-            pairs["total_min"] = (
-                pairs["walk_to_board_min"].astype(float)
-                + (pairs["board_dep_s"].astype(float) - float(t0)) / 60.0
-                + (pairs["alight_arrival_s"].astype(float) - pairs["board_dep_s"].astype(float)) / 60.0
-            )
-            pairs = pairs[pairs["total_min"] >= 0.0]
-
-            if not pairs.empty:
-                best_transit = pairs.groupby("alight_stop_id", as_index=False).agg(reach_min=("total_min", "min"))
-                best_transit["alight_stop_id"] = best_transit["alight_stop_id"].astype(str)
-
-                for _, row in best_transit.iterrows():
-                    sid = str(row["alight_stop_id"])
-                    best = float(row["reach_min"])
-                    current = float(reach_by_stop.get(sid, np.inf))
-                    if best < current:
-                        reach_by_stop.loc[sid] = best
-
-    out = stops.copy()
-    out["dataset"] = dataset
-    out["reach_min"] = reach_by_stop.reindex(out["stop_id"]).astype(float).to_numpy()
-    out = out[out["reach_min"].notna()].copy()
-    out = out[out["reach_min"] <= float(max_min)].copy()
-    return out[["dataset", "stop_id", "stop_lat", "stop_lon", "reach_min"]]
 
 
 def _reachable_stops_multimodal_now(

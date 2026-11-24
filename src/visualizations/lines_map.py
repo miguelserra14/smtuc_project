@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Iterable
 
@@ -16,14 +17,6 @@ from gtfs_processing.scenarios import DEFAULT_METRO_DATASET, DEFAULT_SMTUC_DATAS
 from gtfs_processing.gtfs import load_gtfs_cached
 from overlap.overlap_db import iter_route_direction_stop_arrays, line_metrics_db_path, line_to_route_ids
 from paths import project_path
-from visualizations.io import write_folium_html
-
-
-def _safe_center(lat: float, lon: float) -> tuple[float, float]:
-    try:
-        return float(lat), float(lon)
-    except Exception:
-        return 40.203809, -8.407904
 
 
 def create_overlap_lines_map(
@@ -41,6 +34,8 @@ def create_overlap_lines_map(
     """Create a standalone HTML map showing Metrobus and selected SMTUC lines (top/bottom overlap).
 
     The map is saved to `output_path` and includes layer control so users can toggle lines.
+    Uma falha a desenhar o metro ou as linhas levanta (o regenerate regista-a): antes era engolida
+    e o mapa saía sem essas camadas, ou sem a caixa "Mostrar linha", sem qualquer aviso.
     """
     if folium is None:
         raise ImportError("folium não disponível para gerar o mapa de linhas")
@@ -78,42 +73,27 @@ def create_overlap_lines_map(
     gtfs_smtuc = load_gtfs_cached(smtuc_dataset)
     gtfs_metro = load_gtfs_cached(metrobus_dataset)
 
-    center = _safe_center(*STADIUM_COORD)
+    center = (float(STADIUM_COORD[0]), float(STADIUM_COORD[1]))
     m = folium.Map(location=center, zoom_start=13, tiles="cartodbpositron")
 
     # Metrobus layer: prefer shapes if available
     metro_fg = FeatureGroup(name="Metrobus (shapes)", show=True)
-    try:
-        if hasattr(gtfs_metro, "shapes") and not gtfs_metro.shapes.empty:
-            for sid, grp in gtfs_metro.shapes.groupby("shape_id"):
-                pts = list(zip(grp["shape_pt_lat"].astype(float), grp["shape_pt_lon"].astype(float)))
+    if not gtfs_metro.shapes.empty:
+        for sid, grp in gtfs_metro.shapes.groupby("shape_id"):
+            pts = list(zip(grp["shape_pt_lat"].astype(float), grp["shape_pt_lon"].astype(float)))
+            if len(pts) >= 2:
+                folium.PolyLine(pts, color="#1976d2", weight=3, opacity=0.8).add_to(metro_fg)
+    else:
+        # Sem shapes.txt: liga as paragens pela ordem real dos trips (stop_sequence de um trip
+        # representativo por sentido), como nas linhas SMTUC, e marca as paragens.
+        for rid in gtfs_metro.routes["route_id"].tolist():
+            for lat_arr, lon_arr, _stop_ids, _count in iter_route_direction_stop_arrays(gtfs_metro, rid):
+                pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
                 if len(pts) >= 2:
                     folium.PolyLine(pts, color="#1976d2", weight=3, opacity=0.8).add_to(metro_fg)
-        else:
-            # Sem shapes.txt: liga as paragens pela ordem real dos trips (stop_sequence de um
-            # trip representativo por sentido), tal como já fazemos para as linhas SMTUC, em vez
-            # de deixar só pontos soltos.
-            try:
-                if hasattr(gtfs_metro, "routes") and not gtfs_metro.routes.empty:
-                    metro_route_ids = gtfs_metro.routes["route_id"].tolist()
-                    for rid in metro_route_ids:
-                        for lat_arr, lon_arr, _stop_ids, _count in iter_route_direction_stop_arrays(gtfs_metro, rid):
-                            pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
-                            if len(pts) >= 2:
-                                folium.PolyLine(pts, color="#1976d2", weight=3, opacity=0.8).add_to(metro_fg)
-            except Exception:
-                pass
-
-            try:
-                if hasattr(gtfs_metro, "stops") and not gtfs_metro.stops.empty:
-                    stops = gtfs_metro.stops.dropna(subset=["stop_lat", "stop_lon"])
-                    for _, s in stops.iterrows():
-                        folium.CircleMarker(location=(float(s.stop_lat), float(s.stop_lon)), radius=3, color="#1976d2", fill=True, fillOpacity=0.9).add_to(metro_fg)
-            except Exception:
-                # If even stops fail, do nothing
-                pass
-    except Exception:
-        pass
+        stops = gtfs_metro.stops.dropna(subset=["stop_lat", "stop_lon"])
+        for _, s in stops.iterrows():
+            folium.CircleMarker(location=(float(s.stop_lat), float(s.stop_lon)), radius=3, color="#1976d2", fill=True, fillOpacity=0.9).add_to(metro_fg)
     m.add_child(metro_fg)
 
     # Estádio: marcador de referência (usado no filtro "linhas junto ao estádio" a <=stadium_radius_m)
@@ -167,21 +147,16 @@ def create_overlap_lines_map(
         print(f"[WARNING] Não foi possível carregar pontos de interesse ({points_of_interest_csv}): {exc}")
 
     # Helper to add SMTUC line feature groups
+    line_map = line_to_route_ids(gtfs_smtuc)
+
     def _add_line_groups(lines: Iterable[str], color: str, prefix: str) -> None:
         for line in lines:
             fg = FeatureGroup(name=f"{prefix} {line}", show=False)
-            try:
-                # get route ids for this line
-                line_map = line_to_route_ids(gtfs_smtuc)
-                route_ids = line_map.get(str(line), [])
-                for rid in route_ids:
-                    for lat_arr, lon_arr, _stop_ids, _count in iter_route_direction_stop_arrays(gtfs_smtuc, rid):
-                        pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
-                        if len(pts) >= 2:
-                            folium.PolyLine(pts, color=color, weight=3, opacity=0.85).add_to(fg)
-            except Exception:
-                # best-effort: skip if anything fails
-                continue
+            for rid in line_map.get(str(line), []):
+                for lat_arr, lon_arr, _stop_ids, _count in iter_route_direction_stop_arrays(gtfs_smtuc, rid):
+                    pts = list(zip(lat_arr.tolist(), lon_arr.tolist()))
+                    if len(pts) >= 2:
+                        folium.PolyLine(pts, color=color, weight=3, opacity=0.85).add_to(fg)
             m.add_child(fg)
 
     _add_line_groups(top_lines, "#2e7d32", "Top")
@@ -192,21 +167,15 @@ def create_overlap_lines_map(
 
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # Prepare lines data (coords + metrics) to embed for interactive selection
-    try:
-        metrics_df = pd.read_csv(metrics_path).fillna("")
-        # only numeric-ish lines
-        metrics_df["line"] = metrics_df["line"].astype(str)
-    except Exception:
-        metrics_df = pd.DataFrame()
+    # Dados das linhas (coords + métricas) para a caixa "Mostrar linha"
+    metrics_df = df.fillna("")
 
     lines_data: dict = {}
     try:
-        line_map_all = line_to_route_ids(gtfs_smtuc)
         for line in sorted(set(metrics_df["line"].tolist())):
-            if line not in line_map_all:
+            if line not in line_map:
                 continue
-            route_ids = line_map_all.get(line, [])
+            route_ids = line_map.get(line, [])
             # Guarda TODOS os sentidos/variantes da linha (não só o mais comprido) - cada um
             # vira um segmento da mesma polyline multi-parte no mapa.
             directions_coords: list[list[tuple[float, float]]] = []
@@ -230,10 +199,7 @@ def create_overlap_lines_map(
         lines_data = {}
 
     # embed a small control and the lines_data JSON into the page
-    try:
-        import json
-
-        control_html = """
+    control_html = """
         <div id="line-select-control" style="position: absolute; bottom: 20px; left: 10px; z-index: 9999; background: rgba(255,255,255,0.95); padding:8px; border-radius:6px; box-shadow:0 1px 6px rgba(0,0,0,0.2); font-size:13px;">
           <div style="margin-bottom:6px; font-weight:600;">Mostrar linha</div>
           <div style="display:flex; gap:6px;">
@@ -296,21 +262,18 @@ def create_overlap_lines_map(
           })();
         </script>
         """
-        control_html = control_html.replace("__LINES_DATA_JSON__", json.dumps(lines_data, ensure_ascii=False))
-        control_html = control_html.replace("__MAP_VAR_NAME__", m.get_name())
+    control_html = control_html.replace("__LINES_DATA_JSON__", json.dumps(lines_data, ensure_ascii=False))
+    control_html = control_html.replace("__MAP_VAR_NAME__", m.get_name())
 
-        # O folium coloca o <script> que cria de facto o objeto do mapa (L.map(...)) DEPOIS do
-        # </body> (antes só de </html>). Inserir antes de </body> corria antes de o mapa existir.
-        page = m.get_root().render()
-        insert_at = page.rfind('</html>')
-        if insert_at == -1:
-            insert_at = page.rfind('</body>')
-        if insert_at != -1:
-            new_page = page[:insert_at] + control_html + page[insert_at:]
-        else:
-            new_page = page + control_html
-        out_path.write_text(new_page, encoding='utf-8')
-    except Exception:
-        # fallback: save map normally
-        write_folium_html(m, out_path)
+    # O folium coloca o <script> que cria de facto o objeto do mapa (L.map(...)) DEPOIS do
+    # </body> (antes só de </html>). Inserir antes de </body> corria antes de o mapa existir.
+    page = m.get_root().render()
+    insert_at = page.rfind('</html>')
+    if insert_at == -1:
+        insert_at = page.rfind('</body>')
+    if insert_at != -1:
+        new_page = page[:insert_at] + control_html + page[insert_at:]
+    else:
+        new_page = page + control_html
+    out_path.write_text(new_page, encoding='utf-8')
     return str(out_path)

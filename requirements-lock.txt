@@ -1,0 +1,40 @@
+# Versões exatas do ambiente de desenvolvimento (conda smtuc312, Python 3.12.12, Windows),
+# fecho transitivo de requirements.txt. É o que a CI instala (.github/workflows/testes.yml).
+# Instalar: pip install -r requirements-lock.txt
+bottle==0.13.4
+branca==0.8.2
+certifi==2026.2.25
+cffi==2.1.0
+charset-normalizer==3.4.4
+clr_loader==0.3.1
+colorama==0.4.6
+confluent-kafka==2.15.0
+folium==0.20.0
+geopandas==1.1.3
+idna==3.11
+iniconfig==2.3.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+narwhals==2.18.0
+numpy==1.26.4
+packaging==25.0
+pandas==2.3.3
+plotly==6.6.0
+pluggy==1.5.0
+proxy_tools==0.1.0
+pycparser==3.0
+Pygments==2.19.2
+pyogrio==0.12.1
+pyproj==3.7.2
+pytest==9.0.2
+python-dateutil==2.9.0.post0
+pythonnet==3.1.0
+pytz==2026.1.post1
+pywebview==6.2.1
+requests==2.32.5
+shapely==2.1.2
+six==1.17.0
+typing_extensions==4.15.0
+tzdata==2025.3
+urllib3==2.6.3
+xyzservices==2025.11.0

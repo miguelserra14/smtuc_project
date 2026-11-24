@@ -66,11 +66,9 @@ STADIUM_MIN_EXTENSION_PCT = 50.0
 # causa deste painel específico.
 POPULATION_STADIUM_MAP_RADIUS_M = 3000.0
 
-OUTPUTS_ROOT_DIR = "outputs"
 OUTPUTS_POPULATION_DIR = "outputs/population"
 OUTPUTS_OVERLAP_DIR = "outputs/overlap"
 OUTPUTS_INTEGRATION_DIR = "outputs/integration"
-OUTPUTS_OVERLAP_LINES_MAP = "outputs/overlap/overlap_lines_map.html"
 # Comparação lado a lado de dois cenários (D2.5; ver visualizations/scenario_comparison.py):
 # página + CSV em OUTPUTS_COMPARISON_DIR/<antes>_vs_<depois>.{html,csv}, usada pelo slide
 # "Antes vs Fase 2" e pelo separador do dashboard master.

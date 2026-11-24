@@ -44,10 +44,6 @@ def scenario_names() -> tuple[str, ...]:
     return tuple(config.SCENARIOS)
 
 
-def default_scenario_name() -> str:
-    return config.DEFAULT_SCENARIO
-
-
 def get_scenario(scenario: str | Scenario | None = None) -> Scenario:
     """`None` -> config.DEFAULT_SCENARIO; um `Scenario` passa tal como está (permite cenários ad hoc,
     ex.: o snapshot com --smtuc/--metro); um nome desconhecido ou mal definido levanta ValueError."""

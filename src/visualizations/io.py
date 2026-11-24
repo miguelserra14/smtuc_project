@@ -58,16 +58,12 @@ def write_folium_html(map_obj: object, output_path: Path | str, footer_html: str
     if not footer_html:
         return
 
-    try:
-        # Read the generated file and append footer HTML before closing body
-        text = output_path.read_text(encoding="utf-8")
-        insert_at = text.rfind("</body>")
-        if insert_at == -1:
-            # Fallback: append at end
-            new_text = text + "\n" + footer_html
-        else:
-            new_text = text[:insert_at] + footer_html + "\n" + text[insert_at:]
-        output_path.write_text(new_text, encoding="utf-8")
-    except Exception:
-        # If anything goes wrong, keep the originally saved map and do not raise
-        return
+    # Acrescenta o rodapé antes de </body>. Uma falha aqui levanta: antes era engolida e o mapa
+    # ficava sem o rodapé, sem qualquer aviso.
+    text = output_path.read_text(encoding="utf-8")
+    insert_at = text.rfind("</body>")
+    if insert_at == -1:
+        new_text = text + "\n" + footer_html
+    else:
+        new_text = text[:insert_at] + footer_html + "\n" + text[insert_at:]
+    output_path.write_text(new_text, encoding="utf-8")

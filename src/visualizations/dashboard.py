@@ -30,7 +30,7 @@ def _read_template(template_name: str) -> str:
 def _to_float(value: str | None) -> float:
     try:
         return float(value) if value not in (None, "") else 0.0
-    except Exception:
+    except (TypeError, ValueError):
         return 0.0
 
 
@@ -90,15 +90,8 @@ def load_overlap_stats(
         return out
 
     # temporal aggregates from ALL lines (CSV contains per-line temporal counts)
-    try:
-        total_spatial_candidates = int(sum(_to_float(r.get("temporal_spatial_candidates_count")) for r in rows))
-    except Exception:
-        total_spatial_candidates = 0
-
-    try:
-        total_temporal_overlaps = int(sum(_to_float(r.get("temporal_overlaps_count")) for r in rows))
-    except Exception:
-        total_temporal_overlaps = 0
+    total_spatial_candidates = int(sum(_to_float(r.get("temporal_spatial_candidates_count")) for r in rows))
+    total_temporal_overlaps = int(sum(_to_float(r.get("temporal_overlaps_count")) for r in rows))
 
     def _split_ids(value: str | None) -> set[str]:
         if not value:

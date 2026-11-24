@@ -82,6 +82,8 @@ conda activate smtuc312
 pip install -r requirements.txt
 ```
 
+`requirements.txt` tem os intervalos de versões aceites; `requirements-lock.txt` tem as versões exatas do ambiente de desenvolvimento (Windows), as mesmas que a CI usa (`.github/workflows/testes.yml`, que corre a suite em cada push para `main`). Depois de atualizar um pacote, regenerar o lock a partir do ambiente e confirmar que os testes passam.
+
 **SMTUC Ep225 (cenário `fase2`).** Os ficheiros não vêm no git. Numa máquina nova, descarregam-se e constroem-se assim:
 
 ```bash
@@ -150,8 +152,6 @@ reports/
   *.tex, *.pdf, figures/ relatórios de maio de 2026, ainda com o metro sintético
 docs/integracao_dados_agit/   plano, decisões e protótipos da integração dos dados oficiais
 ```
-
-`pytest_files/` é código antigo e o pytest já não o carrega.
 
 ## O que falta fechar
 
