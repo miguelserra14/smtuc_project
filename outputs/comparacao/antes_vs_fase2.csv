@@ -2,7 +2,7 @@ tabela,indicador,variante,antes,depois
 indicadores,overlap_resumo/total/overlap_lines,,68,86
 indicadores,overlap_resumo/total/overlap_stations,,59,94
 indicadores,overlap_resumo/total/total_overlap_extension_m,,103560.8,338075.3
-indicadores,overlap_resumo/total/temporal_overlap_pct,,92.3,97.84
+indicadores,overlap_resumo/total/temporal_overlap_pct,,93.56,95.59
 indicadores,isocrona/total/tempo_medio_ponderado_min,,39.5004,35.6858
 indicadores,isocrona/faixa 0-10/populacao,,14141,16633
 indicadores,populacao/sem_oferta/populacao,,13701,13534
