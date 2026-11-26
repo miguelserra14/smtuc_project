@@ -1,0 +1,23 @@
+tabela,indicador,variante,antes,depois
+indicadores,overlap_resumo/total/overlap_lines,,68,94
+indicadores,overlap_resumo/total/overlap_stations,,59,96
+indicadores,overlap_resumo/total/total_overlap_extension_m,,103560.8,398216.5
+indicadores,overlap_resumo/total/temporal_overlap_pct,,93.56,95.91
+indicadores,isocrona/total/tempo_medio_ponderado_min,,39.5004,35.3284
+indicadores,isocrona/faixa 0-10/populacao,,14141,16952
+indicadores,populacao/sem_oferta/populacao,,13701,13701
+esperas_54_mediana_min,Portagem metro→autocarro,atual,19.02,18.5
+esperas_54_mediana_min,Portagem metro→autocarro,otimizado,,18.09
+esperas_54_mediana_min,Portagem metro→autocarro,melhorado,,8.62
+esperas_54_mediana_min,Portagem autocarro→metro,atual,4,5.07
+esperas_54_mediana_min,Portagem autocarro→metro,otimizado,,4.58
+esperas_54_mediana_min,Portagem autocarro→metro,melhorado,,5.07
+esperas_54_mediana_min,Portagem autocarro→metro (norte) *,atual,,5.3
+esperas_54_mediana_min,Portagem autocarro→metro (norte) *,otimizado,,5.3
+esperas_54_mediana_min,Portagem autocarro→metro (norte) *,melhorado,,5.3
+esperas_54_mediana_min,Portela metro→autocarro,atual,15.33,19.75
+esperas_54_mediana_min,Portela metro→autocarro,otimizado,,19.75
+esperas_54_mediana_min,Portela metro→autocarro,melhorado,,17.68
+esperas_54_mediana_min,Portela autocarro→metro,atual,7.67,6.32
+esperas_54_mediana_min,Portela autocarro→metro,otimizado,,6.28
+esperas_54_mediana_min,Portela autocarro→metro,melhorado,,6.77

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light only" />
-  <title>Antes vs Fase 2</title>
+  <title>Fase 1 vs Como Vou</title>
   <!-- Sem recursos externos: a página tem de funcionar offline (parede FeedNPlay) e dentro de
        um iframe num cartão branco dos slides - por isso fundo claro e as cores da apresentação. -->
   <style>
@@ -48,6 +48,11 @@
     .note { color: var(--muted); font-size: 0.85em; margin: 0.5em 0 0; }
     .sources { margin-top: 1.4em; }
     code { font-size: 0.95em; }
+    /* Diferenças de rede (network_diff_page.py): colunas de texto, nome da linha, tabela de contagens. */
+    td.text { text-align: left; white-space: normal; }
+    th .name { font-weight: 400; font-size: 0.8em; color: var(--muted); }
+    table.counts { width: auto; min-width: 50%; margin-top: 0.8em; }
+    .note code { overflow-wrap: anywhere; }
     @media (max-width: 560px) {
       body { padding: 0.75em 0.5em; }
       th, td { padding: 0.35em 0.3em; }
@@ -60,7 +65,7 @@
 <section>
   <h2>Rede, cobertura e acessibilidade</h2>
   <table>
-    <thead><tr><th scope="col">Indicador</th><th scope="col">Antes (11/05/2026)</th><th scope="col">Fase 2 (09/11/2026)</th><th scope="col">Diferença</th></tr></thead>
+    <thead><tr><th scope="col">Indicador</th><th scope="col">Fase 1 (11/05/2026)</th><th scope="col">Como Vou (09/11/2026)</th><th scope="col">Diferença</th></tr></thead>
     <tbody><tr><th scope="row">Linhas SMTUC com troços a ≤ 240 m do metro</th><td>68</td><td>86</td><td>+18</td></tr><tr><th scope="row">Paragens SMTUC a ≤ 240 m de uma estação</th><td>59</td><td>94</td><td>+35</td></tr><tr><th scope="row">Extensão de linhas SMTUC a par do metro (soma por linha)</th><td>103,6 km</td><td>338,1 km</td><td>+234,5 km</td></tr><tr><th scope="row">Passagens nessas paragens com um metro a ≤ 5 min</th><td>93,6 %</td><td>95,6 %</td><td>+2,0 p.p.</td></tr><tr><th scope="row">Tempo médio a partir do estádio às 08:20 (ponderado pela população)</th><td>39,5 min</td><td>35,7 min</td><td class="trend-melhor">−3,8 min</td></tr><tr><th scope="row">População a ≤ 10 min do estádio</th><td>14 141</td><td>16 633</td><td class="trend-melhor">+2 492</td></tr><tr><th scope="row">População em subsecções sem oferta</th><td>13 701</td><td>13 534</td><td class="trend-melhor">−167</td></tr></tbody>
   </table>
   <p class="note">A extensão soma o troço de cada linha: um corredor com várias linhas conta várias vezes.</p>
@@ -68,13 +73,13 @@
 <section>
   <h2>Linha 54: espera mediana no transbordo</h2>
   <table>
-    <thead><tr><th scope="col">Sentido</th><th scope="col">Antes (11/05/2026)<br><span>atual</span></th><th scope="col">Fase 2 (09/11/2026)<br><span>atual</span></th><th scope="col">Fase 2 (09/11/2026)<br><span>otimizado</span></th><th scope="col">Fase 2 (09/11/2026)<br><span>melhorado (2 autocarros)</span></th></tr></thead>
+    <thead><tr><th scope="col">Sentido</th><th scope="col">Fase 1 (11/05/2026)<br><span>atual</span></th><th scope="col">Como Vou (09/11/2026)<br><span>atual</span></th><th scope="col">Como Vou (09/11/2026)<br><span>otimizado</span></th><th scope="col">Como Vou (09/11/2026)<br><span>melhorado (2 autocarros)</span></th></tr></thead>
     <tbody><tr><th scope="row">Portagem metro→autocarro</th><td>19,0 min</td><td>19,0 min</td><td class="trend-melhor">18,5 min</td><td class="trend-melhor">9,1 min</td></tr><tr><th scope="row">Portagem autocarro→metro</th><td>4,0 min</td><td class="trend-pior">4,5 min</td><td class="trend-melhor">4,0 min</td><td>4,5 min</td></tr><tr><th scope="row">Portagem autocarro→metro (norte) *</th><td>–</td><td>5,7 min</td><td class="trend-pior">5,8 min</td><td class="trend-pior">5,8 min</td></tr><tr><th scope="row">Portela metro→autocarro</th><td>15,3 min</td><td class="trend-pior">19,8 min</td><td>19,8 min</td><td class="trend-melhor">17,7 min</td></tr><tr><th scope="row">Portela autocarro→metro</th><td>7,7 min</td><td class="trend-melhor">6,3 min</td><td>6,3 min</td><td class="trend-pior">6,8 min</td></tr></tbody>
   </table>
-  <p class="note">A cor compara com o horário atual da fase 2 (e esse com o antes): <span class="trend-melhor">menos espera</span>, <span class="trend-pior">mais espera</span>.</p>
-  <p class="note">* Informativo: só existe na fase 2, em que o metro continua de Portagem para Coimbra B e para a República (conta a primeira partida em qualquer dos ramos). Fica fora da busca do desvio de fase da 54.</p>
+  <p class="note">A cor compara as propostas com o horário atual de Como Vou (e esse com Fase 1): <span class="trend-melhor">menos espera</span>, <span class="trend-pior">mais espera</span>.</p>
+  <p class="note">* Informativo: só existe com o metro da fase 2, que continua de Portagem para Coimbra B e para a República (conta a primeira partida em qualquer dos ramos). Fica fora da busca do desvio de fase da 54.</p>
 </section>
-<p class="note sources">Entre os dois cenários mudam o metro <strong>e</strong> o horário do SMTUC. Antes (11/05/2026): SMTUC <code>smtuc</code> + Metro <code>metrobus</code> · Fase 2 (09/11/2026): SMTUC <code>smtuc_atual</code> + Metro <code>metro_fase2_oficial</code>. Dados: AGIT / dados.gov.pt (CC BY 4.0), SMTUC, INE (BGRI 2021).</p>
+<p class="note sources">Entre os dois cenários mudam o metro <strong>e</strong> o horário do SMTUC. Cada um é medido no seu dia de referência. Fase 1 (11/05/2026): SMTUC <code>smtuc</code> + Metro <code>metrobus</code> · Como Vou (09/11/2026): SMTUC <code>smtuc_atual</code> + Metro <code>metro_fase2_oficial</code>. Dados: AGIT / dados.gov.pt (CC BY 4.0), SMTUC, INE (BGRI 2021).</p>
 
 </body>
 </html>

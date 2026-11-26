@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>O que mudou na rede SMTUC: Metro da fase 2 + SMTUC Ep212 → Como Vou</title>
+  <!-- Sem recursos externos: a página tem de funcionar offline (parede FeedNPlay) e dentro de
+       um iframe num cartão branco dos slides - por isso fundo claro e as cores da apresentação. -->
+  <style>
+    :root {
+      --ink: #221d13;
+      --muted: #5c574c;
+      --border: #e7e2d8;
+      --card: #ffffff;
+      --card-soft: #faf8f4;
+      --accent: #ffdd2b;
+      --good: #1f7a3a;
+      --good-bg: #e6f4ea;
+      --bad: #a3361f;
+      --bad-bg: #fbe9e4;
+      color-scheme: light only;
+    }
+    html, body { margin: 0; background: var(--card); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
+      font-size: clamp(13px, 1.25vw, 17px);
+      line-height: 1.4;
+      padding: 1em 1.2em;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 1.05em;
+      margin: 0 0 0.5em;
+      letter-spacing: 0.01em;
+    }
+    section + section { margin-top: 1.4em; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 0.45em 0.6em; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+    thead th { background: var(--card-soft); font-size: 0.85em; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--accent); }
+    thead th span { font-weight: 400; }
+    th[scope="row"], thead th:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+    td { white-space: nowrap; }
+    .trend-melhor { color: var(--good); background: var(--good-bg); font-weight: 600; }
+    .trend-pior { color: var(--bad); background: var(--bad-bg); font-weight: 600; }
+    span.trend-melhor, span.trend-pior { padding: 0 0.3em; border-radius: 3px; }
+    .note { color: var(--muted); font-size: 0.85em; margin: 0.5em 0 0; }
+    .sources { margin-top: 1.4em; }
+    code { font-size: 0.95em; }
+    /* Diferenças de rede (network_diff_page.py): colunas de texto, nome da linha, tabela de contagens. */
+    td.text { text-align: left; white-space: normal; }
+    th .name { font-weight: 400; font-size: 0.8em; color: var(--muted); }
+    table.counts { width: auto; min-width: 50%; margin-top: 0.8em; }
+    .note code { overflow-wrap: anywhere; }
+    @media (max-width: 560px) {
+      body { padding: 0.75em 0.5em; }
+      th, td { padding: 0.35em 0.3em; }
+      td { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+<section>
+  <h2>Resumo: Metro da fase 2 + SMTUC Ep212 → Como Vou</h2>
+  <table>
+    <thead><tr><th scope="col">Indicador</th><th scope="col">Metro da fase 2 + SMTUC Ep212</th><th scope="col">Como Vou</th><th scope="col">Diferença</th></tr></thead>
+    <tbody><tr><th scope="row">Linhas com viagens no dia</th><td>96</td><td>95</td><td>−1</td></tr><tr><th scope="row">Viagens no dia</th><td>2 373</td><td>2 407</td><td>+34</td></tr><tr><th scope="row">Extensão a par do metro (soma das linhas com viagens no dia)</th><td>364,4 km</td><td>321,2 km</td><td>−43,2 km</td></tr></tbody>
+  </table>
+  <table class="counts">
+    <thead><tr><th scope="col">Linhas</th><th scope="col">N.º</th></tr></thead>
+    <tbody><tr><th scope="row">Cortadas</th><td>4</td></tr><tr><th scope="row">Renumeradas</th><td>0</td></tr><tr><th scope="row">Novas</th><td>3</td></tr><tr><th scope="row">Percurso alterado (≥ 4 paragens retiradas ou novas)</th><td>19</td></tr><tr><th scope="row">Ajuste de paragens (menos de 4, ou paragens deslocadas)</th><td>24</td></tr><tr><th scope="row">Só o horário (mesmas paragens)</th><td>2</td></tr><tr><th scope="row">Iguais</th><td>47</td></tr></tbody>
+  </table>
+</section>
+<section>
+  <h2>Linhas que mudaram</h2>
+  <table>
+    <thead><tr><th scope="col">Linha</th><th scope="col">Estado</th><th scope="col">Viagens no dia</th><th scope="col">Paragens<br><span>mantidas / deslocadas / retiradas / novas</span></th><th scope="col">A par do metro (km)</th><th scope="col">Aviso SMTUC</th></tr></thead>
+    <tbody><tr><th scope="row">7T → —<br><span class="name">PALÁCIO DA JUSTIÇA - TOVIM</span></th><td class="text">cortada</td><td>94 → 0</td><td>0 / 0 / 41 / 0</td><td>5,1 → –</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">12R → —<br><span class="name">BEIRA RIO - TAVEIRO (circulação via E.N. 341)</span></th><td class="text">cortada</td><td>3 → 0</td><td>0 / 0 / 31 / 0</td><td>0,8 → –</td><td class="text"></td></tr><tr><th scope="row">33 → —<br><span class="name">PORTAGEM - MANUTENÇÃO (via Casa Branca)</span></th><td class="text">cortada</td><td>41 → 0</td><td>0 / 0 / 44 / 0</td><td>7,0 → –</td><td class="text">antes do Como Vou (14/06/2026)</td></tr><tr><th scope="row">33R → —<br><span class="name">PORTAGEM - MANUTENÇÃO (via Quinta da Romeira)</span></th><td class="text">cortada</td><td>2 → 0</td><td>0 / 0 / 50 / 0</td><td>5,0 → –</td><td class="text">antes do Como Vou (14/06/2026)</td></tr><tr><th scope="row">— → 100E<br><span class="name">Elevador do Mercado D. Pedro V</span></th><td class="text">nova</td><td>0 → 162</td><td>0 / 0 / 0 / 2</td><td>– → –</td><td class="text"></td></tr><tr><th scope="row">— → 101<br><span class="name">Transporte - Especial</span></th><td class="text">nova</td><td>0 → 8</td><td>0 / 0 / 0 / 3</td><td>– → –</td><td class="text"></td></tr><tr><th scope="row">— → 251<br><span class="name">Transporte Flexível</span></th><td class="text">nova</td><td>0 → 3</td><td>0 / 0 / 0 / 32</td><td>– → –</td><td class="text"></td></tr><tr><th scope="row">4<br><span class="name">Stº António dos Olivais - Praça da República</span></th><td class="text">percurso alterado</td><td>80 → 66</td><td>14 / 3 / 9 / 1</td><td>2,1 → 0,6</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">5<br><span class="name">Parque - C. Formação (Pedrulha)</span></th><td class="text">percurso alterado</td><td>66 → 58</td><td>36 / 4 / 16 / 41</td><td>6,4 → 14,6</td><td class="text">antes do Como Vou (14/06/2026)</td></tr><tr><th scope="row">5T<br><span class="name">Parque - Pedrulha</span></th><td class="text">percurso alterado</td><td>14 → 15</td><td>40 / 5 / 24 / 28</td><td>7,5 → 6,5</td><td class="text">antes do Como Vou (14/06/2026)</td></tr><tr><th scope="row">7<br><span class="name">Estádio C. Coimbra - Pr. da República</span></th><td class="text">percurso alterado</td><td>101 → 101</td><td>26 / 0 / 12 / 25</td><td>2,4 → 0,9</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">10<br><span class="name">H. Sobral Cid - Pr. da República</span></th><td class="text">percurso alterado</td><td>26 → 31</td><td>42 / 0 / 14 / 9</td><td>13,2 → 2,5</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">12<br><span class="name">Taveiro - Beira Rio</span></th><td class="text">percurso alterado</td><td>7 → 34</td><td>47 / 1 / 1 / 6</td><td>1,6 → 0,8</td><td class="text">Como Vou (15/09/2026)</td></tr><tr><th scope="row">12A<br><span class="name">Beira Rio - Taveiro</span></th><td class="text">percurso alterado</td><td>1 → 1</td><td>27 / 1 / 1 / 5</td><td>0,0 → 0,0</td><td class="text"></td></tr><tr><th scope="row">19R<br><span class="name">S. Romão - Praça da República</span></th><td class="text">percurso alterado</td><td>7 → 7</td><td>65 / 1 / 0 / 4</td><td>5,4 → 6,2</td><td class="text"></td></tr><tr><th scope="row">19T<br><span class="name">Cova do Ouro - Praça da República</span></th><td class="text">percurso alterado</td><td>47 → 47</td><td>84 / 2 / 0 / 4</td><td>16,0 → 21,0</td><td class="text"></td></tr><tr><th scope="row">21<br><span class="name">Arzila - Beira Rio</span></th><td class="text">percurso alterado</td><td>14 → 14</td><td>72 / 1 / 2 / 3</td><td>2,4 → 2,4</td><td class="text"></td></tr><tr><th scope="row">21T<br><span class="name">Lameira - Beira Rio (p/ Via Rápida)</span></th><td class="text">percurso alterado</td><td>13 → 14</td><td>87 / 0 / 1 / 3</td><td>4,0 → 4,0</td><td class="text"></td></tr><tr><th scope="row">25<br><span class="name">Casal da Rosa - Arnado</span></th><td class="text">percurso alterado</td><td>26 → 26</td><td>76 / 1 / 5 / 0</td><td>10,4 → 6,1</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">25T<br><span class="name">Arnado - Stª. Apolónia</span></th><td class="text">percurso alterado</td><td>14 → 14</td><td>59 / 1 / 5 / 0</td><td>7,4 → 4,3</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">27<br><span class="name">Bairro do Ingote - Hospitais U.C.</span></th><td class="text">percurso alterado</td><td>54 → 53</td><td>54 / 4 / 10 / 7</td><td>14,1 → 16,0</td><td class="text"></td></tr><tr><th scope="row">27F<br><span class="name">Bairro do Ingote - Praça da República</span></th><td class="text">percurso alterado</td><td>8 → 9</td><td>37 / 2 / 10 / 2</td><td>7,9 → 7,0</td><td class="text"></td></tr><tr><th scope="row">30<br><span class="name">Redonda - Arnado</span></th><td class="text">percurso alterado</td><td>12 → 10</td><td>103 / 1 / 6 / 0</td><td>7,1 → 5,0</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">30T<br><span class="name">Antero de Quental - Lordemão</span></th><td class="text">percurso alterado</td><td>8 → 6</td><td>70 / 1 / 6 / 0</td><td>3,8 → 1,7</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">50T<br><span class="name">Sargento Mor - Arnado</span></th><td class="text">percurso alterado</td><td>52 → 48</td><td>123 / 0 / 4 / 0</td><td>17,4 → 14,3</td><td class="text"></td></tr><tr><th scope="row">103<br><span class="name">Olivais - Universidade</span></th><td class="text">percurso alterado</td><td>62 → 63</td><td>22 / 0 / 10 / 0</td><td>– → –</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">2T<br><span class="name">Vil de Matos - Arnado</span></th><td class="text">ajuste de paragens</td><td>42 → 40</td><td>102 / 0 / 3 / 0</td><td>16,9 → 11,7</td><td class="text"></td></tr><tr><th scope="row">6<br><span class="name">Hospitais U. C. - Cimo de Fala</span></th><td class="text">ajuste de paragens</td><td>61 → 61</td><td>71 / 1 / 1 / 1</td><td>8,0 → 7,4</td><td class="text"></td></tr><tr><th scope="row">6F<br><span class="name">Fala - Hospitais U. C.</span></th><td class="text">ajuste de paragens</td><td>14 → 14</td><td>69 / 2 / 1 / 0</td><td>3,1 → 3,0</td><td class="text"></td></tr><tr><th scope="row">11<br><span class="name">B. Norton de Matos - Pr. da República</span></th><td class="text">ajuste de paragens</td><td>25 → 25</td><td>22 / 2 / 1 / 0</td><td>2,0 → 2,3</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">16<br><span class="name">Carapinheira da Serra - Manutenção</span></th><td class="text">ajuste de paragens</td><td>14 → 14</td><td>109 / 2 / 0 / 0</td><td>5,0 → 4,6</td><td class="text"></td></tr><tr><th scope="row">16F<br><span class="name">Carapinheira da Serra - H. U. C.</span></th><td class="text">ajuste de paragens</td><td>2 → 2</td><td>73 / 2 / 0 / 0</td><td>1,0 → 1,1</td><td class="text"></td></tr><tr><th scope="row">16G<br><span class="name">Rocha Velha - Manutenção</span></th><td class="text">ajuste de paragens</td><td>21 → 21</td><td>124 / 2 / 1 / 1</td><td>5,5 → 5,3</td><td class="text">Como Vou (14/09/2026)</td></tr><tr><th scope="row">19<br><span class="name">S. Paulo de Frades - Praça da República</span></th><td class="text">ajuste de paragens</td><td>5 → 5</td><td>51 / 2 / 0 / 3</td><td>6,3 → 7,2</td><td class="text"></td></tr><tr><th scope="row">19A<br><span class="name">Cova do Ouro - H. U. C.</span></th><td class="text">ajuste de paragens</td><td>2 → 2</td><td>83 / 1 / 0 / 3</td><td>3,1 → 3,5</td><td class="text"></td></tr><tr><th scope="row">24<br><span class="name">Quinta da Nora - Pr. da República</span></th><td class="text">ajuste de paragens</td><td>41 → 41</td><td>22 / 2 / 1 / 0</td><td>2,0 → 2,3</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">28<br><span class="name">Bairro do Ingote - Universidade</span></th><td class="text">ajuste de paragens</td><td>54 → 54</td><td>53 / 2 / 1 / 2</td><td>14,9 → 16,4</td><td class="text"></td></tr><tr><th scope="row">29<br><span class="name">H. U. C. - Estação Coimbra - B</span></th><td class="text">ajuste de paragens</td><td>68 → 68</td><td>28 / 1 / 2 / 0</td><td>10,9 → 8,1</td><td class="text"></td></tr><tr><th scope="row">32<br><span class="name">Vila Pouca do Campo - Beira Rio</span></th><td class="text">ajuste de paragens</td><td>19 → 19</td><td>63 / 0 / 1 / 0</td><td>1,6 → 1,6</td><td class="text"></td></tr><tr><th scope="row">34<br><span class="name">Qt. da Portela - Universidade</span></th><td class="text">ajuste de paragens</td><td>57 → 57</td><td>50 / 0 / 0 / 1</td><td>1,1 → 1,1</td><td class="text"></td></tr><tr><th scope="row">36<br><span class="name">Ponte de Eiras - Praça da República</span></th><td class="text">ajuste de paragens</td><td>17 → 17</td><td>66 / 1 / 0 / 1</td><td>4,1 → 4,2</td><td class="text"></td></tr><tr><th scope="row">36T<br><span class="name">Ponte de Eiras - Praça da República</span></th><td class="text">ajuste de paragens</td><td>18 → 18</td><td>63 / 2 / 0 / 0</td><td>4,6 → 4,7</td><td class="text"></td></tr><tr><th scope="row">38F<br><span class="name">Qt. da Portela - Santa Clara</span></th><td class="text">ajuste de paragens</td><td>7 → 7</td><td>55 / 0 / 0 / 1</td><td>3,7 → 3,7</td><td class="text"></td></tr><tr><th scope="row">38T<br><span class="name">Qt. da Portela - Portagem</span></th><td class="text">ajuste de paragens</td><td>4 → 4</td><td>19 / 0 / 0 / 1</td><td>1,2 → 1,2</td><td class="text"></td></tr><tr><th scope="row">42V<br><span class="name">Portagem - Misarela</span></th><td class="text">ajuste de paragens</td><td>6 → 6</td><td>70 / 1 / 1 / 0</td><td>2,9 → 2,6</td><td class="text"></td></tr><tr><th scope="row">50<br><span class="name">Sargento Mor - Arnado</span></th><td class="text">ajuste de paragens</td><td>23 → 22</td><td>72 / 0 / 3 / 0</td><td>7,2 → 3,4</td><td class="text"></td></tr><tr><th scope="row">50M<br><span class="name">Sargento Mor - Arnado</span></th><td class="text">ajuste de paragens</td><td>6 → 6</td><td>78 / 0 / 3 / 0</td><td>6,9 → 5,5</td><td class="text"></td></tr><tr><th scope="row">50S<br><span class="name">Sargento Mor - Arnado</span></th><td class="text">ajuste de paragens</td><td>8 → 8</td><td>91 / 0 / 3 / 0</td><td>5,3 → 4,4</td><td class="text"></td></tr><tr><th scope="row">51<br><span class="name">Marmeleira - Arnado</span></th><td class="text">ajuste de paragens</td><td>11 → 8</td><td>92 / 0 / 3 / 0</td><td>4,0 → 3,4</td><td class="text"></td></tr><tr><th scope="row">221<br><span class="name">H. U. C. - Estação Coimbra - B - Linha Vermelha</span></th><td class="text">ajuste de paragens</td><td>70 → 70</td><td>7 / 0 / 0 / 1</td><td>– → –</td><td class="text"></td></tr></tbody>
+  </table>
+  <p class="note">Só o horário: 10A, 21A. Iguais: 9, 13, 13P, 13T, 14, 14T, 17, 18, 18E, 20, 20T, 21R, 22, 23, 23C, 24T, 26, 31, 32A, 32R, 35, 37, 38, 39, 41, 42M, 42T, 43, 43T, 43V, 44, 45, 47, 48, 48T, 49, 49T, 52, 52P, 53, 53T, 54, 100, 201, 204, 223, 244.</p>
+  <p class="note">Avisos SMTUC: <code>https://www.smtuc.pt/avisos/reestruturacao-das-linhas-5-5t-5f-e-33-a-partir-de-14-de-junho/</code> · <code>https://www.smtuc.pt/eventos/alteracoes-nas-linhas-11-e-24-a-partir-de-10-de-setembro/</code> · <code>https://www.smtuc.pt/eventos/alteracoes-nas-linhas-25-25t-30-e-30t-a-partir-de-10-de-setembro/</code> · <code>https://www.smtuc.pt/eventos/alteracoes-nas-linhas-4-7-7t-10-e-103-a-partir-de-10-de-setembro/</code> · <code>https://www.smtuc.pt/eventos/reforco-das-linhas-16g-e-37-a-partir-de-14-de-setembro/</code> · <code>https://www.smtuc.pt/eventos/remodelacao-da-linha-12-a-partir-de-15-de-setembro/</code></p>
+</section>
+<p class="note sources">Só linhas com viagens no dia de referência (09/11/2026). Linha = número público (route_short_name); paragem = código da paragem (stop_code), que se mantém entre horários. Uma paragem trocada por outra a ≤ 150 m conta como deslocada, não como mudança de percurso. A extensão a par do metro é a das métricas por linha de cada cenário. O horário Ep212 é de março de 2026: as diferenças incluem também a reestruturação de 14/06 (linhas 5, 5T, 5F, 33 e 33R), assinalada como anterior ao Como Vou. Dados: SMTUC / Município de Coimbra; avisos em smtuc.pt.</p>
+
+</body>
+</html>
