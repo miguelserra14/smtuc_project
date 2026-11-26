@@ -6,6 +6,10 @@ indicadores,overlap_resumo/total/temporal_overlap_pct,,93.74,93.56
 indicadores,isocrona/total/tempo_medio_ponderado_min,,39.5004,39.5004
 indicadores,isocrona/faixa 0-10/populacao,,14141,14141
 indicadores,populacao/sem_oferta/populacao,,13701,13701
+indicadores,isocrona_nos/Portagem | total/tempo_medio_ponderado_min,,32.9649,32.9648
+indicadores,isocrona_nos/Portagem | total/populacao_30min_media,,83477,83477
+indicadores,isocrona_nos/Portela | total/tempo_medio_ponderado_min,,46.958,46.0133
+indicadores,isocrona_nos/Portela | total/populacao_30min_media,,51136.3333,52375.3333
 esperas_54_mediana_min,Portagem metro→autocarro,atual,,19.02
 esperas_54_mediana_min,Portagem metro→autocarro,otimizado,,19.135
 esperas_54_mediana_min,Portagem metro→autocarro,melhorado,,9.35
