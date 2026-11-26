@@ -223,3 +223,29 @@ def test_what_changes_names_the_excluded_line(tmp_path: Path) -> None:
     assert "que só existe no primeiro" in what_changes(BEFORE, SEM54)
     page = Path(create_scenario_comparison_html(tmp_path / "s.html", SEM54, BEFORE)).read_text(encoding="utf-8")
     assert "Fase 1 sem a 54 (11/05/2026)" in page
+
+
+def test_node_isochrone_rows_only_when_a_snapshot_has_them() -> None:
+    # N2.4: as isócronas dos nós são uma secção opcional - sem ela as linhas não saem.
+    from visualizations.scenario_comparison import build_comparison_rows
+
+    labels = [r["label"] for r in build_comparison_rows(BEFORE, AFTER)["kpis"]]
+    assert not any("estação Portela" in label for label in labels)
+
+    def with_nodes(snap: pd.DataFrame, minutes: float, pop: float) -> pd.DataFrame:
+        extra = pd.DataFrame([
+            ("isocrona_nos", "Portela | origem", "partidas", "07:30:00-09:20:00/12"),
+            ("isocrona_nos", "Portela | total", "tempo_medio_ponderado_min", str(minutes)),
+            ("isocrona_nos", "Portela | total", "populacao_30min_media", str(pop)),
+        ], columns=snap.columns)
+        return pd.concat([snap, extra], ignore_index=True)
+
+    rows = build_comparison_rows(with_nodes(SEM54, 46.96, 51137), with_nodes(BEFORE, 46.01, 52375))["kpis"]
+    portela = {r["label"]: r for r in rows if "estação Portela" in r["label"]}
+    time_row = next(r for label, r in portela.items() if label.startswith("Tempo médio"))
+    assert "07:30–09:20" in next(iter(portela))
+    assert (time_row["before"], time_row["after"], time_row["delta"], time_row["trend"]) == ("47,0 min", "46,0 min", "−1,0 min", "melhor")
+    pop_row = next(r for label, r in portela.items() if label.startswith("População"))
+    assert (pop_row["delta"], pop_row["trend"]) == ("+1 238", "melhor")
+    # Portagem não está em nenhum dos dois: não sai.
+    assert not any("estação Portagem" in r["label"] for r in rows)

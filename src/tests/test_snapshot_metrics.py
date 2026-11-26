@@ -79,6 +79,18 @@ def test_redundancy_section_matches_the_module() -> None:
     assert ("desperdicio", "ano_t_co2") in data.index and ("semana-tipo sábado", "peso") in data.index
 
 
+def test_node_departures_follow_the_config_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    import config
+
+    monkeypatch.setattr(config, "NODE_ISOCHRONE_START", "08:00:00")
+    monkeypatch.setattr(config, "NODE_ISOCHRONE_END", "08:30:00")
+    monkeypatch.setattr(config, "NODE_ISOCHRONE_STEP_MIN", 10)
+    assert snap_mod.node_departure_times() == ["08:00:00", "08:10:00", "08:20:00"]  # fim exclusive
+    monkeypatch.setattr(config, "NODE_ISOCHRONE_STEP_MIN", 0)
+    with pytest.raises(ValueError, match="janela"):
+        snap_mod.node_departure_times()
+
+
 def test_diff_classifies_changes() -> None:
     before = _frame([
         ("meta", "snapshot", "fase", "a"),

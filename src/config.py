@@ -61,6 +61,15 @@ WASTE_DIESEL_KG_CO2_PER_L = 2.68
 WASTE_GRID_KG_CO2_PER_KWH = 0.097
 WASTE_WEEKS_PER_YEAR = 52
 
+# Isócronas a partir dos nós de integração (N2.4, snapshot "isocrona_nos"): em vez de uma só hora
+# de partida (uma linha de 40 em 40 min, como a 54, conta ou não conforme a hora calha), a MÉDIA
+# das isócronas com partidas de NODE_ISOCHRONE_START a NODE_ISOCHRONE_END (exclusive), de
+# NODE_ISOCHRONE_STEP_MIN em NODE_ISOCHRONE_STEP_MIN minutos - a de quem chega ao nó a uma hora
+# qualquer da ponta da manhã. Origem = a estação do metro do nó (INTEGRATION_SITES metro_stop_ref).
+NODE_ISOCHRONE_START = "07:30:00"
+NODE_ISOCHRONE_END = "09:30:00"
+NODE_ISOCHRONE_STEP_MIN = 10
+
 # Origem/destino de exemplo dos testes de percurso (test_overlap.py). Por omissão são pontos
 # PÚBLICOS (Estação Coimbra-B e Polo I, do catálogo population/points_of_interest.py); valores
 # pessoais (ex.: casa/trabalho) vão em src/config_local.py, que o git ignora - ver o fim deste ficheiro.

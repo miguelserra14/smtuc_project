@@ -26,8 +26,12 @@ Secções:
   populacao       população sem oferta (total e no raio do painel do estádio), top 10 de subserviço
   redundancia     (opcional, só com --secoes) autocarros·km e ·hora a par do metro viagem a viagem
                   no dia de referência (overlap/redundancy.py): totais, por linha e por corredor
-                  do metro; desperdício (CO2 e ano estimado pela semana-tipo, N2.2). Fora das secções por omissão para os registos antigos continuarem
-                  comparáveis.
+                  do metro; desperdício (CO2 e ano estimado pela semana-tipo, N2.2).
+  isocrona_nos    (opcional) isócronas a partir de cada nó de integração (INTEGRATION_SITES:
+                  Portagem, Portela; origem = a estação do metro desse nome no feed do cenário),
+                  MÉDIA das partidas da janela NODE_ISOCHRONE_* do config: população média por
+                  faixa e tempo médio ponderado (médio, melhor e pior partida) (N2.4).
+As secções opcionais ficam fora das por omissão para os registos antigos continuarem comparáveis.
 
 Nada é escrito em outputs/: o cache de métricas é copiado para uma pasta temporária e as tabelas
 intermédias vão para lá. Um snapshot existente NÃO é substituído sem --force (é uma linha de base).
@@ -58,7 +62,7 @@ import pandas as pd  # noqa: E402
 COLUMNS = ["section", "key", "metric", "value"]
 SECTIONS = ("linhas", "overlap_resumo", "esperas_54", "busca_fase_54", "isocrona", "populacao")
 # Secções que só entram quando pedidas (--secoes): os registos já gravados não as têm.
-OPTIONAL_SECTIONS = ("redundancia",)
+OPTIONAL_SECTIONS = ("redundancia", "isocrona_nos")
 ALL_SECTIONS = SECTIONS + OPTIONAL_SECTIONS
 DEFAULT_OUT_DIR = ROOT / "reports" / "metricas"
 DECIMALS = 4
@@ -187,8 +191,83 @@ def _section_waits(snap: Snapshot, workdir: Path, with_search: bool, scenario) -
                 snap.add("busca_fase_54", variant, metric, best[metric])
 
 
+def _isochrone_rows(snap: Snapshot, section: str, prefix: str, reach: pd.DataFrame) -> None:
+    """Faixas de tempo, modos e tempo médio ponderado de uma isócrona (`prefix` antes de cada chave:
+    "" no estádio, as chaves de sempre; "<nó> | " nos nós de integração)."""
+    reach_pop = pd.to_numeric(reach["N_INDIVIDUOS"], errors="coerce").fillna(0.0)
+    snap.add(section, f"{prefix}origem", "hora_partida", str(reach["reach_time"].iloc[0]) if len(reach) else "")
+    for band in ("0-10", "10-15", "15-30", "30-60", ">60"):
+        mask = reach["reach_bin"] == band
+        snap.add(section, f"{prefix}faixa {band}", "populacao", reach_pop[mask].sum())
+        snap.add(section, f"{prefix}faixa {band}", "zonas", int(mask.sum()))
+    for mode in sorted(reach["reach_mode"].unique()):
+        snap.add(section, f"{prefix}modo {mode}", "populacao", reach_pop[reach["reach_mode"] == mode].sum())
+    finite = reach["reach_min"].replace([float("inf")], pd.NA).dropna().astype(float)
+    weights = reach_pop.loc[finite.index]
+    if weights.sum() > 0:
+        snap.add(section, f"{prefix}total", "tempo_medio_ponderado_min", float((finite * weights).sum() / weights.sum()))
+
+
+def node_departure_times() -> list[str]:
+    """Horas de partida da janela NODE_ISOCHRONE_* do config (fim exclusive)."""
+    from config import NODE_ISOCHRONE_END, NODE_ISOCHRONE_START, NODE_ISOCHRONE_STEP_MIN
+    from gtfs_processing.timeutil import hhmmss_to_seconds, seconds_to_hhmmss
+
+    start, end, step = hhmmss_to_seconds(NODE_ISOCHRONE_START), hhmmss_to_seconds(NODE_ISOCHRONE_END), int(NODE_ISOCHRONE_STEP_MIN) * 60
+    if step <= 0 or end <= start:
+        raise ValueError(f"janela das isócronas dos nós inválida: {NODE_ISOCHRONE_START}-{NODE_ISOCHRONE_END} / {NODE_ISOCHRONE_STEP_MIN} min")
+    return [seconds_to_hhmmss(t) for t in range(start, end, step)]
+
+
+def _node_isochrone_rows(snap: Snapshot, node: str, merged, lat: float, lon: float, datasets, day_str: str) -> None:
+    from config import REACHABILITY_MAX_TRANSFERS
+    from overlap.overlap import compute_bgri_reachability_now
+
+    bands = ("0-10", "10-15", "15-30", "30-60", ">60")
+    pops: dict[str, list[float]] = {b: [] for b in bands}
+    means: list[float] = []
+    times = node_departure_times()
+    for time_str in times:
+        reach = compute_bgri_reachability_now(
+            merged_bgri=merged, origin_lat=lat, origin_lon=lon, datasets=datasets,
+            day_str=day_str, time_str=time_str, max_transfers=REACHABILITY_MAX_TRANSFERS,
+        )
+        pop = pd.to_numeric(reach["N_INDIVIDUOS"], errors="coerce").fillna(0.0)
+        for band in bands:
+            pops[band].append(float(pop[reach["reach_bin"] == band].sum()))
+        finite = reach["reach_min"].replace([float("inf")], pd.NA).dropna().astype(float)
+        weights = pop.loc[finite.index]
+        if weights.sum() > 0:
+            means.append(float((finite * weights).sum() / weights.sum()))
+    key = f"{node} | "
+    snap.add("isocrona_nos", f"{key}origem", "partidas", f"{times[0]}-{times[-1]}/{len(times)}")
+    for band in bands:
+        snap.add("isocrona_nos", f"{key}faixa {band}", "populacao_media", sum(pops[band]) / len(times))
+    within_30 = sum(sum(pops[b]) for b in ("0-10", "10-15", "15-30")) / len(times)
+    snap.add("isocrona_nos", f"{key}total", "populacao_30min_media", within_30)
+    if means:
+        snap.add("isocrona_nos", f"{key}total", "tempo_medio_ponderado_min", sum(means) / len(means))
+        snap.add("isocrona_nos", f"{key}total", "melhor_partida_min", min(means))
+        snap.add("isocrona_nos", f"{key}total", "pior_partida_min", max(means))
+
+
+def integration_node_origins(metro_dataset: str) -> list[tuple[str, float, float]]:
+    """(nó, lat, lon) de cada INTEGRATION_SITES: a estação do metro `metro_stop_ref` no feed."""
+    from config import INTEGRATION_SITES
+    from gtfs_processing.gtfs import load_gtfs_cached
+    from gtfs_processing.gtfs_probe import resolve_stop_id
+
+    gtfs = load_gtfs_cached(metro_dataset)
+    stops = gtfs.stops.assign(stop_id=gtfs.stops["stop_id"].astype(str)).set_index("stop_id")
+    out = []
+    for site in INTEGRATION_SITES:
+        stop = stops.loc[resolve_stop_id(gtfs, site["metro_stop_ref"])]
+        out.append((str(site["name"]), float(stop["stop_lat"]), float(stop["stop_lon"])))
+    return out
+
+
 def _section_population(snap: Snapshot, datasets: tuple[str, str], day_str: str, time_str: str, workdir: Path,
-                        with_isochrone: bool, with_population: bool) -> None:
+                        with_isochrone: bool, with_population: bool, with_nodes: bool = False) -> None:
     from config import POPULATION_STADIUM_MAP_RADIUS_M, REACHABILITY_MAX_TRANSFERS, STADIUM_COORD
     from overlap.overlap import compute_bgri_reachability_now
     from population.data_processing import compute_underserved_zones, filter_zones_by_distance
@@ -222,18 +301,11 @@ def _section_population(snap: Snapshot, datasets: tuple[str, str], day_str: str,
             merged_bgri=merged, origin_lat=STADIUM_COORD[0], origin_lon=STADIUM_COORD[1], datasets=datasets,
             day_str=day_str, time_str=time_str, max_transfers=REACHABILITY_MAX_TRANSFERS,
         )
-        reach_pop = pd.to_numeric(reach["N_INDIVIDUOS"], errors="coerce").fillna(0.0)
-        snap.add("isocrona", "origem", "hora_partida", str(reach["reach_time"].iloc[0]) if len(reach) else "")
-        for band in ("0-10", "10-15", "15-30", "30-60", ">60"):
-            mask = reach["reach_bin"] == band
-            snap.add("isocrona", f"faixa {band}", "populacao", reach_pop[mask].sum())
-            snap.add("isocrona", f"faixa {band}", "zonas", int(mask.sum()))
-        for mode in sorted(reach["reach_mode"].unique()):
-            snap.add("isocrona", f"modo {mode}", "populacao", reach_pop[reach["reach_mode"] == mode].sum())
-        finite = reach["reach_min"].replace([float("inf")], pd.NA).dropna().astype(float)
-        weights = reach_pop.loc[finite.index]
-        if weights.sum() > 0:
-            snap.add("isocrona", "total", "tempo_medio_ponderado_min", float((finite * weights).sum() / weights.sum()))
+        _isochrone_rows(snap, "isocrona", "", reach)
+
+    if with_nodes:
+        for node, lat, lon in integration_node_origins(datasets[1]):
+            _node_isochrone_rows(snap, node, merged, lat, lon, datasets, day_str)
 
 
 # --------------------------------------------------------------------------- snapshot
@@ -338,10 +410,12 @@ def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None
             print("[snapshot] esperas da 54" + (" + busca de fase (meio ciclo)" if "busca_fase_54" in sections else "") + "...")
             _section_waits(snap, work, with_search="busca_fase_54" in sections, scenario=sc)
 
-        if {"isocrona", "populacao"} & set(sections):
-            print("[snapshot] população BGRI" + (" + isócronas do estádio" if "isocrona" in sections else "") + "...")
+        if {"isocrona", "populacao", "isocrona_nos"} & set(sections):
+            print("[snapshot] população BGRI" + (" + isócronas do estádio" if "isocrona" in sections else "")
+                  + (" + isócronas dos nós" if "isocrona_nos" in sections else "") + "...")
             _section_population(snap, (smtuc, metro), day_str, time_str, work,
-                                with_isochrone="isocrona" in sections, with_population="populacao" in sections)
+                                with_isochrone="isocrona" in sections, with_population="populacao" in sections,
+                                with_nodes="isocrona_nos" in sections)
 
         if "redundancia" in sections:
             print("[snapshot] redundância viagem a viagem...")

@@ -19,6 +19,7 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `oficial_fase2_ep212.csv` | **Cenário `fase2_ep212`** (N1, 2026-11-26): contrafactual, Metro fase 2 com o SMTUC Ep212 a 2026-11-09 (as mesmas 2373 viagens do Ep212 a 11/05). Separa as mudanças de setembro: `antes` → `fase2_ep212` é só o metro, `fase2_ep212` → `fase2` é só o horário SMTUC (Como Vou + o que mudou de março a setembro). Os registos `oficial_fase1_t3` e `oficial_fase2_norte` não mudaram |
 | `n2_redundancia_antes.csv`, `n2_redundancia_fase2_ep212.csv`, `n2_redundancia_fase2.csv` | **Redundância viagem a viagem** (N2.1, 2026-11-26; só a secção opcional `redundancia`, `--secoes redundancia`): autocarros·km e autocarros·hora a par do metro no dia de referência de cada cenário, no total, por linha e por corredor do metro. Mesma regra da extensão a par do metro; nenhum número dos outros registos mudou. Regravados com `--force` no N2.2 só com 24 números novos cada (desperdício e semana-tipo; os outros iguais) |
 | `oficial_fase1_sem54.csv`, `n2_redundancia_antes_sem54.csv` | **Cenário `antes_sem54`** (A′, N2.3, 2026-11-26): a rede da fase 1 sem a linha 54 (Ep212 filtrado em memória, vista `smtuc-sem-54`; mesmos metro e dia). Sem esperas nem busca da 54 (secções omitidas) |
+| `n2_isocronas_nos_<cenário>.csv` (antes, antes_sem54, fase2_ep212, fase2) | **Isócronas a partir dos nós de integração** (N2.4, 2026-11-26; secção opcional `isocrona_nos`): estações Portagem e Portela, média das partidas de 10 em 10 min das 07:30 às 09:20 |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -201,3 +202,17 @@ O cenário `antes_sem54` é o `antes` com a linha 54 tirada do Ep212 em memória
 - **Esperas da 54:** omitidas em A′, porque não há 54.
 
 O contributo da 54 não aparece na cobertura nem no estádio. Fica para as isócronas a partir da Portela e da Portagem (N2.4) e para as esperas da integração.
+
+## Isócronas a partir dos nós de integração (N2.4, 2026-11-26)
+
+A origem é a estação do metro de cada nó (`INTEGRATION_SITES`). Não se usa uma só hora de partida: com uma hora só, uma linha de 40 em 40 min como a 54 conta ou não conforme a hora calha. Às 08:20, por exemplo, a 54 sai da Portela às 08:40 e da Portagem às 08:20, numa paragem a uns passos da estação, e nunca é apanhada. Por isso cada valor é a média das partidas de 10 em 10 min das 07:30 às 09:20 (`NODE_ISOCHRONE_*` no config): a de quem chega ao nó a uma hora qualquer da ponta da manhã.
+
+| Média das partidas | A′ (sem a 54) | A (fase 1) | B (metro fase 2 + Ep212) | C (Como Vou) |
+|---|---|---|---|---|
+| Portela: tempo médio ponderado | 47,0 min | 46,0 min | 44,1 min | 43,9 min |
+| Portela: população a ≤ 30 min | 51 136 | 52 375 | 55 978 | 57 313 |
+| Portagem: tempo médio ponderado | 33,0 min | 33,0 min | 33,0 min | 33,5 min |
+| Portagem: população a ≤ 30 min | 83 477 | 83 477 | 83 222 | 81 750 |
+
+- **A 54 conta na Portela e não na Portagem.** A partir da Portela tira cerca de 1 min ao tempo médio e põe mais ~1 200 pessoas a ≤ 30 min. A partir da Portagem não muda nada: tudo o que a 54 alcança dali também se alcança por outras linhas.
+- **O metro da fase 2 melhora a Portela** (A → B, −1,9 min). O Como Vou melhora-a um pouco mais (−0,2 min) e piora um pouco a Portagem (+0,5 min, −1 500 pessoas a ≤ 30 min).

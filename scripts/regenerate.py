@@ -420,7 +420,7 @@ def regenerate_integration_scenario_htmls(scenario: str | None = None) -> None:
 
 # Secções do snapshot que a página de comparação usa (sem "linhas" nem a busca de fase, que é a
 # parte lenta e não entra na página).
-_COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao")
+_COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao", "isocrona_nos")
 
 
 def _load_snapshot_module():

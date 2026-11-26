@@ -224,4 +224,4 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
 
 def test_snapshot_module_loads_from_scripts() -> None:
     module = regen._load_snapshot_module()
-    assert set(regen._COMPARISON_SECTIONS) <= set(module.SECTIONS)
+    assert set(regen._COMPARISON_SECTIONS) <= set(module.ALL_SECTIONS)

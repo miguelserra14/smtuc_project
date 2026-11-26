@@ -1,0 +1,48 @@
+section,key,metric,value
+meta,snapshot,fase,n2_isocronas_nos_antes_sem54
+meta,snapshot,cenario,antes_sem54
+meta,snapshot,criado_em,2026-11-26
+meta,snapshot,commit,fea352b+alterações
+meta,dados,smtuc,smtuc-sem-54
+meta,dados,metro,metrobus
+meta,dados,pasta_smtuc,data/gtfs/smtuc/antigo_ep212
+meta,dados,impressao_digital_smtuc,864ee5237cafc617
+meta,dados,pasta_metro,data/gtfs/metro/fase1_gtfs_20251219
+meta,dados,impressao_digital_metro,da23030383ae252e
+meta,dados,dia_referencia,2026-05-11
+meta,dados,hora_isocrona,08:20:00
+meta,parametros,WALK_SPEED_M_MIN,80
+meta,parametros,CATCHMENT_M,500
+meta,parametros,TRANSFER_BUFFER_MIN,1
+meta,parametros,FREQUENCY_WINDOW_START_H,7
+meta,parametros,FREQUENCY_WINDOW_END_H,20
+meta,parametros,TEMPORAL_OVERLAP_MAX_MIN,5
+meta,parametros,SPATIAL_OVERLAP_WALK_MIN,3
+meta,parametros,STADIUM_RADIUS_M,2000
+meta,parametros,REACHABILITY_MAX_MIN,60
+meta,parametros,REACHABILITY_MAX_TRANSFERS,2
+meta,parametros,LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,-10
+meta,parametros,LINE_54_MELHORADO_PHASE_SHIFT_MIN,0
+meta,dados,linhas_excluidas_smtuc,54
+isocrona_nos,Portagem | origem,partidas,07:30:00-09:20:00/12
+isocrona_nos,Portagem | faixa 0-10,populacao_media,11692.4167
+isocrona_nos,Portagem | faixa 10-15,populacao_media,22732.6667
+isocrona_nos,Portagem | faixa 15-30,populacao_media,49051.9167
+isocrona_nos,Portagem | faixa 30-60,populacao_media,38830.0833
+isocrona_nos,Portagem | faixa >60,populacao_media,18508.9167
+isocrona_nos,Portagem | total,populacao_30min_media,83477
+isocrona_nos,Portagem | total,tempo_medio_ponderado_min,32.9649
+isocrona_nos,Portagem | total,melhor_partida_min,29.5989
+isocrona_nos,Portagem | total,pior_partida_min,38.1891
+isocrona_nos,Portela | origem,partidas,07:30:00-09:20:00/12
+isocrona_nos,Portela | faixa 0-10,populacao_media,4879.5
+isocrona_nos,Portela | faixa 10-15,populacao_media,9159.0833
+isocrona_nos,Portela | faixa 15-30,populacao_media,37097.75
+isocrona_nos,Portela | faixa 30-60,populacao_media,55640.3333
+isocrona_nos,Portela | faixa >60,populacao_media,34039.3333
+isocrona_nos,Portela | total,populacao_30min_media,51136.3333
+isocrona_nos,Portela | total,tempo_medio_ponderado_min,46.958
+isocrona_nos,Portela | total,melhor_partida_min,40.9017
+isocrona_nos,Portela | total,pior_partida_min,51.5861
+meta,snapshot,secoes,isocrona_nos
+meta,snapshot,secoes_omitidas,

@@ -99,12 +99,36 @@ class _Kpi:
     scale: float = 1.0
     better: str = ""  # "lower"/"higher": sentido em que a mudança é uma melhoria ("" = neutro)
     delta_unit: str | None = None  # unidade da diferença, se for outra (percentagem -> "p.p.")
+    optional: bool = False  # sem valor nos DOIS snapshots -> a linha não sai (secções opcionais)
 
 
 def _param(snap: pd.DataFrame, name: str, default: str) -> str:
     value = snapshot_value(snap, "overlap_resumo", "total", name) or snapshot_value(snap, "meta", "parametros", name)
     number = _number(value)
     return _fmt_number(number) if number is not None else default
+
+
+def _node_window(snap: pd.DataFrame, node: str) -> str:
+    """"07:30–09:20" a partir de "07:30:00-09:20:00/12" (snapshot isocrona_nos, chave origem)."""
+    raw = snapshot_value(snap, "isocrona_nos", f"{node} | origem", "partidas") or ""
+    span = raw.split("/")[0].split("-")
+    return f"{span[0][:5]}–{span[1][:5]}" if len(span) == 2 else "?"
+
+
+def _node_kpis() -> tuple[_Kpi, ...]:
+    """Isócronas dos nós de integração (N2.4): uma linha de tempo e uma de população por nó."""
+    from config import INTEGRATION_SITES
+
+    out: list[_Kpi] = []
+    for site in INTEGRATION_SITES:
+        node = str(site["name"])
+        out.append(_Kpi(lambda s, n=node: f"Tempo médio a partir da estação {n} (média das partidas "
+                        f"{_node_window(s, n)}, ponderado pela população)",
+                        "isocrona_nos", f"{node} | total", "tempo_medio_ponderado_min", decimals=1, unit="min",
+                        better="lower", optional=True))
+        out.append(_Kpi(lambda s, n=node: f"População a ≤ 30 min da estação {n} (média das partidas)",
+                        "isocrona_nos", f"{node} | total", "populacao_30min_media", better="higher", optional=True))
+    return tuple(out)
 
 
 KPIS: tuple[_Kpi, ...] = (
@@ -123,6 +147,7 @@ KPIS: tuple[_Kpi, ...] = (
          "isocrona", "faixa 0-10", "populacao", better="higher"),
     _Kpi(lambda s: "População em subsecções sem oferta",
          "populacao", "sem_oferta", "populacao", better="lower"),
+    *_node_kpis(),
 )
 
 
@@ -146,12 +171,14 @@ def build_comparison_rows(before: pd.DataFrame, after: pd.DataFrame) -> dict[str
     for kpi in KPIS:
         raw_b = snapshot_value(before, kpi.section, kpi.key, kpi.metric)
         raw_a = snapshot_value(after, kpi.section, kpi.key, kpi.metric)
+        if kpi.optional and raw_b is None and raw_a is None:
+            continue
         b = _number(raw_b)
         a = _number(raw_a)
         b = b * kpi.scale if b is not None else None
         a = a * kpi.scale if a is not None else None
         kpis.append({
-            "label": kpi.label(after),
+            "label": kpi.label(after if raw_a is not None else before),
             "before": _fmt_number(b, kpi.decimals, kpi.unit),
             "after": _fmt_number(a, kpi.decimals, kpi.unit),
             "delta": _fmt_delta(b, a, kpi.decimals, kpi.unit if kpi.delta_unit is None else kpi.delta_unit),
