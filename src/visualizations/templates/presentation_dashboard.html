@@ -530,6 +530,235 @@
             justify-content: center;
             margin-top: 16px;
         }
+        /* Narrativa por secções (ver presentation_content.py): etiqueta de secção + cenário no
+           topo de cada slide, divisores de secção, escada de cenários e slides por construir. */
+        .section-tag {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 10px;
+        }
+        .section-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.2em;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: var(--accent-ink);
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 0.78rem;
+        }
+        .section-name {
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--ink);
+        }
+        .ladder-chips {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+        }
+        .ladder-chip {
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        .ladder-arrow {
+            margin: 0 0.2em;
+            color: var(--accent);
+            font-family: var(--font-body);
+            font-weight: 700;
+        }
+        .planned-badge {
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px dashed var(--accent-2);
+            color: var(--accent-2);
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .section-divider {
+            min-height: 62vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 18px;
+        }
+        .section-divider-head {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+        }
+        .section-big-num {
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: clamp(4rem, 9vw, 7.5rem);
+            line-height: 1;
+            color: var(--accent);
+        }
+        .section-divider-title {
+            margin: 0;
+            font-family: var(--font-head);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: clamp(1.8rem, 3.4vw, 2.8rem);
+            line-height: 1.1;
+        }
+        .section-divider-period {
+            margin: 6px 0 0;
+            font-family: var(--font-head);
+            color: var(--muted);
+        }
+        .section-question {
+            margin: 0;
+            max-width: 1000px;
+            font-size: clamp(1.15rem, 1.7vw, 1.45rem);
+            line-height: 1.4;
+            font-weight: 500;
+            border-left: 5px solid var(--accent-2);
+            padding-left: 16px;
+        }
+        .section-divider .chip-row .chip {
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+        }
+        .ladder {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .ladder-step {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            opacity: 0.4;
+        }
+        .ladder-step.nature-planeado {
+            border-style: dashed;
+        }
+        .ladder-step.is-on {
+            opacity: 1;
+            border-color: var(--accent);
+            background: rgba(255, 221, 43, 0.10);
+        }
+        .ladder-step.is-context {
+            opacity: 0.75;
+        }
+        .ladder-tag {
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 1.5rem;
+            line-height: 1;
+            color: var(--accent);
+        }
+        .ladder-title {
+            font-weight: 600;
+        }
+        .ladder-detail {
+            color: var(--muted);
+            font-size: 0.85rem;
+            line-height: 1.35;
+        }
+        .ladder-meta {
+            margin-top: auto;
+            padding-top: 6px;
+            color: var(--muted);
+            font-family: var(--font-head);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .ladder-map {
+            list-style: none;
+            margin: 16px 0 0;
+            padding: 0;
+            display: grid;
+            gap: 8px;
+        }
+        .ladder-map li {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .ladder-map-compare {
+            min-width: 5em;
+            font-family: var(--font-head);
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .ladder-map-question {
+            flex: 1 1 320px;
+            line-height: 1.4;
+        }
+        .pending-card {
+            max-width: 1000px;
+            border: 1px dashed var(--accent-2);
+            border-radius: 18px;
+            background: rgba(255, 181, 0, 0.06);
+            padding: 16px 18px;
+            line-height: 1.5;
+            box-shadow: var(--shadow);
+        }
+        .pending-status {
+            display: inline-block;
+            margin-bottom: 10px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--accent-2);
+            color: var(--accent-ink);
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .pending-card h4 {
+            margin: 0 0 8px;
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            font-size: 0.88rem;
+        }
+        .pending-card ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .pending-card li + li {
+            margin-top: 6px;
+        }
+        /* Barra de tabs: uma linha por secção, com o divisor de cada secção destacado. */
+        .tab-row-break {
+            flex-basis: 100%;
+            height: 0;
+        }
+        .tab-btn.is-section {
+            border-color: var(--accent);
+        }
         .visually-hidden {
             position: absolute;
             width: 1px;
@@ -560,6 +789,9 @@
             .thanks-card {
                 padding: 24px 18px;
             }
+            .ladder {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
         }
         @media (max-width: 760px) {
             .shell {
@@ -580,6 +812,9 @@
             .stats-grid {
                 grid-template-columns: 1fr;
             }
+            .ladder {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
     </style>
 </head>
@@ -588,7 +823,7 @@
         <section class="hero">
             <div class="eyebrow">Mockups da apresentação</div>
             <h1>SMTUC: A caminho da complementaridade</h1>
-            <p>Tabs organizadas como o fluxo da apresentação: introdução, metodologia, subserviço, overlap, integração, conclusões e agradecimentos.</p>
+            <p>Tabs organizadas como o fluxo da apresentação, uma linha por secção: abertura, 1 fase 1, 1.5 linha 54, 2 Como Vou, 3 fase 3, 4 sugestões e fecho.</p>
         </section>
 
         <nav class="tabs" id="dashboard-tabs" aria-label="Tabs da apresentação"></nav>
@@ -709,17 +944,151 @@
             return options.length ? { ...current, src: options[0].src || current.src } : current;
         }
 
+        // ---- Narrativa por secções (presentation_content.py; resolvida em
+        // dashboard._attach_narrative). Mesmo código em feednplay_dashboard.html. ----
+        const NATURE_LABELS = { oficial: 'dados oficiais', contrafactual: 'contrafactual', planeado: 'cenário planeado' };
+        const PLANNED_BADGE = '<span class="planned-badge">Cenário planeado</span>';
+
+        // Tags dos degraus ("A′", "B", ...) unidas por setas; devolve HTML já escapado (a seta vai
+        // na fonte do corpo: o Space Mono não tem "→" e a de substituição sai minúscula).
+        function ladderTags(ids, steps) {
+            return (ids || []).map((id) => esc((steps.find((step) => step.id === id) || {}).tag || id)).join('<span class="ladder-arrow">→</span>');
+        }
+
+        // Etiqueta no topo de cada slide de uma secção: número + nome da secção + o(s) cenário(s)
+        // que o slide mostra (+ selo se algum for planeado). Abertura/fecho não têm.
+        function renderSectionTag(item) {
+            const section = item.section_meta;
+            if (!section) return '';
+            const steps = Array.isArray(item.ladder_meta) ? item.ladder_meta : [];
+            const chips = steps.length
+                ? `<span class="ladder-chips">${steps.map((step) => `<span class="ladder-chip" title="${esc(step.detail)}">${esc(step.tag)} · ${esc(step.title)} · ${esc(step.day)}</span>`).join('<span class="ladder-arrow" aria-hidden="true">→</span>')}</span>`
+                : '';
+            const planned = steps.some((step) => step.nature === 'planeado');
+            return `
+                <div class="section-tag">
+                    <span class="section-num">${esc(section.number)}</span>
+                    <span class="section-name">${esc(section.title)}</span>
+                    ${chips}
+                    ${planned ? PLANNED_BADGE : ''}
+                </div>
+            `;
+        }
+
+        function panelHead(item) {
+            return `
+                        <div class="panel-head">
+                            ${renderSectionTag(item)}
+                            <h2 class="panel-title">${esc(item.label)}</h2>
+                            <p class="panel-desc">${esc(item.description || '')}</p>
+                        </div>
+            `;
+        }
+
+        // Escada de cenários: "on" = degraus comparados, "context" = só contexto (destaque mais
+        // fraco); sem nenhum dos dois (slide "Cenários") ficam todos acesos.
+        function renderLadder(steps, on = [], context = []) {
+            const highlight = on.length > 0 || context.length > 0;
+            return `
+                <ol class="ladder">
+                    ${(steps || []).map((step) => {
+                        const state = !highlight || on.includes(step.id) ? 'is-on' : (context.includes(step.id) ? 'is-context' : '');
+                        const status = step.status && step.status !== 'existe' ? ` · ${esc(step.status)}` : '';
+                        return `
+                            <li class="ladder-step ${state} nature-${esc(step.nature)}">
+                                <span class="ladder-tag">${esc(step.tag)}</span>
+                                <span class="ladder-title">${esc(step.title)}</span>
+                                <span class="ladder-detail">${esc(step.detail)}</span>
+                                <span class="ladder-meta">${esc(step.day)} · ${esc(NATURE_LABELS[step.nature] || step.nature)}${status}</span>
+                            </li>
+                        `;
+                    }).join('')}
+                </ol>
+            `;
+        }
+
         function renderPanel(item) {
             const kind = item.kind || 'hero';
+
+            if (kind === 'section') {
+                const section = item.section_meta || {};
+                const steps = Array.isArray(item.ladder_all) ? item.ladder_all : [];
+                const compare = section.compare || [];
+                const context = section.context || [];
+                const compareChip = compare.length
+                    ? `<span class="chip">${compare.length > 1 ? 'Comparação' : 'Cenário'}: ${ladderTags(compare, steps)}</span>`
+                    : '';
+                const contextChip = context.length
+                    ? `<span class="chip">Contexto: ${ladderTags([...context, compare[0]], steps)}</span>`
+                    : '';
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        <div class="panel-body section-divider">
+                            <div class="section-divider-head">
+                                <span class="section-big-num">${esc(section.number)}</span>
+                                <div>
+                                    <h2 class="section-divider-title">${esc(section.title)}</h2>
+                                    <p class="section-divider-period">${esc(section.period || '')}</p>
+                                </div>
+                            </div>
+                            <p class="section-question">${esc(section.question || '')}</p>
+                            <div class="chip-row">
+                                <span class="chip">Tese: ${esc(section.thesis || '')}</span>
+                                ${compareChip}
+                                ${contextChip}
+                                ${section.planned ? PLANNED_BADGE : ''}
+                            </div>
+                            ${renderLadder(steps, compare, context)}
+                            ${section.note ? `<div class="panel-note">${esc(section.note)}</div>` : ''}
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'ladder') {
+                const steps = Array.isArray(item.ladder_all) ? item.ladder_all : [];
+                const sections = Array.isArray(item.sections_all) ? item.sections_all : [];
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        ${panelHead(item)}
+                        <div class="panel-body">
+                            <div class="panel-note">${esc(item.note || '')}</div>
+                            ${renderLadder(steps)}
+                            <ul class="ladder-map">
+                                ${sections.map((section) => `
+                                    <li>
+                                        <span class="section-num">${esc(section.number)}</span>
+                                        <span class="ladder-map-compare">${ladderTags(section.compare, steps)}</span>
+                                        <span class="ladder-map-question">${esc(section.question || '')}</span>
+                                        ${section.planned ? PLANNED_BADGE : ''}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </article>
+                `;
+            }
+
+            if (kind === 'pending') {
+                return `
+                    <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
+                        ${panelHead(item)}
+                        <div class="panel-body">
+                            <div class="pending-card">
+                                <span class="pending-status">${esc(item.status || 'Por construir')}</span>
+                                <h4>O que este slide vai mostrar</h4>
+                                <ul>${(item.shows || []).map((point) => `<li>${esc(point)}</li>`).join('')}</ul>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }
 
             if (kind === 'hero') {
                 const highlights = Array.isArray(item.highlights) ? item.highlights : [];
                 return `
                     <article class="tab-panel is-active" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}">
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body">
                             <div class="grid-hero">
                                 <div class="card hero-card">
@@ -749,10 +1118,7 @@
             if (kind === 'methodology') {
                 return `
                     <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body">
                             <div class="grid-2">
                                 <div class="card">
@@ -774,10 +1140,7 @@
             if (kind === 'three-up') {
                 return `
                     <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body">
                             <div class="panel-note">${esc(item.note || '')}</div>
                             <div class="grid-3">
@@ -791,10 +1154,7 @@
             if (kind === 'overlap') {
                 return `
                     <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body">
                             <div class="panel-note">${esc(item.note || '')}</div>
                             <div class="grid-2">
@@ -809,10 +1169,7 @@
             if (kind === 'scenario-compare') {
                 return `
                     <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body">
                             <div class="panel-note">${esc(item.note || '')}</div>
                             ${item.table ? renderIframeFrame(item.table, 'tall') : ''}
@@ -827,10 +1184,7 @@
             if (kind === 'comparison') {
                 return `
                     <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body">
                             <div class="panel-note">${esc(item.note || '')}</div>
                             <div class="grid-2">
@@ -842,10 +1196,11 @@
                                         </div>
                                         ${renderScenarioSwitch(column)}
                                         ${renderIframeFrame(columnFrame(column), 'slim', { bare: true })}
+                                        ${(column.optimized || []).length ? `
                                         <div class="target-card">
-                                            <h4>Versão otimizada</h4>
-                                            <ul>${(column.optimized || []).map((point) => `<li>${esc(point)}</li>`).join('')}</ul>
-                                        </div>
+                                            <h4>${esc(column.optimized_title || 'Versão otimizada')}</h4>
+                                            <ul>${column.optimized.map((point) => `<li>${esc(point)}</li>`).join('')}</ul>
+                                        </div>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -857,15 +1212,12 @@
             if (kind === 'closing') {
                 return `
                     <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body">
                             <div class="closing-layout">
                                 <div class="closing-hero">
                                     <h2>${esc(item.headline || '')}</h2>
-                                    <p>O foco da apresentação é mostrar que já existe impacto mensurável e que o SMTUC pode responder com rapidez, antes de a narrativa pública da mobilidade em Coimbra ficar fechada sem esta adaptação.</p>
+                                    ${item.lead ? `<p>${esc(item.lead)}</p>` : ''}
                                 </div>
                                 <div class="comparison-col">
                                     ${(item.points || []).map((point) => `
@@ -883,10 +1235,7 @@
             if (kind === 'thanks') {
                 return `
                     <article class="tab-panel" id="panel-${esc(item.id)}" data-panel-id="${esc(item.id)}" role="tabpanel" aria-labelledby="tab-${esc(item.id)}" hidden>
-                        <div class="panel-head">
-                            <h2 class="panel-title">${esc(item.label)}</h2>
-                            <p class="panel-desc">${esc(item.description || '')}</p>
-                        </div>
+                        ${panelHead(item)}
                         <div class="panel-body thanks-layout">
                             <div class="thanks-card">
                                 <h2>${esc(item.title || 'Obrigado')}</h2>
@@ -927,10 +1276,18 @@
             });
         }
 
+        // Quebra de linha na barra de tabs sempre que muda a secção (abertura, 1, 1.5, ..., fecho).
+        function tabRowBreak(index) {
+            if (index === 0) return '';
+            const sectionOf = (item) => (item.section_meta ? item.section_meta.id : '');
+            return sectionOf(tabs[index]) !== sectionOf(tabs[index - 1]) ? '<span class="tab-row-break" aria-hidden="true"></span>' : '';
+        }
+
         function renderTabs() {
             tabsEl.innerHTML = tabs.map((item, index) => `
+                ${tabRowBreak(index)}
                 <button
-                    class="tab-btn"
+                    class="tab-btn${item.kind === 'section' ? ' is-section' : ''}"
                     type="button"
                     role="tab"
                     id="tab-${esc(item.id)}"

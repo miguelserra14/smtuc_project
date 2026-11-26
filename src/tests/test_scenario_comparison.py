@@ -149,14 +149,19 @@ def test_page_and_csv(tmp_path: Path) -> None:
 def test_slides_and_master_link_both_scenarios(tmp_path: Path) -> None:
     tabs = _default_presentation_tabs()
     ids = [t["id"] for t in tabs]
-    assert ids.index("overlap_fase2") < ids.index("antes_vs_fase2") < ids.index("integracao")
+    # Narrativa de 2026-11-26: a integração da fase 1 fica na secção 1.5, antes da secção 2
+    # (Como Vou), onde estão o overlap da fase 2, a comparação e a 54 na rede atual.
+    assert ids.index("integracao") < ids.index("overlap_fase2") < ids.index("antes_vs_fase2") < ids.index("integracao_fase2")
     compare = tabs[ids.index("antes_vs_fase2")]
     assert compare["kind"] == "scenario-compare"
     assert compare["table"]["src"] == "comparacao/antes_vs_fase2.html"
     for column in tabs[ids.index("integracao")]["columns"]:
+        assert "_fase2/" not in column["current"]["src"]  # secção 1.5 = só a fase 1
+    for column in tabs[ids.index("integracao_fase2")]["columns"]:
         srcs = [s["src"] for s in column["scenarios"]]
-        assert srcs[0] == column["current"]["src"]  # abre no antes, como antes
-        assert any("_fase2/" in s for s in srcs)
+        assert srcs[0] == column["current"]["src"]  # abre na rede atual (C)
+        assert "_fase2/" in srcs[0]
+        assert any("_fase2/" not in s for s in srcs)  # e o botão mostra a fase 1 (A)
 
     master = {t["id"]: t for t in _default_dashboard_tabs()}
     assert master["antes-vs-fase2"]["src"] == "comparacao/antes_vs_fase2.html"

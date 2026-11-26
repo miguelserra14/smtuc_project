@@ -27,7 +27,7 @@ Já feito:
   - **atual**;
   - **otimizado**: as mesmas viagens, deslocadas −10 min;
   - **melhorado**: um 2.º autocarro, que passa a linha de 40 em 40 para 20 em 20 min.
-- **Dashboards**: master (`outputs/dashboard.html`), apresentação (`outputs/mockups_dashboard.html`) e parede FeedNPlay de 9 ecrãs (`outputs/feednplay_dashboard.html`). A apresentação já tem o slide de overlap e isócronas da fase 2, um slide "Antes vs Fase 2" com os indicadores lado a lado e, nos slides da 54, um botão para trocar entre os dois cenários.
+- **Dashboards**: master (`outputs/dashboard.html`), apresentação (`outputs/mockups_dashboard.html`) e parede FeedNPlay de 9 ecrãs (`outputs/feednplay_dashboard.html`). A apresentação está organizada por secções (ver "O que falta fechar"); cada slide diz que cenário mostra. Já tem o overlap e as isócronas da fase 2, um slide "Fase 1 vs Como Vou" com os indicadores lado a lado e, no slide da 54 depois do Como Vou, um botão para trocar entre os dois cenários.
 - **Antes vs fase 2** (`outputs/comparacao/antes_vs_fase2.html` e `.csv`): overlap, acessibilidade a partir do estádio, população sem oferta e esperas da 54 lado a lado. Os números são os do `snapshot_metrics.py`, recalculados em cada regenerate.
 - **Dados verificáveis**: os ficheiros oficiais ficam congelados em `data/raw/`. Os feeds que o código lê são construídos a partir deles com transformações registadas. Antes e depois de cada troca de dados tira-se um snapshot dos números de controlo (`reports/metricas/`).
 
@@ -161,17 +161,11 @@ docs/integracao_dados_agit/   plano, decisões e protótipos da integração dos
 - SIT, a rede interurbana, na fase 2: acessibilidade, cobertura, sobreposição SIT × SMTUC e transbordos SIT ↔ Metro em Portagem e Coimbra B. O plano está em `docs/integracao_dados_agit/README.md` (fase D3).
 
 **Apresentação**
-- Rever a narrativa:
-  1. o problema e o objetivo;
-  2. o estado atual antes da fase 2 e o desperdício que já houve;
-  3. o estado atual da 54;
-  4. como fica depois da fase 2, com a 54 melhorada;
-  5. as propostas de melhoria e a urgência;
-  6. a conclusão.
-- Atualizar os textos dos slides que ficaram para trás:
-  - o slide da fase 2 ainda diz "inauguração prevista em setembro";
-  - a integração diz que a versão otimizada "ainda é um objetivo";
-  - a conclusão fala de setembro como uma oportunidade futura.
+- Narrativa (o esqueleto já está nos slides, `src/visualizations/presentation_content.py`): 1 fase 1 (set 2025 – set 2026), 1.5 linha 54, 2 Como Vou (a reorganização das linhas SMTUC de setembro de 2026), 3 fase 3 (Linha do Hospital, março de 2027), 4 para onde levar os autocarros que a fase 3 torna redundantes. Cada secção compara dois degraus de uma escada de cenários que diferem numa só coisa: A (fase 1), A′ (A sem a 54), B (SMTUC Ep212 + Metro fase 2), C (Como Vou), D (fase 3, planeado), E (proposta, planeado). Os slides marcados "por construir" esperam por:
+  - N1: cenário B, comparação por pares e diferenças Ep212 → Ep225 (secção 2);
+  - N2: ranking das redundâncias com o desperdício e a rede sem a 54 (secções 1 e 1.5);
+  - N3: feed planeado da Linha do Hospital a partir do KMZ (secção 3);
+  - N4: onde investir e a proposta E (secção 4).
 - Fazer os mockups finais e melhorar o design. Juntar tudo no dashboard e limar arestas (legendas, etc.). Fechar as transições.
 - A isócrona dinâmica no browser é uma aproximação: o tempo base mais a distância extra a 80 m/min. Rotulá-la como estimativa ou pré-calcular uma grelha de origens.
 

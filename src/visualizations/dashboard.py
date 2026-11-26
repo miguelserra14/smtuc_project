@@ -16,7 +16,7 @@ from config import (
 from gtfs_processing.scenarios import scenario_output_path
 from overlap.overlap_db import line_metrics_db_path
 
-from .presentation_content import PRESENTATION_TABS
+from .presentation_content import PRESENTATION_TABS, SCENARIO_LADDER, SECTIONS
 
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
@@ -380,15 +380,57 @@ def _overlap_tab_metrics_path(tab_id: str) -> str:
     return scenario_output_path(LINE_METRICS_DB_PATH, _OVERLAP_TAB_SCENARIO.get(tab_id))
 
 
+_LADDER_BY_ID = {step["id"]: step for step in SCENARIO_LADDER}
+_SECTIONS_BY_ID = {section["id"]: section for section in SECTIONS}
+
+
+def _ladder_steps(ids: list[str], where: str) -> list[dict[str, Any]]:
+    unknown = [step_id for step_id in ids if step_id not in _LADDER_BY_ID]
+    if unknown:
+        raise ValueError(f"{where}: degraus inexistentes em SCENARIO_LADDER: {unknown}")
+    return [copy.deepcopy(_LADDER_BY_ID[step_id]) for step_id in ids]
+
+
+def _section_meta(section_id: str, where: str) -> dict[str, Any]:
+    """Cópia da secção de `SECTIONS`, com "planned" = compara algum degrau planeado (leva o selo
+    "cenário planeado")."""
+    if section_id not in _SECTIONS_BY_ID:
+        raise ValueError(f"{where}: secção inexistente em SECTIONS: {section_id!r}")
+    section = copy.deepcopy(_SECTIONS_BY_ID[section_id])
+    compared = _ladder_steps(section["compare"], f"secção {section_id}")
+    _ladder_steps(section.get("context", []), f"secção {section_id}")
+    section["planned"] = any(step["nature"] == "planeado" for step in compared)
+    return section
+
+
+def _attach_narrative(tabs: list[dict[str, Any]]) -> None:
+    """Resolve os ids de "section"/"ladder" de cada slide (ver `presentation_content.py`) no que
+    os templates leem: "section_meta", "ladder_meta" e, nos slides da escada e nos divisores,
+    "ladder_all"/"sections_all". Um id desconhecido rebenta aqui, em vez de o slide sair sem
+    etiqueta."""
+    for tab in tabs:
+        where = f"slide {tab.get('id')!r}"
+        if tab.get("section") is not None:
+            tab["section_meta"] = _section_meta(tab["section"], where)
+        if tab.get("ladder") is not None:
+            tab["ladder_meta"] = _ladder_steps(tab["ladder"], where)
+        if tab.get("kind") in ("section", "ladder"):
+            tab["ladder_all"] = copy.deepcopy(SCENARIO_LADDER)
+        if tab.get("kind") == "ladder":
+            tab["sections_all"] = [_section_meta(section["id"], where) for section in SECTIONS]
+
+
 def _default_presentation_tabs() -> list[dict[str, Any]]:
     """Devolve os dados dos slides da apresentação - texto vem de `presentation_content.py`,
     exceto "stats" nos slides de kind "overlap", calculado aqui em tempo real a partir do cache
     de métricas de linha (ver `_OVERLAP_TAB_SCENARIO` - há mais do que um slide "overlap"
     desde que o slide dedicado à fase 2 existe, cada um com o seu próprio cache/dataset, por
-    isso a escolha é por `id`, não só por `kind`). `deepcopy` evita mutar a lista partilhada ao
-    nível do módulo entre chamadas sucessivas (ex.: presentation_dashboard.html e
-    feednplay_dashboard.html chamam esta função cada um a sua vez)."""
+    isso a escolha é por `id`, não só por `kind`), e os metadados de secção/cenário de
+    `_attach_narrative`. `deepcopy` evita mutar a lista partilhada ao nível do módulo entre
+    chamadas sucessivas (ex.: presentation_dashboard.html e feednplay_dashboard.html chamam esta
+    função cada um a sua vez)."""
     tabs = copy.deepcopy(PRESENTATION_TABS)
+    _attach_narrative(tabs)
     for tab in tabs:
         if tab.get("kind") == "overlap":
             metrics_path = _overlap_tab_metrics_path(str(tab.get("id")))
