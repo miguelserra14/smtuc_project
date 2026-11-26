@@ -18,6 +18,7 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `diff_oficial_fase2_t3_vs_norte.csv` | Diferenças (12 números novos, só esse sentido; a busca de fase não muda) |
 | `oficial_fase2_ep212.csv` | **Cenário `fase2_ep212`** (N1, 2026-11-26): contrafactual, Metro fase 2 com o SMTUC Ep212 a 2026-11-09 (as mesmas 2373 viagens do Ep212 a 11/05). Separa as mudanças de setembro: `antes` → `fase2_ep212` é só o metro, `fase2_ep212` → `fase2` é só o horário SMTUC (Como Vou + o que mudou de março a setembro). Os registos `oficial_fase1_t3` e `oficial_fase2_norte` não mudaram |
 | `n2_redundancia_antes.csv`, `n2_redundancia_fase2_ep212.csv`, `n2_redundancia_fase2.csv` | **Redundância viagem a viagem** (N2.1, 2026-11-26; só a secção opcional `redundancia`, `--secoes redundancia`): autocarros·km e autocarros·hora a par do metro no dia de referência de cada cenário, no total, por linha e por corredor do metro. Mesma regra da extensão a par do metro; nenhum número dos outros registos mudou. Regravados com `--force` no N2.2 só com 24 números novos cada (desperdício e semana-tipo; os outros iguais) |
+| `oficial_fase1_sem54.csv`, `n2_redundancia_antes_sem54.csv` | **Cenário `antes_sem54`** (A′, N2.3, 2026-11-26): a rede da fase 1 sem a linha 54 (Ep212 filtrado em memória, vista `smtuc-sem-54`; mesmos metro e dia). Sem esperas nem busca da 54 (secções omitidas) |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -188,3 +189,15 @@ O ano é uma **estimativa**: semana-tipo × 52. A semana-tipo é o dia útil de 
 
 - Substitui as contas à mão de `reports/estatisticas.txt` (503 574 km/ano e ~383 t CO2/ano na fase 1). Essas partiam de 85,4 km de extensão, viagens = 19 h ÷ intervalo médio e 365 dias iguais. Calculado viagem a viagem, a fase 1 dá cerca de metade.
 - Linhas com mais CO2 por ano: A 7T, 24T, 33; B 7T, 29, 24T; C 5, 24T, 29.
+
+## Rede da fase 1 sem a 54 (A′, N2.3, 2026-11-26)
+
+O cenário `antes_sem54` é o `antes` com a linha 54 tirada do Ep212 em memória: não há ficheiros novos, e a cache de métricas tem assinatura própria. Comparado com `oficial_fase1_t3` (A), só mudam números ligados à 54:
+
+- **Linhas:** desaparece a linha 54. Todas as outras linhas têm exatamente os mesmos números.
+- **Overlap:** menos 1 linha e menos 1,7 km de extensão a par do metro (de 103,6 para 101,9 km).
+- **População:** a população sem oferta e as isócronas do estádio não mudam (13 701 pessoas; 39,5 min). Só as partidas na área de influência das paragens descem 0,7 %: todas as subsecções servidas pela 54 têm outra linha.
+- **Redundância:** a 54 faz 34,5 autocarros·km por dia útil a par do metro (4,2 % dos 815 de A).
+- **Esperas da 54:** omitidas em A′, porque não há 54.
+
+O contributo da 54 não aparece na cobertura nem no estádio. Fica para as isócronas a partir da Portela e da Portagem (N2.4) e para as esperas da integração.

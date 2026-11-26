@@ -90,6 +90,7 @@ OUTPUTS_INTEGRATION_DIR = "outputs/integration"
 # secção 2; antes -> fase2 (mudam os dois) fica só no separador do dashboard master.
 OUTPUTS_COMPARISON_DIR = "outputs/comparacao"
 COMPARISON_PAIRS: tuple[tuple[str, str], ...] = (
+    ("antes_sem54", "antes"),  # contributo da linha 54 (secção 1.5)
     ("antes", "fase2_ep212"),  # efeito do metro da fase 2
     ("fase2_ep212", "fase2"),  # efeito do horário SMTUC (Como Vou + mudanças de março a setembro)
     ("antes", "fase2"),        # os dois juntos (visão geral, só no master)
@@ -134,8 +135,9 @@ DATASET_DIRS: dict[str, str] = {
 # têm nenhum dia em comum (Ep212 + Metro fase 1 até 09/09/2026; Ep225 + Metro fase 2 depois).
 # "label" (opcional; por omissão o nome) é o nome curto das páginas de comparação. Na narrativa
 # da apresentação (visualizations/presentation_content.py, SCENARIO_LADDER) antes = degrau A,
-# fase2_ep212 = B e fase2 = C.
-SCENARIOS: dict[str, dict[str, str]] = {
+# antes_sem54 = A′, fase2_ep212 = B e fase2 = C. "exclude_lines" (opcional) retira linhas SMTUC
+# do feed (vista gtfs.dataset_view, sem ficheiros novos).
+SCENARIOS: dict[str, dict[str, object]] = {
     "antes": {
         "description": "Antes da fase 2 do Metro: SMTUC Ep212 + Metro fase 1 (GTFS oficial 2025-12-19)",
         "label": "Fase 1",
@@ -144,6 +146,21 @@ SCENARIOS: dict[str, dict[str, str]] = {
         "reference_day": "2026-05-11",
         "reference_time": "08:20:00",
         "output_suffix": "",
+    },
+    # CONTRAFACTUAL (N2.3, 2026-11-26): a rede da fase 1 SEM a linha 54 (degrau A′ da narrativa,
+    # secção 1.5 "impacto da 54"). A 54 começou a 23/02/2026 (aviso SMTUC de 18/02), antes do
+    # Ep212 (09/03): não há horário oficial sem ela, por isso é o Ep212 com a linha filtrada em
+    # memória ("exclude_lines": vista "smtuc-sem-54", sem dados novos). Sem páginas de
+    # integração nem esperas da 54 (não há 54).
+    "antes_sem54": {
+        "description": "Contrafactual: a rede da fase 1 (SMTUC Ep212 + Metro fase 1) sem a linha 54",
+        "label": "Fase 1 sem a 54",
+        "smtuc": "smtuc",
+        "exclude_lines": ("54",),
+        "metro": "metrobus",
+        "reference_day": "2026-05-11",
+        "reference_time": "08:20:00",
+        "output_suffix": "_sem54",
     },
     # CONTRAFACTUAL (N1, 2026-11-26): o metro da fase 2 com o horário SMTUC Ep212, no dia da fase
     # 2. Separa as duas mudanças de setembro de 2026: antes -> fase2_ep212 é só o metro;
@@ -314,6 +331,7 @@ Outros cenários: as mesmas páginas em integration/<nó><sufixo>/ (ex.: portela
 portagem_fase2_ep212/); overlap/isócronas em overlap/*<sufixo>.html.
 
 Comparações de cenários (COMPARISON_PAIRS; números de scripts/snapshot_metrics.py):
+http://localhost:8000/outputs/comparacao/antes_sem54_vs_antes.html   (só a linha 54)
 http://localhost:8000/outputs/comparacao/antes_vs_fase2_ep212.html   (só o metro)
 http://localhost:8000/outputs/comparacao/fase2_ep212_vs_fase2.html   (só o horário SMTUC)
 http://localhost:8000/outputs/comparacao/antes_vs_fase2.html         (os dois)

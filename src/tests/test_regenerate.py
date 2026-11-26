@@ -113,11 +113,17 @@ def test_real_integration_section_records_failure_instead_of_swallowing(monkeypa
     monkeypatch.setattr(regen, "generate_connection_visualizations", _boom)
     regen.regenerate_integration_htmls()
     expected = []
-    for name in regen.scenario_names():  # o cenário por omissão sai sem o nome
+    for name in _with_integration():  # o cenário por omissão sai sem o nome
         prefix = "integração" if not regen.get_scenario(name).output_suffix else f"integração {name}"
         expected += [f"{prefix} Portagem (54+38)", f"{prefix} Portela (54)"]
     assert [s for s, _ in regen._FAILURES] == expected
     assert "integração fase2 Portela (54)" in expected and "integração fase2_ep212 Portela (54)" in expected
+    assert not any("antes_sem54" in name for name in expected)  # sem a 54 não há integração
+
+
+def _with_integration() -> list[str]:
+    """Cenários com páginas de integração: todos menos os que retiram a 54/38 (N2.3, A′)."""
+    return [n for n in regen.scenario_names() if not regen.excluded_integration_lines(n)]
 
 
 def test_overlap_section_covers_every_other_scenario(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -145,11 +151,12 @@ def test_integration_section_covers_every_scenario(monkeypatch: pytest.MonkeyPat
     by_scenario: dict[str, set[str]] = {}
     for scenario, day, _subdir in calls:
         by_scenario.setdefault(scenario, set()).add(day)
-    assert set(by_scenario) == set(regen.scenario_names())
+    assert set(by_scenario) == set(_with_integration())
+    assert "antes_sem54" in regen.scenario_names() and "antes_sem54" not in by_scenario
     for name, days in by_scenario.items():
         expected = regen.resolve_reference_day(scenario=regen.get_scenario(name)).strftime("%Y-%m-%d")
         assert days == {expected}
-    assert len(calls) == len(regen.scenario_names()) * len(regen.INTEGRATION_SITES)
+    assert len(calls) == len(_with_integration()) * len(regen.INTEGRATION_SITES)
 
 
 def test_utf8_output_survives_redirected_stdout() -> None:
@@ -182,7 +189,7 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
     # D2.5/N1: a secção tira UM snapshot por cenário de COMPARISON_PAIRS (aqui falso), mesmo que
     # entre em vários pares, e grava página + CSV por par em <raiz>/outputs/comparacao/ (aqui
     # tmp_path); erro no snapshot = falha registada.
-    from tests.test_scenario_comparison import AFTER, BEFORE, MIDDLE
+    from tests.test_scenario_comparison import AFTER, BEFORE, MIDDLE, SEM54
 
     taken: list[tuple[str, tuple[str, ...]]] = []
 
@@ -190,7 +197,7 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
         @staticmethod
         def take_snapshot(phase, scenario=None, sections=()):
             taken.append((scenario, tuple(sections)))
-            return {"antes": BEFORE, "fase2_ep212": MIDDLE, "fase2": AFTER}[scenario]
+            return {"antes_sem54": SEM54, "antes": BEFORE, "fase2_ep212": MIDDLE, "fase2": AFTER}[scenario]
 
     monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
     monkeypatch.setattr(regen, "require_geo_stack", lambda: None)

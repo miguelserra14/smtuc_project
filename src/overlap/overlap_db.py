@@ -339,11 +339,14 @@ def _dataset_signature(dataset: str) -> str:
     conteúdo invalidava a cache, que recalculava os mesmos valores e mudava a assinatura gravada
     em outputs/overlap/line_metrics_db*.csv (ruído nos commits). Quebras de linha normalizadas
     (CRLF/LF), como em gtfs_processing.fingerprint."""
-    from gtfs_processing.gtfs import dataset_dir
+    from gtfs_processing.gtfs import dataset_dir, parse_dataset_view
 
     folder = dataset_dir(dataset, _project_root())
     txt_files = sorted(folder.glob("*.txt")) if folder.exists() else []
     h = hashlib.sha256()
+    _base, excluded = parse_dataset_view(dataset)
+    if excluded:  # vista: o mesmo conteúdo com outro filtro tem de dar outra assinatura
+        h.update(("sem:" + "+".join(excluded)).encode("utf-8"))
     for path in txt_files:
         stat = path.stat()
         h.update(path.name.encode("utf-8"))

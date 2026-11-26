@@ -63,12 +63,69 @@ def _looks_like_gtfs_folder(folder: Path) -> bool:
     return folder.exists() and folder.is_dir() and all((folder / f).exists() for f in REQUIRED_FILES)
 
 
+# Vistas de dataset (N2.3): "<base>-sem-<linha>[+<linha>...]" é o feed `base` SEM essas linhas
+# (route_short_name). Não há pasta nova nem ficheiros derivados: a vista lê a pasta do base e
+# filtra em memória. Serve os cenários com `exclude_lines` (ex.: a rede da fase 1 sem a 54) e,
+# por ser só um nome, passa por todo o código que recebe nomes de dataset (população, isócronas,
+# mapas, snapshots). A assinatura da cache de métricas inclui o filtro (overlap_db).
+VIEW_SEPARATOR = "-sem-"
+VIEW_LINE_SEPARATOR = "+"
+
+
+def dataset_view(base: str, exclude_lines: tuple[str, ...] | list[str]) -> str:
+    """Nome da vista `base` sem `exclude_lines` (ordem e repetições não contam); sem linhas = `base`."""
+    lines = sorted({str(line).strip() for line in exclude_lines if str(line).strip()})
+    if not lines:
+        return base
+    bad = [line for line in lines if VIEW_LINE_SEPARATOR in line or VIEW_SEPARATOR in line]
+    if bad or VIEW_SEPARATOR in base:
+        raise ValueError(f"vista inválida: base {base!r}, linhas {lines}")
+    return f"{base}{VIEW_SEPARATOR}{VIEW_LINE_SEPARATOR.join(lines)}"
+
+
+def parse_dataset_view(dataset: str) -> tuple[str, tuple[str, ...]]:
+    """`"smtuc-sem-54"` -> `("smtuc", ("54",))`; um dataset normal -> `(dataset, ())`."""
+    if VIEW_SEPARATOR not in dataset:
+        return dataset, ()
+    base, lines = dataset.split(VIEW_SEPARATOR, 1)
+    return base, tuple(line for line in lines.split(VIEW_LINE_SEPARATOR) if line)
+
+
+def base_dataset(dataset: str) -> str:
+    return parse_dataset_view(dataset)[0]
+
+
+def exclude_lines(gtfs: GTFSData, lines: tuple[str, ...], dataset: str = "") -> GTFSData:
+    """Cópia do feed sem as viagens das `lines` (route_short_name; uma linha que não exista
+    levanta ValueError, como na resolução de linhas). Paragens, calendários e shapes ficam."""
+    routes = gtfs.routes
+    if "route_short_name" not in routes.columns:
+        raise ValueError(f"{dataset or 'feed'}: sem route_short_name, não é possível excluir linhas {list(lines)}")
+    names = routes["route_short_name"].astype(str).str.strip()
+    missing = sorted(set(lines) - set(names))
+    if missing:
+        raise ValueError(f"{dataset or 'feed'}: linhas a excluir que não existem no feed: {missing}")
+    drop_routes = set(routes.loc[names.isin(lines), "route_id"].astype(str))
+    trips = gtfs.trips[~gtfs.trips["route_id"].astype(str).isin(drop_routes)].copy()
+    stop_times = gtfs.stop_times[gtfs.stop_times["trip_id"].isin(trips["trip_id"])].copy()
+    return GTFSData(
+        routes=routes[~routes["route_id"].astype(str).isin(drop_routes)].copy(),
+        trips=trips,
+        stop_times=stop_times,
+        stops=gtfs.stops,
+        shapes=gtfs.shapes,
+        calendar=gtfs.calendar,
+        calendar_dates=gtfs.calendar_dates,
+    )
+
+
 def dataset_dir(dataset: str, root: Path | None = None) -> Path:
     """Pasta do feed `dataset` (nome lógico -> config.DATASET_DIRS, relativo a config.GTFS_DIR).
     Fonte ÚNICA do caminho de um dataset: carregamento, assinatura da cache, impressões digitais,
     snapshots e regenerate passam todos por aqui. Nome desconhecido = erro (sem adivinhar pastas)."""
     from config import DATASET_DIRS, GTFS_DIR
 
+    dataset = base_dataset(dataset)  # uma vista lê a pasta do feed base
     if dataset not in DATASET_DIRS:
         raise KeyError(f"dataset GTFS desconhecido: {dataset!r} (conhecidos: {', '.join(sorted(DATASET_DIRS))}; ver config.DATASET_DIRS)")
     root = Path(root) if root is not None else PROJECT_ROOT
@@ -145,7 +202,11 @@ def load_gtfs_cached(dataset: str) -> GTFSData:
     """`load_gtfs(dataset=...)` com cache em memória - a ÚNICA cache de feeds do projeto (antes
     overlap_db e transit tinham cada um a sua, e lines_map/operations_population voltavam a ler
     os ficheiros). O GTFSData devolvido é partilhado: quem o usa NÃO pode alterar os DataFrames no
-    lugar (trabalhar sobre `.copy()`). `load_gtfs_cached.cache_clear()` força nova leitura."""
+    lugar (trabalhar sobre `.copy()`). `load_gtfs_cached.cache_clear()` força nova leitura.
+    Uma vista ("<base>-sem-<linhas>") é o feed base filtrado (`exclude_lines`)."""
+    base, lines = parse_dataset_view(dataset)
+    if lines:
+        return exclude_lines(load_gtfs_cached(base), lines, dataset)
     return load_gtfs(dataset=dataset)
 
 

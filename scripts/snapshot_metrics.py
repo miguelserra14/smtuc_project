@@ -300,7 +300,7 @@ def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None
     substituem só o feed respetivo (cenário ad hoc com o mesmo dia)."""
     import dataclasses
 
-    from gtfs_processing.scenarios import get_scenario
+    from gtfs_processing.scenarios import excluded_integration_lines, get_scenario
     from overlap.transit import resolve_reference_day
 
     unknown = set(sections) - set(ALL_SECTIONS)
@@ -315,6 +315,8 @@ def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None
 
     snap = Snapshot()
     _add_meta(snap, phase, smtuc, metro, day_str, time_str, sc.name)
+    if sc.exclude_lines:
+        snap.add("meta", "dados", "linhas_excluidas_smtuc", ";".join(sc.exclude_lines))
     skipped: list[str] = []
 
     with tempfile.TemporaryDirectory(prefix="snapshot_") as tmp:
@@ -328,7 +330,11 @@ def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None
                 _section_overlap_summary(snap, metrics_csv)
 
         wants_waits = {"esperas_54", "busca_fase_54"} & set(sections)
-        if wants_waits:
+        if wants_waits and excluded_integration_lines(sc):
+            # Cenário sem a 54 (N2.3): não há esperas a medir. Fica registado como secção omitida.
+            print(f"[snapshot] esperas da 54 omitidas: o cenário retira {', '.join(excluded_integration_lines(sc))}")
+            skipped.extend(s for s in ("esperas_54", "busca_fase_54") if s in sections)
+        elif wants_waits:
             print("[snapshot] esperas da 54" + (" + busca de fase (meio ciclo)" if "busca_fase_54" in sections else "") + "...")
             _section_waits(snap, work, with_search="busca_fase_54" in sections, scenario=sc)
 

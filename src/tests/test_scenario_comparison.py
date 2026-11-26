@@ -57,6 +57,13 @@ MIDDLE = _snap("fase2_ep212", "2026-11-09", {
 })
 MIDDLE.loc[MIDDLE["metric"] == "smtuc", "value"] = "smtuc_antes"
 MIDDLE.loc[MIDDLE["metric"] == "metro", "value"] = "metro_fase2"
+# A′ (N2.3): o SMTUC do BEFORE sem a 54 (vista do dataset), o mesmo metro; sem esperas da 54.
+SEM54 = _snap("antes_sem54", "2026-05-11", {
+    ("overlap_resumo", "total", "total_overlap_extension_m"): 100000.0,
+    ("populacao", "sem_oferta", "populacao"): 14000,
+})
+SEM54.loc[SEM54["metric"] == "smtuc", "value"] = "smtuc_antes-sem-54"
+SEM54.loc[SEM54["metric"] == "metro", "value"] = "metro_antes"
 AFTER = _snap("fase2", "2026-11-09", {
     ("overlap_resumo", "total", "overlap_lines"): 86,
     ("overlap_resumo", "total", "total_overlap_extension_m"): 338075.3,
@@ -204,3 +211,15 @@ def test_what_changes_is_computed_from_the_feeds(tmp_path: Path) -> None:
     text = Path(create_scenario_comparison_html(tmp_path / "m.html", MIDDLE, AFTER)).read_text(encoding="utf-8")
     assert "Metro da fase 2 + SMTUC Ep212 (09/11/2026)" in text
     assert "horário atual de Como Vou (e esse com Metro da fase 2 + SMTUC Ep212)" in text
+
+
+def test_what_changes_names_the_excluded_line(tmp_path: Path) -> None:
+    # N2.3: entre A′ e A só muda a linha 54 (mesmo feed, filtrado) - não "o horário do SMTUC".
+    from visualizations.scenario_comparison import what_changes
+
+    text = what_changes(SEM54, BEFORE)
+    assert "só muda a linha <strong>54</strong>, que só existe no segundo" in text
+    assert "horário do SMTUC</strong>" not in text and "Cada um é medido" not in text
+    assert "que só existe no primeiro" in what_changes(BEFORE, SEM54)
+    page = Path(create_scenario_comparison_html(tmp_path / "s.html", SEM54, BEFORE)).read_text(encoding="utf-8")
+    assert "Fase 1 sem a 54 (11/05/2026)" in page

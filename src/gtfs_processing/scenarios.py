@@ -31,6 +31,16 @@ class Scenario:
     reference_time: str
     output_suffix: str
     label: str = ""  # nome curto (páginas de comparação); "" = usar o nome
+    # Linhas SMTUC retiradas do feed (N2.3, ex.: a rede da fase 1 sem a 54). Com linhas, `smtuc` é
+    # o nome da VISTA do dataset (gtfs.dataset_view, ex.: "smtuc-sem-54"), que todo o código lê
+    # como um dataset normal; `smtuc_base` é o feed de onde vem.
+    exclude_lines: tuple[str, ...] = ()
+
+    @property
+    def smtuc_base(self) -> str:
+        from gtfs_processing.gtfs import base_dataset
+
+        return base_dataset(self.smtuc)
 
     @property
     def display_name(self) -> str:
@@ -64,16 +74,34 @@ def get_scenario(scenario: str | Scenario | None = None) -> Scenario:
     for role in ("smtuc", "metro"):
         if spec[role] not in config.DATASET_DIRS:
             raise ValueError(f"Cenário {name!r}: dataset {role}={spec[role]!r} não existe em config.DATASET_DIRS")
+    raw_excluded = spec.get("exclude_lines") or ()
+    if isinstance(raw_excluded, str):
+        raise ValueError(f"Cenário {name!r}: exclude_lines tem de ser uma lista de linhas, não {raw_excluded!r}")
+    from gtfs_processing.gtfs import dataset_view
+
+    excluded = tuple(sorted({str(line).strip() for line in raw_excluded if str(line).strip()}))
     return Scenario(
         name=name,
         description=str(spec["description"]),
-        smtuc=str(spec["smtuc"]),
+        smtuc=dataset_view(str(spec["smtuc"]), excluded),
         metro=str(spec["metro"]),
         reference_day=date.fromisoformat(str(spec["reference_day"])),
         reference_time=str(spec["reference_time"]),
         output_suffix=str(spec["output_suffix"]),
         label=str(spec.get("label") or ""),
+        exclude_lines=excluded,
     )
+
+
+def excluded_integration_lines(scenario: str | Scenario | None = None) -> tuple[str, ...]:
+    """Linhas dos nós de integração (config.INTEGRATION_SITES: 54, 38) que o cenário retira do
+    feed. Não vazio = o cenário não tem páginas de integração nem esperas/busca de fase da 54."""
+    sc = get_scenario(scenario)
+    lines: set[str] = set()
+    for site in config.INTEGRATION_SITES:
+        value = site["line_number"]
+        lines.update([value] if isinstance(value, str) else [str(v) for v in value])
+    return tuple(sorted(lines & set(sc.exclude_lines)))
 
 
 def nearest_business_day(from_day: date | None = None) -> date:
@@ -112,13 +140,16 @@ def scenario_output_path(path: str | Path, scenario: str | Scenario | None = Non
 
 def reference_days_by_dataset() -> dict[str, set[date]]:
     """Para cada dataset usado em algum cenário, os dias de referência em que tem de ser avaliado
-    (validação do regenerate e do validador de feeds)."""
+    (validação do regenerate e do validador de feeds). Uma vista conta como o seu feed base (são
+    os mesmos ficheiros)."""
+    from gtfs_processing.gtfs import base_dataset
+
     out: dict[str, set[date]] = {}
     for name in scenario_names():
         sc = get_scenario(name)
         day = scenario_reference_day(sc)
         for dataset in sc.datasets:
-            out.setdefault(dataset, set()).add(day)
+            out.setdefault(base_dataset(dataset), set()).add(day)
     return out
 
 

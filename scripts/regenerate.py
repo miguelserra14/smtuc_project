@@ -42,6 +42,7 @@ from gtfs_processing.gtfs_probe import (  # noqa: E402
     is_public_holiday,
 )
 from gtfs_processing.scenarios import (  # noqa: E402
+    excluded_integration_lines,
     get_scenario,
     scenario_names,
     scenario_output_path,
@@ -378,6 +379,11 @@ def regenerate_integration_scenario_htmls(scenario: str | None = None) -> None:
     print("\n" + "=" * 60)
     print(f"[INFO] Regenerando HTMLs de Integração (cenário {sc.name})...")
     print("=" * 60)
+    excluded = excluded_integration_lines(sc)
+    if excluded:
+        # Por desenho (N2.3), não é uma falha nem falta de dados: o cenário não tem estas linhas.
+        print(f"[INFO] {sc.name} retira a(s) linha(s) {', '.join(excluded)}: sem páginas de integração.")
+        return
 
     if not _require_dataset(sc.smtuc) or not _require_dataset(sc.metro):
         _record_skip(section, f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")

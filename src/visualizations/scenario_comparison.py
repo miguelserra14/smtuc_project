@@ -205,21 +205,46 @@ def _scenario_heading(snap: pd.DataFrame, fallback: str) -> str:
 
 def what_changes(before: pd.DataFrame, after: pd.DataFrame) -> str:
     """Frase (HTML, sem dados por escapar) sobre o que muda entre os dois snapshots, a partir dos
-    feeds de cada um: só o metro, só o horário do SMTUC, os dois, ou nenhum."""
+    feeds de cada um: só o metro, só o horário do SMTUC, só umas linhas (vistas "<feed>-sem-<linhas>",
+    N2.3), os dois, ou nenhum."""
+    from gtfs_processing.gtfs import parse_dataset_view
+
     changed = [
         role for role in ("metro", "smtuc")
         if snapshot_value(before, "meta", "dados", role) != snapshot_value(after, "meta", "dados", role)
     ]
+    base_b, excl_b = parse_dataset_view(str(snapshot_value(before, "meta", "dados", "smtuc") or ""))
+    base_a, excl_a = parse_dataset_view(str(snapshot_value(after, "meta", "dados", "smtuc") or ""))
+    if changed == ["smtuc"] and base_b == base_a:
+        only_after = sorted(set(excl_b) - set(excl_a))
+        only_before = sorted(set(excl_a) - set(excl_b))
+        parts = []
+        for lines, where in ((only_after, "segundo"), (only_before, "primeiro")):
+            if lines:
+                many = len(lines) > 1
+                parts.append(f"{'as linhas' if many else 'a linha'} {_lines_html(lines)}, que só "
+                             f"existe{'m' if many else ''} no {where}")
+        sentence = (
+            f"Entre os dois cenários só muda {' e '.join(parts)}. "
+            "O resto do horário do SMTUC e o metro são os mesmos."
+        )
+        return sentence + _days_note(before, after)
     sentence = {
         ("metro", "smtuc"): "Entre os dois cenários mudam o metro <strong>e</strong> o horário do SMTUC.",
         ("metro",): "Entre os dois cenários só muda o <strong>metro</strong>: o horário do SMTUC é o mesmo.",
         ("smtuc",): "Entre os dois cenários só muda o <strong>horário do SMTUC</strong>: o metro é o mesmo.",
         (): "Os dois cenários usam os mesmos horários.",
     }[tuple(changed)]
+    return sentence + _days_note(before, after)
+
+
+def _lines_html(lines: list[str]) -> str:
+    return " e ".join(f"<strong>{html.escape(line)}</strong>" for line in lines)
+
+
+def _days_note(before: pd.DataFrame, after: pd.DataFrame) -> str:
     days = {snapshot_value(snap, "meta", "dados", "dia_referencia") for snap in (before, after)}
-    if len(days) > 1:
-        sentence += " Cada um é medido no seu dia de referência."
-    return sentence
+    return " Cada um é medido no seu dia de referência." if len(days) > 1 else ""
 
 
 def _cell(text: str, trend: str = "") -> str:
