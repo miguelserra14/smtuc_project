@@ -148,6 +148,13 @@ KPIS: tuple[_Kpi, ...] = (
     _Kpi(lambda s: "População em subsecções sem oferta",
          "populacao", "sem_oferta", "populacao", better="lower"),
     *_node_kpis(),
+    # Redundância viagem a viagem (N2.1/N2.2; secção opcional "redundancia" do snapshot).
+    _Kpi(lambda s: "Autocarros·km a par do metro num dia útil (viagem a viagem)",
+         "redundancia", "total", "km_metro", better="lower", optional=True),
+    _Kpi(lambda s: "Autocarros·hora a par do metro num dia útil",
+         "redundancia", "total", "horas_metro", better="lower", optional=True),
+    _Kpi(lambda s: "t CO2 por ano a par do metro (estimativa pela semana-tipo)",
+         "redundancia", "desperdicio", "ano_t_co2", better="lower", optional=True),
 )
 
 

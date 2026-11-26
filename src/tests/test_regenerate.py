@@ -225,3 +225,33 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
 def test_snapshot_module_loads_from_scripts() -> None:
     module = regen._load_snapshot_module()
     assert set(regen._COMPARISON_SECTIONS) <= set(module.ALL_SECTIONS)
+
+
+def test_redundancy_section_writes_rankings_and_measures(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # N2.5: um ranking por cenário (sufixo do cenário) e uma página de medidas por par de
+    # NETWORK_DIFF_PAIRS, em <raiz>/outputs/redundancia/; erro num cenário = falha registada.
+    import pandas as pd
+
+    from tests.test_redundancy_page import _waste
+
+    monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
+    monkeypatch.setattr(regen, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(regen, "scenario_waste", lambda sc: _waste({"5": 10.0}))
+    diff = pd.DataFrame({"linha_antes": ["5"], "linha_depois": ["5"], "estado": ["igual"], "aviso": [""]})
+    monkeypatch.setattr(regen, "_network_diff", lambda b, a, c: diff)
+    regen.regenerate_redundancy_html()
+    assert regen._FAILURES == []
+    out = tmp_path / "outputs" / "redundancia"
+    for name in regen.scenario_names():
+        stem = regen.scenario_output_path("ranking.html", name)[: -len(".html")]
+        assert (out / f"{stem}.html").exists() and (out / f"{stem}.csv").exists()
+    assert (out / "ranking.html").exists() and (out / "ranking_sem54.html").exists()
+    for before, after in regen.NETWORK_DIFF_PAIRS:
+        assert (out / f"medidas_{before}_vs_{after}.html").exists()
+
+    def _boom(sc):
+        raise RuntimeError("falhou")
+
+    monkeypatch.setattr(regen, "scenario_waste", _boom)
+    regen.regenerate_redundancy_html()
+    assert len([s for s, _ in regen._FAILURES if s.startswith("redundância ")]) == len(regen.scenario_names())

@@ -109,6 +109,12 @@ COMPARISON_PAIRS: tuple[tuple[str, str], ...] = (
 # {html,csv}, com as linhas assinaladas pelos avisos SMTUC de SMTUC_LINE_CHANGES_CSV.
 NETWORK_DIFF_PAIRS: tuple[tuple[str, str], ...] = (("fase2_ep212", "fase2"),)
 SMTUC_LINE_CHANGES_CSV = "data/smtuc_alteracoes_2026.csv"
+# Redundância autocarro x metro (N2.5, visualizations/redundancy_page.py): um ranking por cenário
+# em OUTPUTS_REDUNDANCY_DIR/ranking<sufixo>.{html,csv} e, para cada par de NETWORK_DIFF_PAIRS, o
+# que o horário novo fez às REDUNDANCY_TOP_N linhas mais redundantes do anterior
+# (OUTPUTS_REDUNDANCY_DIR/medidas_<antes>_vs_<depois>.{html,csv}).
+OUTPUTS_REDUNDANCY_DIR = "outputs/redundancia"
+REDUNDANCY_TOP_N = 15
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 

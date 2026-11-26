@@ -27,6 +27,8 @@ from config import (  # noqa: E402
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
     NETWORK_DIFF_PAIRS,
     OUTPUTS_COMPARISON_DIR,
+    OUTPUTS_REDUNDANCY_DIR,
+    REDUNDANCY_TOP_N,
     OUTPUTS_OVERLAP_DIR,
     OUTPUTS_POPULATION_DIR,
     POPULATION_STADIUM_MAP_RADIUS_M,
@@ -51,6 +53,7 @@ from gtfs_processing.scenarios import (  # noqa: E402
 from overlap import network_diff  # noqa: E402
 from overlap.overlap import compute_bgri_reachability_now  # noqa: E402
 from overlap.overlap_db import line_metrics_db_path, load_line_metrics_db  # noqa: E402
+from overlap.redundancy import scenario_waste  # noqa: E402
 from overlap.transit import resolve_reference_day  # noqa: E402
 from population.data_processing import (  # noqa: E402
     compute_poi_underservice,
@@ -73,6 +76,7 @@ from visualizations import (  # noqa: E402
 )
 from visualizations.dashboard import load_overlap_stats, overlap_stats_footer_html  # noqa: E402
 from visualizations.network_diff_page import create_network_diff_html, default_note_html  # noqa: E402
+from visualizations.redundancy_page import create_measures_html, create_ranking_html  # noqa: E402
 from visualizations.scenario_comparison import create_scenario_comparison_html  # noqa: E402
 
 # Registo do que correu mal / foi saltado durante a execução, para o resumo final e o exit code.
@@ -420,7 +424,7 @@ def regenerate_integration_scenario_htmls(scenario: str | None = None) -> None:
 
 # Secções do snapshot que a página de comparação usa (sem "linhas" nem a busca de fase, que é a
 # parte lenta e não entra na página).
-_COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao", "isocrona_nos")
+_COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao", "isocrona_nos", "redundancia")
 
 
 def _load_snapshot_module():
@@ -488,6 +492,67 @@ def regenerate_comparison_html() -> None:
             _record_failure(f"{section} {stem}", e)
 
 
+def _line_changes():
+    """Avisos SMTUC (SMTUC_LINE_CHANGES_CSV) ou None se o ficheiro não existir."""
+    path = project_root() / SMTUC_LINE_CHANGES_CSV
+    return network_diff.load_line_changes(path) if path.exists() else None
+
+
+def _network_diff(before, after, changes):
+    """Diferenças de rede SMTUC entre dois cenários, com as métricas por linha e os avisos."""
+    day_b = resolve_reference_day(scenario=before)
+    day_a = resolve_reference_day(scenario=after)
+    gtfs_b, gtfs_a = load_gtfs_cached(before.smtuc), load_gtfs_cached(after.smtuc)
+    diff = network_diff.compare_networks(
+        network_diff.line_profiles(gtfs_b, day_b),
+        network_diff.line_profiles(gtfs_a, day_a),
+        network_diff.stop_coordinates(gtfs_b),
+        network_diff.stop_coordinates(gtfs_a),
+    )
+    diff = network_diff.add_line_metrics(diff, load_line_metrics_db(scenario=before), load_line_metrics_db(scenario=after))
+    return network_diff.annotate_line_changes(diff, changes)
+
+
+def regenerate_redundancy_html() -> None:
+    """Redundância autocarro x metro (N2.5): ranking de cada cenário -> outputs/redundancia/
+    ranking<sufixo>.{html,csv}; e, por par de NETWORK_DIFF_PAIRS, o que o horário novo fez às
+    linhas mais redundantes do anterior -> medidas_<antes>_vs_<depois>.{html,csv}."""
+    section = "redundância"
+    print("\n" + "=" * 60)
+    print("[INFO] Regenerando páginas de redundância...")
+    print("=" * 60)
+    out_dir = project_root() / OUTPUTS_REDUNDANCY_DIR
+    wastes = {}
+    for name in scenario_names():
+        sc = get_scenario(name)
+        if not _require_dataset(sc.smtuc) or not _require_dataset(sc.metro):
+            _record_skip(f"{section} {name}", f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
+            continue
+        stem = scenario_output_path("ranking.html", sc)[: -len(".html")]
+        try:
+            wastes[name] = scenario_waste(sc)
+            created = create_ranking_html(out_dir / f"{stem}.html", wastes[name], sc.display_name,
+                                          top_n=REDUNDANCY_TOP_N, csv_path=out_dir / f"{stem}.csv")
+            print(f"[SUCCESS] Ranking de redundância ({name}): {created}")
+        except Exception as e:
+            _record_failure(f"{section} {name}", e)
+    changes = _line_changes()
+    for before_name, after_name in NETWORK_DIFF_PAIRS:
+        stem = f"medidas_{before_name}_vs_{after_name}"
+        if before_name not in wastes or after_name not in wastes:
+            _record_skip(f"{section} {stem}", "falta o ranking de um dos cenários")
+            continue
+        before, after = get_scenario(before_name), get_scenario(after_name)
+        try:
+            created = create_measures_html(
+                out_dir / f"{stem}.html", wastes[before_name], wastes[after_name], _network_diff(before, after, changes),
+                before.display_name, after.display_name, top_n=REDUNDANCY_TOP_N, csv_path=out_dir / f"{stem}.csv",
+            )
+            print(f"[SUCCESS] Medidas nas linhas mais redundantes ({stem}): {created}")
+        except Exception as e:
+            _record_failure(f"{section} {stem}", e)
+
+
 def regenerate_network_diff_html() -> None:
     """Diferenças de rede SMTUC linha a linha (N1.3) para cada par de NETWORK_DIFF_PAIRS ->
     outputs/comparacao/rede_<antes>_vs_<depois>.{html,csv}. Usa o cache de métricas por linha de
@@ -497,8 +562,7 @@ def regenerate_network_diff_html() -> None:
     print("[INFO] Regenerando diferenças de rede SMTUC...")
     print("=" * 60)
 
-    changes_path = project_root() / SMTUC_LINE_CHANGES_CSV
-    changes = network_diff.load_line_changes(changes_path) if changes_path.exists() else None
+    changes = _line_changes()
     if changes is None:
         _record_warning(section, f"sem avisos SMTUC ({SMTUC_LINE_CHANGES_CSV} não existe): linhas sem anotação")
     out_dir = project_root() / OUTPUTS_COMPARISON_DIR
@@ -511,17 +575,7 @@ def regenerate_network_diff_html() -> None:
         try:
             day_b = resolve_reference_day(scenario=before)
             day_a = resolve_reference_day(scenario=after)
-            gtfs_b, gtfs_a = load_gtfs_cached(before.smtuc), load_gtfs_cached(after.smtuc)
-            diff = network_diff.compare_networks(
-                network_diff.line_profiles(gtfs_b, day_b),
-                network_diff.line_profiles(gtfs_a, day_a),
-                network_diff.stop_coordinates(gtfs_b),
-                network_diff.stop_coordinates(gtfs_a),
-            )
-            diff = network_diff.add_line_metrics(
-                diff, load_line_metrics_db(scenario=before), load_line_metrics_db(scenario=after)
-            )
-            diff = network_diff.annotate_line_changes(diff, changes)
+            diff = _network_diff(before, after, changes)
             created = create_network_diff_html(
                 out_dir / f"{stem}.html",
                 diff,
@@ -608,6 +662,7 @@ def main() -> None:
     regenerate_integration_htmls()
     regenerate_comparison_html()
     regenerate_network_diff_html()
+    regenerate_redundancy_html()
     regenerate_master_dashboard()
     regenerate_presentation_dashboard()
     regenerate_feednplay_dashboard()
