@@ -1,0 +1,571 @@
+section,key,metric,value
+meta,snapshot,fase,n2_redundancia_fase2
+meta,snapshot,cenario,fase2
+meta,snapshot,criado_em,2026-11-26
+meta,snapshot,commit,59282a1+alterações
+meta,dados,smtuc,smtuc_atual
+meta,dados,metro,metro_fase2_oficial
+meta,dados,pasta_smtuc,data/gtfs/smtuc/atual_ep225
+meta,dados,impressao_digital_smtuc,12aefeabe5782c22
+meta,dados,pasta_metro,data/gtfs/metro/fase2_netex_20261111
+meta,dados,impressao_digital_metro,d66f8a075d3e6998
+meta,dados,dia_referencia,2026-11-09
+meta,dados,hora_isocrona,08:20:00
+meta,parametros,WALK_SPEED_M_MIN,80
+meta,parametros,CATCHMENT_M,500
+meta,parametros,TRANSFER_BUFFER_MIN,1
+meta,parametros,FREQUENCY_WINDOW_START_H,7
+meta,parametros,FREQUENCY_WINDOW_END_H,20
+meta,parametros,TEMPORAL_OVERLAP_MAX_MIN,5
+meta,parametros,SPATIAL_OVERLAP_WALK_MIN,3
+meta,parametros,STADIUM_RADIUS_M,2000
+meta,parametros,REACHABILITY_MAX_MIN,60
+meta,parametros,REACHABILITY_MAX_TRANSFERS,2
+meta,parametros,LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,-10
+meta,parametros,LINE_54_MELHORADO_PHASE_SHIFT_MIN,0
+redundancia,total,linhas,85
+redundancia,total,linhas_com_troco_metro,80
+redundancia,total,viagens,1970
+redundancia,total,km,16055.3907
+redundancia,total,km_metro,1970.2236
+redundancia,total,pct_km_metro,12.2714
+redundancia,total,horas,1017
+redundancia,total,horas_metro,150.1911
+redundancia,linha 10,viagens,31
+redundancia,linha 10,km,247.7134
+redundancia,linha 10,km_metro,39.1472
+redundancia,linha 10,pct_km_metro,15.8034
+redundancia,linha 10,horas_metro,3.3375
+redundancia,linha 10A,viagens,7
+redundancia,linha 10A,km,56.7174
+redundancia,linha 10A,km_metro,8.6495
+redundancia,linha 10A,pct_km_metro,15.2502
+redundancia,linha 10A,horas_metro,0.5889
+redundancia,linha 11,viagens,25
+redundancia,linha 11,km,73.3841
+redundancia,linha 11,km_metro,24.9246
+redundancia,linha 11,pct_km_metro,33.9645
+redundancia,linha 11,horas_metro,2.2128
+redundancia,linha 12,viagens,34
+redundancia,linha 12,km,342.9945
+redundancia,linha 12,km_metro,14.5369
+redundancia,linha 12,pct_km_metro,4.2382
+redundancia,linha 12,horas_metro,0.7114
+redundancia,linha 12A,viagens,1
+redundancia,linha 12A,km,10.3117
+redundancia,linha 12A,km_metro,0
+redundancia,linha 12A,pct_km_metro,0
+redundancia,linha 12A,horas_metro,0
+redundancia,linha 13,viagens,21
+redundancia,linha 13,km,167.068
+redundancia,linha 13,km_metro,8.8837
+redundancia,linha 13,pct_km_metro,5.3174
+redundancia,linha 13,horas_metro,0.5933
+redundancia,linha 13P,viagens,8
+redundancia,linha 13P,km,55.4621
+redundancia,linha 13P,km_metro,0
+redundancia,linha 13P,pct_km_metro,0
+redundancia,linha 13P,horas_metro,0
+redundancia,linha 13T,viagens,3
+redundancia,linha 13T,km,20.6629
+redundancia,linha 13T,km_metro,0.8076
+redundancia,linha 13T,pct_km_metro,3.9085
+redundancia,linha 13T,horas_metro,0.1353
+redundancia,linha 14,viagens,58
+redundancia,linha 14,km,403.4999
+redundancia,linha 14,km_metro,51.5529
+redundancia,linha 14,pct_km_metro,12.7764
+redundancia,linha 14,horas_metro,3.8656
+redundancia,linha 14T,viagens,80
+redundancia,linha 14T,km,434.0418
+redundancia,linha 14T,km_metro,34.291
+redundancia,linha 14T,pct_km_metro,7.9004
+redundancia,linha 14T,horas_metro,3.6194
+redundancia,linha 16,viagens,14
+redundancia,linha 16,km,145.2878
+redundancia,linha 16,km_metro,8.192
+redundancia,linha 16,pct_km_metro,5.6384
+redundancia,linha 16,horas_metro,0.4364
+redundancia,linha 16F,viagens,2
+redundancia,linha 16F,km,19.2102
+redundancia,linha 16F,km_metro,1.0559
+redundancia,linha 16F,pct_km_metro,5.4967
+redundancia,linha 16F,horas_metro,0.0492
+redundancia,linha 16G,viagens,21
+redundancia,linha 16G,km,259.4641
+redundancia,linha 16G,km_metro,14.0451
+redundancia,linha 16G,pct_km_metro,5.4131
+redundancia,linha 16G,horas_metro,0.6869
+redundancia,linha 17,viagens,16
+redundancia,linha 17,km,103.6535
+redundancia,linha 17,km_metro,6.4608
+redundancia,linha 17,pct_km_metro,6.2331
+redundancia,linha 17,horas_metro,0.6286
+redundancia,linha 18,viagens,32
+redundancia,linha 18,km,334.8342
+redundancia,linha 18,km_metro,0.9527
+redundancia,linha 18,pct_km_metro,0.2845
+redundancia,linha 18,horas_metro,0.1794
+redundancia,linha 18E,viagens,4
+redundancia,linha 18E,km,51.5257
+redundancia,linha 18E,km_metro,2.4153
+redundancia,linha 18E,pct_km_metro,4.6875
+redundancia,linha 18E,horas_metro,0.2003
+redundancia,linha 19,viagens,5
+redundancia,linha 19,km,34.7923
+redundancia,linha 19,km_metro,9.7762
+redundancia,linha 19,pct_km_metro,28.0989
+redundancia,linha 19,horas_metro,0.8725
+redundancia,linha 19A,viagens,2
+redundancia,linha 19A,km,28.6472
+redundancia,linha 19A,km_metro,3.5486
+redundancia,linha 19A,pct_km_metro,12.3871
+redundancia,linha 19A,horas_metro,0.145
+redundancia,linha 19R,viagens,7
+redundancia,linha 19R,km,56.2034
+redundancia,linha 19R,km_metro,9.2877
+redundancia,linha 19R,pct_km_metro,16.5252
+redundancia,linha 19R,horas_metro,0.62
+redundancia,linha 19T,viagens,47
+redundancia,linha 19T,km,446.428
+redundancia,linha 19T,km_metro,79.3281
+redundancia,linha 19T,pct_km_metro,17.7695
+redundancia,linha 19T,horas_metro,5.4214
+redundancia,linha 20,viagens,24
+redundancia,linha 20,km,206.4894
+redundancia,linha 20,km_metro,19.5545
+redundancia,linha 20,pct_km_metro,9.47
+redundancia,linha 20,horas_metro,1.0653
+redundancia,linha 20T,viagens,4
+redundancia,linha 20T,km,36.2698
+redundancia,linha 20T,km_metro,3.5554
+redundancia,linha 20T,pct_km_metro,9.8026
+redundancia,linha 20T,horas_metro,0.1861
+redundancia,linha 21,viagens,14
+redundancia,linha 21,km,204.2284
+redundancia,linha 21,km_metro,7.2684
+redundancia,linha 21,pct_km_metro,3.559
+redundancia,linha 21,horas_metro,0.2956
+redundancia,linha 21A,viagens,7
+redundancia,linha 21A,km,47.7548
+redundancia,linha 21A,km_metro,4.038
+redundancia,linha 21A,pct_km_metro,8.4558
+redundancia,linha 21A,horas_metro,0.3064
+redundancia,linha 21R,viagens,21
+redundancia,linha 21R,km,223.1003
+redundancia,linha 21R,km_metro,8.8837
+redundancia,linha 21R,pct_km_metro,3.9819
+redundancia,linha 21R,horas_metro,0.4936
+redundancia,linha 21T,viagens,14
+redundancia,linha 21T,km,179.6339
+redundancia,linha 21T,km_metro,6.4405
+redundancia,linha 21T,pct_km_metro,3.5854
+redundancia,linha 21T,horas_metro,0.3567
+redundancia,linha 22,viagens,32
+redundancia,linha 22,km,228.0267
+redundancia,linha 22,km_metro,40.2524
+redundancia,linha 22,pct_km_metro,17.6525
+redundancia,linha 22,horas_metro,3.09
+redundancia,linha 23,viagens,23
+redundancia,linha 23,km,177.7054
+redundancia,linha 23,km_metro,13.3436
+redundancia,linha 23,pct_km_metro,7.5088
+redundancia,linha 23,horas_metro,1.3233
+redundancia,linha 23C,viagens,6
+redundancia,linha 23C,km,40.792
+redundancia,linha 23C,km_metro,3.9888
+redundancia,linha 23C,pct_km_metro,9.7785
+redundancia,linha 23C,horas_metro,0.3831
+redundancia,linha 24,viagens,41
+redundancia,linha 24,km,143.9307
+redundancia,linha 24,km_metro,45.3174
+redundancia,linha 24,pct_km_metro,31.4856
+redundancia,linha 24,horas_metro,3.7864
+redundancia,linha 24T,viagens,74
+redundancia,linha 24T,km,400.9676
+redundancia,linha 24T,km_metro,117.007
+redundancia,linha 24T,pct_km_metro,29.1811
+redundancia,linha 24T,horas_metro,10.2969
+redundancia,linha 25,viagens,26
+redundancia,linha 25,km,253.3628
+redundancia,linha 25,km_metro,24.0803
+redundancia,linha 25,pct_km_metro,9.5043
+redundancia,linha 25,horas_metro,1.2819
+redundancia,linha 25T,viagens,14
+redundancia,linha 25T,km,86.8143
+redundancia,linha 25T,km_metro,12.4645
+redundancia,linha 25T,pct_km_metro,14.3577
+redundancia,linha 25T,horas_metro,0.8358
+redundancia,linha 26,viagens,24
+redundancia,linha 26,km,114.7365
+redundancia,linha 26,km_metro,16.9796
+redundancia,linha 26,pct_km_metro,14.7988
+redundancia,linha 26,horas_metro,1.8678
+redundancia,linha 27,viagens,53
+redundancia,linha 27,km,340.9238
+redundancia,linha 27,km_metro,95.2815
+redundancia,linha 27,pct_km_metro,27.948
+redundancia,linha 27,horas_metro,7.7194
+redundancia,linha 27F,viagens,9
+redundancia,linha 27F,km,41.0232
+redundancia,linha 27F,km_metro,18.8547
+redundancia,linha 27F,pct_km_metro,45.961
+redundancia,linha 27F,horas_metro,1.7408
+redundancia,linha 28,viagens,54
+redundancia,linha 28,km,310.1857
+redundancia,linha 28,km_metro,123.0332
+redundancia,linha 28,pct_km_metro,39.6644
+redundancia,linha 28,horas_metro,9.6403
+redundancia,linha 29,viagens,68
+redundancia,linha 29,km,284.5562
+redundancia,linha 29,km_metro,114.0747
+redundancia,linha 29,pct_km_metro,40.0886
+redundancia,linha 29,horas_metro,12.2683
+redundancia,linha 2T,viagens,40
+redundancia,linha 2T,km,499.8004
+redundancia,linha 2T,km_metro,49.8038
+redundancia,linha 2T,pct_km_metro,9.9647
+redundancia,linha 2T,horas_metro,2.4622
+redundancia,linha 30,viagens,10
+redundancia,linha 30,km,116.4511
+redundancia,linha 30,km_metro,10.0702
+redundancia,linha 30,pct_km_metro,8.6476
+redundancia,linha 30,horas_metro,0.635
+redundancia,linha 30T,viagens,6
+redundancia,linha 30T,km,65.6925
+redundancia,linha 30T,km_metro,5.0903
+redundancia,linha 30T,pct_km_metro,7.7486
+redundancia,linha 30T,horas_metro,0.3275
+redundancia,linha 31,viagens,24
+redundancia,linha 31,km,125.2817
+redundancia,linha 31,km_metro,16.4229
+redundancia,linha 31,pct_km_metro,13.1088
+redundancia,linha 31,horas_metro,1.3817
+redundancia,linha 32,viagens,19
+redundancia,linha 32,km,170.548
+redundancia,linha 32,km_metro,8.0761
+redundancia,linha 32,pct_km_metro,4.7354
+redundancia,linha 32,horas_metro,0.6994
+redundancia,linha 32A,viagens,3
+redundancia,linha 32A,km,22.8219
+redundancia,linha 32A,km_metro,1.6152
+redundancia,linha 32A,pct_km_metro,7.0774
+redundancia,linha 32A,horas_metro,0.1822
+redundancia,linha 32R,viagens,6
+redundancia,linha 32R,km,55.1999
+redundancia,linha 32R,km_metro,3.2304
+redundancia,linha 32R,pct_km_metro,5.8522
+redundancia,linha 32R,horas_metro,0.1753
+redundancia,linha 34,viagens,57
+redundancia,linha 34,km,338.3943
+redundancia,linha 34,km_metro,30.6238
+redundancia,linha 34,pct_km_metro,9.0498
+redundancia,linha 34,horas_metro,3.0372
+redundancia,linha 35,viagens,29
+redundancia,linha 35,km,194.4008
+redundancia,linha 35,km_metro,15.2307
+redundancia,linha 35,pct_km_metro,7.8347
+redundancia,linha 35,horas_metro,1.1111
+redundancia,linha 36,viagens,17
+redundancia,linha 36,km,168.7019
+redundancia,linha 36,km_metro,22.9712
+redundancia,linha 36,pct_km_metro,13.6164
+redundancia,linha 36,horas_metro,1.1597
+redundancia,linha 36T,viagens,18
+redundancia,linha 36T,km,141.302
+redundancia,linha 36T,km_metro,21.2859
+redundancia,linha 36T,pct_km_metro,15.0641
+redundancia,linha 36T,horas_metro,1.2708
+redundancia,linha 37,viagens,62
+redundancia,linha 37,km,358.8173
+redundancia,linha 37,km_metro,43.3836
+redundancia,linha 37,pct_km_metro,12.0907
+redundancia,linha 37,horas_metro,3.3647
+redundancia,linha 38,viagens,29
+redundancia,linha 38,km,227.4148
+redundancia,linha 38,km_metro,26.556
+redundancia,linha 38,pct_km_metro,11.6773
+redundancia,linha 38,horas_metro,1.8283
+redundancia,linha 38F,viagens,7
+redundancia,linha 38F,km,44.3349
+redundancia,linha 38F,km_metro,8.5578
+redundancia,linha 38F,pct_km_metro,19.3026
+redundancia,linha 38F,horas_metro,0.5317
+redundancia,linha 38T,viagens,4
+redundancia,linha 38T,km,13.556
+redundancia,linha 38T,km_metro,2.3869
+redundancia,linha 38T,pct_km_metro,17.6074
+redundancia,linha 38T,horas_metro,0.1444
+redundancia,linha 39,viagens,20
+redundancia,linha 39,km,222.9133
+redundancia,linha 39,km_metro,25.5408
+redundancia,linha 39,pct_km_metro,11.4577
+redundancia,linha 39,horas_metro,1.1653
+redundancia,linha 4,viagens,66
+redundancia,linha 4,km,153.9895
+redundancia,linha 4,km_metro,19.7461
+redundancia,linha 4,pct_km_metro,12.8231
+redundancia,linha 4,horas_metro,1.7233
+redundancia,linha 41,viagens,22
+redundancia,linha 41,km,140.081
+redundancia,linha 41,km_metro,20.0964
+redundancia,linha 41,pct_km_metro,14.3463
+redundancia,linha 41,horas_metro,1.6314
+redundancia,linha 42M,viagens,1
+redundancia,linha 42M,km,4.9373
+redundancia,linha 42M,km_metro,0
+redundancia,linha 42M,pct_km_metro,0
+redundancia,linha 42M,horas_metro,0
+redundancia,linha 42T,viagens,2
+redundancia,linha 42T,km,16.0686
+redundancia,linha 42T,km_metro,1.0696
+redundancia,linha 42T,pct_km_metro,6.6568
+redundancia,linha 42T,horas_metro,0.0622
+redundancia,linha 42V,viagens,6
+redundancia,linha 42V,km,76.255
+redundancia,linha 42V,km_metro,7.7731
+redundancia,linha 42V,pct_km_metro,10.1936
+redundancia,linha 42V,horas_metro,0.4397
+redundancia,linha 43,viagens,5
+redundancia,linha 43,km,61.6778
+redundancia,linha 43,km_metro,0.0595
+redundancia,linha 43,pct_km_metro,0.0965
+redundancia,linha 43,horas_metro,0.0103
+redundancia,linha 43T,viagens,10
+redundancia,linha 43T,km,143.8481
+redundancia,linha 43T,km_metro,7.467
+redundancia,linha 43T,pct_km_metro,5.1909
+redundancia,linha 43T,horas_metro,0.3458
+redundancia,linha 43V,viagens,4
+redundancia,linha 43V,km,59.9052
+redundancia,linha 43V,km_metro,0.0595
+redundancia,linha 43V,pct_km_metro,0.0994
+redundancia,linha 43V,horas_metro,0.0097
+redundancia,linha 44,viagens,14
+redundancia,linha 44,km,204.3564
+redundancia,linha 44,km_metro,30.0604
+redundancia,linha 44,pct_km_metro,14.7098
+redundancia,linha 44,horas_metro,1.8717
+redundancia,linha 45,viagens,14
+redundancia,linha 45,km,137.3172
+redundancia,linha 45,km_metro,32.2787
+redundancia,linha 45,pct_km_metro,23.5067
+redundancia,linha 45,horas_metro,2.2364
+redundancia,linha 47,viagens,20
+redundancia,linha 47,km,354.1624
+redundancia,linha 47,km_metro,0.5359
+redundancia,linha 47,pct_km_metro,0.1513
+redundancia,linha 47,horas_metro,0.0989
+redundancia,linha 48,viagens,18
+redundancia,linha 48,km,269.1667
+redundancia,linha 48,km_metro,0.5359
+redundancia,linha 48,pct_km_metro,0.1991
+redundancia,linha 48,horas_metro,0.1094
+redundancia,linha 48T,viagens,4
+redundancia,linha 48T,km,31.1164
+redundancia,linha 48T,km_metro,0.1191
+redundancia,linha 48T,pct_km_metro,0.3827
+redundancia,linha 48T,horas_metro,0.02
+redundancia,linha 49,viagens,14
+redundancia,linha 49,km,138.2725
+redundancia,linha 49,km_metro,0.4168
+redundancia,linha 49,pct_km_metro,0.3014
+redundancia,linha 49,horas_metro,0.0917
+redundancia,linha 49T,viagens,44
+redundancia,linha 49T,km,463.126
+redundancia,linha 49T,km_metro,1.31
+redundancia,linha 49T,pct_km_metro,0.2829
+redundancia,linha 49T,horas_metro,0.255
+redundancia,linha 5,viagens,58
+redundancia,linha 5,km,731.3619
+redundancia,linha 5,km_metro,184.1491
+redundancia,linha 5,pct_km_metro,25.1789
+redundancia,linha 5,horas_metro,13.1439
+redundancia,linha 50,viagens,22
+redundancia,linha 50,km,250.6517
+redundancia,linha 50,km_metro,25.7857
+redundancia,linha 50,pct_km_metro,10.2874
+redundancia,linha 50,horas_metro,1.3589
+redundancia,linha 50M,viagens,6
+redundancia,linha 50M,km,81.2916
+redundancia,linha 50M,km_metro,7.806
+redundancia,linha 50M,pct_km_metro,9.6025
+redundancia,linha 50M,horas_metro,0.4156
+redundancia,linha 50S,viagens,8
+redundancia,linha 50S,km,120.2048
+redundancia,linha 50S,km_metro,9.1111
+redundancia,linha 50S,pct_km_metro,7.5796
+redundancia,linha 50S,horas_metro,0.4983
+redundancia,linha 50T,viagens,48
+redundancia,linha 50T,km,567.6307
+redundancia,linha 50T,km_metro,59.5647
+redundancia,linha 50T,pct_km_metro,10.4936
+redundancia,linha 50T,horas_metro,3.1631
+redundancia,linha 51,viagens,8
+redundancia,linha 51,km,108.1324
+redundancia,linha 51,km_metro,7.0325
+redundancia,linha 51,pct_km_metro,6.5036
+redundancia,linha 51,horas_metro,0.3147
+redundancia,linha 52,viagens,11
+redundancia,linha 52,km,240.2388
+redundancia,linha 52,km_metro,0
+redundancia,linha 52,pct_km_metro,0
+redundancia,linha 52,horas_metro,0
+redundancia,linha 52P,viagens,9
+redundancia,linha 52P,km,149.2707
+redundancia,linha 52P,km_metro,0
+redundancia,linha 52P,pct_km_metro,0
+redundancia,linha 52P,horas_metro,0
+redundancia,linha 53,viagens,16
+redundancia,linha 53,km,121.9586
+redundancia,linha 53,km_metro,4.5329
+redundancia,linha 53,pct_km_metro,3.7168
+redundancia,linha 53,horas_metro,0.2325
+redundancia,linha 53T,viagens,10
+redundancia,linha 53T,km,101.2939
+redundancia,linha 53T,km_metro,2.2665
+redundancia,linha 53T,pct_km_metro,2.2375
+redundancia,linha 53T,horas_metro,0.0903
+redundancia,linha 54,viagens,42
+redundancia,linha 54,km,190.1753
+redundancia,linha 54,km_metro,34.4743
+redundancia,linha 54,pct_km_metro,18.1276
+redundancia,linha 54,horas_metro,3.2367
+redundancia,linha 5T,viagens,15
+redundancia,linha 5T,km,182.2877
+redundancia,linha 5T,km_metro,45.3913
+redundancia,linha 5T,pct_km_metro,24.9009
+redundancia,linha 5T,horas_metro,3.0631
+redundancia,linha 6,viagens,61
+redundancia,linha 6,km,514.4242
+redundancia,linha 6,km_metro,83.664
+redundancia,linha 6,pct_km_metro,16.2636
+redundancia,linha 6,horas_metro,7.2142
+redundancia,linha 6F,viagens,14
+redundancia,linha 6F,km,125.8767
+redundancia,linha 6F,km_metro,17.7039
+redundancia,linha 6F,pct_km_metro,14.0645
+redundancia,linha 6F,horas_metro,1.3517
+redundancia,linha 7,viagens,101
+redundancia,linha 7,km,743.1591
+redundancia,linha 7,km_metro,46.6003
+redundancia,linha 7,pct_km_metro,6.2706
+redundancia,linha 7,horas_metro,3.8542
+redundancia,linha 9,viagens,20
+redundancia,linha 9,km,195.1179
+redundancia,linha 9,km_metro,37.4937
+redundancia,linha 9,pct_km_metro,19.2159
+redundancia,linha 9,horas_metro,2.6303
+redundancia,corredor Açude - Casa do Sal,km_metro,230.5448
+redundancia,corredor Açude - Casa do Sal,horas_metro,14.6283
+redundancia,corredor Açude - Casa do Sal,passagens,632
+redundancia,corredor Mercado - República,km_metro,191.1532
+redundancia,corredor Mercado - República,horas_metro,14.0108
+redundancia,corredor Mercado - República,passagens,521
+redundancia,corredor Loja do Cidadão - Loja do Cidadão,km_metro,163.937
+redundancia,corredor Loja do Cidadão - Loja do Cidadão,horas_metro,14.7889
+redundancia,corredor Loja do Cidadão - Loja do Cidadão,passagens,969
+redundancia,corredor Parque - Portagem,km_metro,146.2454
+redundancia,corredor Parque - Portagem,horas_metro,8.4758
+redundancia,corredor Parque - Portagem,passagens,292
+redundancia,corredor Câmara - Mercado,km_metro,127.4293
+redundancia,corredor Câmara - Mercado,horas_metro,9.2667
+redundancia,corredor Câmara - Mercado,passagens,384
+redundancia,corredor Arnado - Açude,km_metro,119.8036
+redundancia,corredor Arnado - Açude,horas_metro,7.0972
+redundancia,corredor Arnado - Açude,passagens,397
+redundancia,corredor Loja do Cidadão - Portagem,km_metro,112.769
+redundancia,corredor Loja do Cidadão - Portagem,horas_metro,9.1069
+redundancia,corredor Loja do Cidadão - Portagem,passagens,397
+redundancia,corredor Arnado - Loja do Cidadão,km_metro,103.594
+redundancia,corredor Arnado - Loja do Cidadão,horas_metro,6.8483
+redundancia,corredor Arnado - Loja do Cidadão,passagens,409
+redundancia,corredor Açude - Açude,km_metro,100.3739
+redundancia,corredor Açude - Açude,horas_metro,6.4958
+redundancia,corredor Açude - Açude,passagens,323
+redundancia,corredor Câmara - Loja do Cidadão,km_metro,74.3546
+redundancia,corredor Câmara - Loja do Cidadão,horas_metro,5.3503
+redundancia,corredor Câmara - Loja do Cidadão,passagens,226
+redundancia,corredor República - República,km_metro,73.4107
+redundancia,corredor República - República,horas_metro,7.8733
+redundancia,corredor República - República,passagens,466
+redundancia,corredor Casa do Sal - Coimbra B,km_metro,60.6409
+redundancia,corredor Casa do Sal - Coimbra B,horas_metro,3.3572
+redundancia,corredor Casa do Sal - Coimbra B,passagens,237
+redundancia,corredor Solum - Solum,km_metro,56.868
+redundancia,corredor Solum - Solum,horas_metro,5.1894
+redundancia,corredor Solum - Solum,passagens,272
+redundancia,corredor Ceira - Ceira,km_metro,42.115
+redundancia,corredor Ceira - Ceira,horas_metro,3.7342
+redundancia,corredor Ceira - Ceira,passagens,184
+redundancia,corredor Parque - Parque,km_metro,36.7997
+redundancia,corredor Parque - Parque,horas_metro,2.3089
+redundancia,corredor Parque - Parque,passagens,151
+redundancia,corredor Portagem - Portagem,km_metro,36.6361
+redundancia,corredor Portagem - Portagem,horas_metro,4.0542
+redundancia,corredor Portagem - Portagem,passagens,287
+redundancia,corredor Solum - São José,km_metro,36.025
+redundancia,corredor Solum - São José,horas_metro,3.2064
+redundancia,corredor Solum - São José,passagens,106
+redundancia,corredor São José - São José,km_metro,30.0289
+redundancia,corredor São José - São José,horas_metro,3.2578
+redundancia,corredor São José - São José,passagens,153
+redundancia,corredor Casa do Sal - Casa do Sal,km_metro,25.6614
+redundancia,corredor Casa do Sal - Casa do Sal,horas_metro,4.3147
+redundancia,corredor Casa do Sal - Casa do Sal,passagens,116
+redundancia,corredor Arnado - Câmara,km_metro,20.8218
+redundancia,corredor Arnado - Câmara,horas_metro,1.3539
+redundancia,corredor Arnado - Câmara,passagens,73
+redundancia,corredor Norton de Matos - São José,km_metro,17.9726
+redundancia,corredor Norton de Matos - São José,horas_metro,1.9108
+redundancia,corredor Norton de Matos - São José,passagens,64
+redundancia,corredor Portela - Quinta da Ponte,km_metro,17.3985
+redundancia,corredor Portela - Quinta da Ponte,horas_metro,1.3892
+redundancia,corredor Portela - Quinta da Ponte,passagens,25
+redundancia,corredor Arregaça - Parque,km_metro,16.1066
+redundancia,corredor Arregaça - Parque,horas_metro,1.7628
+redundancia,corredor Arregaça - Parque,passagens,36
+redundancia,corredor Coimbra B - Coimbra B,km_metro,14.5704
+redundancia,corredor Coimbra B - Coimbra B,horas_metro,0.7903
+redundancia,corredor Coimbra B - Coimbra B,passagens,56
+redundancia,corredor Casa Branca - Fernando Namora,km_metro,14.17
+redundancia,corredor Casa Branca - Fernando Namora,horas_metro,1.1097
+redundancia,corredor Casa Branca - Fernando Namora,passagens,44
+redundancia,corredor Mercado - Mercado,km_metro,13.9801
+redundancia,corredor Mercado - Mercado,horas_metro,1.1339
+redundancia,corredor Mercado - Mercado,passagens,59
+redundancia,corredor Norton de Matos - Norton de Matos,km_metro,13.2581
+redundancia,corredor Norton de Matos - Norton de Matos,horas_metro,1.0808
+redundancia,corredor Norton de Matos - Norton de Matos,passagens,73
+redundancia,corredor Arregaça - Arregaça,km_metro,11.4061
+redundancia,corredor Arregaça - Arregaça,horas_metro,0.5967
+redundancia,corredor Arregaça - Arregaça,passagens,36
+redundancia,corredor Alto de São João - Vale das Flores,km_metro,11.0372
+redundancia,corredor Alto de São João - Vale das Flores,horas_metro,0.85
+redundancia,corredor Alto de São João - Vale das Flores,passagens,35
+redundancia,corredor Fernando Namora - Solum,km_metro,10.8233
+redundancia,corredor Fernando Namora - Solum,horas_metro,0.965
+redundancia,corredor Fernando Namora - Solum,passagens,31
+redundancia,corredor Arregaça - Norton de Matos,km_metro,10.3395
+redundancia,corredor Arregaça - Norton de Matos,horas_metro,0.5469
+redundancia,corredor Arregaça - Norton de Matos,passagens,36
+redundancia,corredor Alto de São João - Alto de São João,km_metro,10.23
+redundancia,corredor Alto de São João - Alto de São João,horas_metro,0.7528
+redundancia,corredor Alto de São João - Alto de São João,passagens,34
+redundancia,corredor Arregaça - Colégios,km_metro,8.5838
+redundancia,corredor Arregaça - Colégios,horas_metro,0.4417
+redundancia,corredor Arregaça - Colégios,passagens,24
+redundancia,corredor Vale das Flores - Vale das Flores,km_metro,5.5496
+redundancia,corredor Vale das Flores - Vale das Flores,horas_metro,0.3975
+redundancia,corredor Vale das Flores - Vale das Flores,passagens,31
+redundancia,corredor Sobral de Ceira - Sobral de Ceira,km_metro,3.0629
+redundancia,corredor Sobral de Ceira - Sobral de Ceira,horas_metro,0.2186
+redundancia,corredor Sobral de Ceira - Sobral de Ceira,passagens,12
+redundancia,corredor Portela - Portela,km_metro,2.1337
+redundancia,corredor Portela - Portela,horas_metro,1.2358
+redundancia,corredor Portela - Portela,passagens,21
+redundancia,corredor Arnado - Arnado,km_metro,0.3887
+redundancia,corredor Arnado - Arnado,horas_metro,0.2894
+redundancia,corredor Arnado - Arnado,passagens,10
+meta,snapshot,secoes,redundancia
+meta,snapshot,secoes_omitidas,

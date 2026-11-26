@@ -59,6 +59,25 @@ def test_unknown_section_is_rejected() -> None:
         snap_mod.take_snapshot("x", sections=("linhas", "nao_existe"))
 
 
+def test_optional_sections_stay_out_of_the_default() -> None:
+    # Os registos já gravados (e o BASELINE) não têm a redundância: tem de ser pedida.
+    assert "redundancia" in snap_mod.OPTIONAL_SECTIONS
+    assert "redundancia" not in snap_mod.SECTIONS
+
+
+@pytest.mark.integration
+def test_redundancy_section_matches_the_module() -> None:
+    from overlap.redundancy import scenario_redundancy
+
+    require_reference_data("smtuc", "metrobus")  # salta sem os feeds (ex.: no CI)
+    df = snap_mod.take_snapshot("x", sections=("redundancia",))
+    data = df[df["section"] == "redundancia"].set_index(["key", "metric"])["value"]
+    totals = scenario_redundancy().totals()
+    assert float(data[("total", "km_metro")]) == pytest.approx(totals["km_metro"], abs=1e-3)
+    assert int(float(data[("total", "viagens")])) == totals["viagens"]
+    assert set(df["section"]) == {"meta", "redundancia"}
+
+
 def test_diff_classifies_changes() -> None:
     before = _frame([
         ("meta", "snapshot", "fase", "a"),

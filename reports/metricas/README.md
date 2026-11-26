@@ -17,6 +17,7 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `oficial_fase2_norte.csv` | Cenário `fase2` (2026-11-24, mesmos dados): + o sentido informativo Portagem autocarro→metro para norte. Linha de base atual da fase 2 |
 | `diff_oficial_fase2_t3_vs_norte.csv` | Diferenças (12 números novos, só esse sentido; a busca de fase não muda) |
 | `oficial_fase2_ep212.csv` | **Cenário `fase2_ep212`** (N1, 2026-11-26): contrafactual, Metro fase 2 com o SMTUC Ep212 a 2026-11-09 (as mesmas 2373 viagens do Ep212 a 11/05). Separa as mudanças de setembro: `antes` → `fase2_ep212` é só o metro, `fase2_ep212` → `fase2` é só o horário SMTUC (Como Vou + o que mudou de março a setembro). Os registos `oficial_fase1_t3` e `oficial_fase2_norte` não mudaram |
+| `n2_redundancia_antes.csv`, `n2_redundancia_fase2_ep212.csv`, `n2_redundancia_fase2.csv` | **Redundância viagem a viagem** (N2.1, 2026-11-26; só a secção opcional `redundancia`, `--secoes redundancia`): autocarros·km e autocarros·hora a par do metro no dia de referência de cada cenário, no total, por linha e por corredor do metro. Mesma regra da extensão a par do metro; nenhum número dos outros registos mudou |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -156,3 +157,17 @@ Contrafactual para separar as duas mudanças de setembro de 2026: o metro da fas
 - **A espera na Portela piora por causa do metro.** O horário da 54 é o mesmo em A e B, e B já tem a espera de C.
 - **B → C não é só o Como Vou.** O Ep212 é de 09/03/2026. Dos avisos SMTUC de março a setembro, a única alteração permanente antes do Como Vou é a reestruturação de 14/06 das linhas 5, 5T, 5F, 33 e 33R (as outras são obras, eventos ou horários sazonais); fica assinalada linha a linha nas diferenças de rede (`data/smtuc_alteracoes_2026.csv`). Procurar o horário em vigor a 09/09 fica para depois.
 - **A busca do desvio de fase em B daria −10 / +1.** Fica só como registo: o par adotado continua a ser −10 / 0, o ótimo da fase 2.
+
+## Redundância viagem a viagem (N2.1, 2026-11-26)
+
+Registos `n2_redundancia_<cenário>.csv` (`--secoes redundancia`, código em `src/overlap/redundancy.py`). A regra de "a par do metro" é a mesma da extensão a par do metro: um troço entre duas paragens consecutivas ambas a ≤ 240 m de uma estação. Muda a unidade: em vez do percurso representativo de cada sentido, somam-se todas as viagens do dia de referência, cada uma com as suas paragens. Ficam as mesmas linhas das métricas por linha (número < 100), por isso as viagens são menos do que as 2373 do Ep212 com todas as linhas.
+
+| Dia útil de referência | A (fase 1) | B (metro fase 2 + Ep212) | C (Como Vou) |
+|---|---|---|---|
+| Viagens SMTUC | 2110 | 2110 | 1970 |
+| Autocarros·km | 16 472 | 16 472 | 16 055 |
+| Autocarros·km a par do metro | 815 (4,9 %) | 2443 (14,8 %) | 1970 (12,3 %) |
+| Autocarros·hora a par do metro | 70 | 194 | 150 |
+
+- Conferido com as métricas por linha: por linha, autocarros·km a par do metro ÷ (viagens × extensão a par do metro por sentido) tem mediana 1,00 em A e em C. Os desvios vêm das viagens curtas e das variantes.
+- O corredor do metro de cada troço são as estações mais próximas das duas pontas; as plataformas "(asc)"/"(desc)" contam como uma estação. Em A o mais carregado é Parque–Portagem; em B e C são Mercado–República e Açude–Casa do Sal.

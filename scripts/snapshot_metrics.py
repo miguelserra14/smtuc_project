@@ -24,6 +24,10 @@ Secções:
   busca_fase_54   melhor desvio de fase de cada proposta (scripts/search_phase_shift.py)
   isocrona        população e zonas por faixa de tempo a partir do estádio, e por modo
   populacao       população sem oferta (total e no raio do painel do estádio), top 10 de subserviço
+  redundancia     (opcional, só com --secoes) autocarros·km e ·hora a par do metro viagem a viagem
+                  no dia de referência (overlap/redundancy.py): totais, por linha e por corredor
+                  do metro. Fora das secções por omissão para os registos antigos continuarem
+                  comparáveis.
 
 Nada é escrito em outputs/: o cache de métricas é copiado para uma pasta temporária e as tabelas
 intermédias vão para lá. Um snapshot existente NÃO é substituído sem --force (é uma linha de base).
@@ -53,6 +57,9 @@ import pandas as pd  # noqa: E402
 
 COLUMNS = ["section", "key", "metric", "value"]
 SECTIONS = ("linhas", "overlap_resumo", "esperas_54", "busca_fase_54", "isocrona", "populacao")
+# Secções que só entram quando pedidas (--secoes): os registos já gravados não as têm.
+OPTIONAL_SECTIONS = ("redundancia",)
+ALL_SECTIONS = SECTIONS + OPTIONAL_SECTIONS
 DEFAULT_OUT_DIR = ROOT / "reports" / "metricas"
 DECIMALS = 4
 
@@ -129,6 +136,21 @@ def _section_overlap_summary(snap: Snapshot, metrics_csv: Path) -> None:
     for ranking in ("top5", "bottom5", "bottom5_stadium"):
         for i, row in enumerate(stats.get(ranking) or [], start=1):
             snap.add("overlap_resumo", f"{ranking}_{i:02d}", "line", row.get("line"))
+
+
+def _section_redundancy(snap: Snapshot, scenario) -> None:
+    from overlap.redundancy import scenario_redundancy
+
+    red = scenario_redundancy(scenario)
+    for name, value in red.totals().items():
+        snap.add("redundancia", "total", name, value)
+    for row in red.by_line.sort_values("line", key=lambda s: s.astype(str)).itertuples(index=False):
+        for col in ("viagens", "km", "km_metro", "pct_km_metro", "horas_metro"):
+            snap.add("redundancia", f"linha {row.line}", col, getattr(row, col))
+    for row in red.by_corridor.itertuples(index=False):
+        key = f"corredor {row.station_a} - {row.station_b}"
+        for col in ("km_metro", "horas_metro", "passagens"):
+            snap.add("redundancia", key, col, getattr(row, col))
 
 
 def _load_phase_search():
@@ -275,9 +297,9 @@ def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None
     from gtfs_processing.scenarios import get_scenario
     from overlap.transit import resolve_reference_day
 
-    unknown = set(sections) - set(SECTIONS)
+    unknown = set(sections) - set(ALL_SECTIONS)
     if unknown:
-        raise ValueError(f"secções desconhecidas: {sorted(unknown)} (válidas: {', '.join(SECTIONS)})")
+        raise ValueError(f"secções desconhecidas: {sorted(unknown)} (válidas: {', '.join(ALL_SECTIONS)})")
     sc = get_scenario(scenario)
     sc = dataclasses.replace(sc, smtuc=smtuc or sc.smtuc, metro=metro or sc.metro)
     smtuc, metro = sc.smtuc, sc.metro
@@ -308,6 +330,10 @@ def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None
             print("[snapshot] população BGRI" + (" + isócronas do estádio" if "isocrona" in sections else "") + "...")
             _section_population(snap, (smtuc, metro), day_str, time_str, work,
                                 with_isochrone="isocrona" in sections, with_population="populacao" in sections)
+
+        if "redundancia" in sections:
+            print("[snapshot] redundância viagem a viagem...")
+            _section_redundancy(snap, sc)
 
     snap.add("meta", "snapshot", "secoes", ";".join(s for s in sections if s not in skipped))
     snap.add("meta", "snapshot", "secoes_omitidas", ";".join(skipped))
@@ -374,7 +400,7 @@ def diff_snapshots(before: pd.DataFrame, after: pd.DataFrame, tol: float = 1e-6)
         rows.append({**{k: rec[k] for k in keys}, "before": "" if pd.isna(a) else a, "after": "" if pd.isna(b) else b,
                      "delta": delta, "delta_pct": delta_pct, "status": status})
     out = pd.DataFrame(rows, columns=[*keys, "before", "after", "delta", "delta_pct", "status"])
-    order = {s: i for i, s in enumerate(("meta", *SECTIONS))}
+    order = {s: i for i, s in enumerate(("meta", *ALL_SECTIONS))}
     return out.sort_values(keys, key=lambda s: s.map(order).fillna(99) if s.name == "section" else s).reset_index(drop=True)
 
 
@@ -408,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
     p_snap.add_argument("--cenario", default=None, help="cenário de config.SCENARIOS (feeds + dia/hora; por omissão o DEFAULT_SCENARIO)")
     p_snap.add_argument("--smtuc", default=None, help="troca o SMTUC do cenário (nome lógico em config.DATASET_DIRS)")
     p_snap.add_argument("--metro", default=None, help="troca o metro do cenário (nome lógico em config.DATASET_DIRS)")
-    p_snap.add_argument("--secoes", default=",".join(SECTIONS), help=f"lista separada por vírgulas ({','.join(SECTIONS)})")
+    p_snap.add_argument("--secoes", default=",".join(SECTIONS), help=f"lista separada por vírgulas (por omissão {','.join(SECTIONS)}; opcionais: {','.join(OPTIONAL_SECTIONS)})")
     p_snap.add_argument("--out", type=Path, default=None, help="ficheiro de saída (por omissão reports/metricas/<fase>.csv)")
     p_snap.add_argument("--force", action="store_true", help="substitui um snapshot existente")
 
