@@ -79,6 +79,11 @@ COMPARISON_PAIRS: tuple[tuple[str, str], ...] = (
     ("fase2_ep212", "fase2"),  # efeito do horário SMTUC (Como Vou + mudanças de março a setembro)
     ("antes", "fase2"),        # os dois juntos (visão geral, só no master)
 )
+# Diferenças de rede SMTUC linha a linha (N1.3, overlap/network_diff.py): pares de cenários com
+# o mesmo metro e horários SMTUC diferentes -> OUTPUTS_COMPARISON_DIR/rede_<antes>_vs_<depois>.
+# {html,csv}, com as linhas assinaladas pelos avisos SMTUC de SMTUC_LINE_CHANGES_CSV.
+NETWORK_DIFF_PAIRS: tuple[tuple[str, str], ...] = (("fase2_ep212", "fase2"),)
+SMTUC_LINE_CHANGES_CSV = "data/smtuc_alteracoes_2026.csv"
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 

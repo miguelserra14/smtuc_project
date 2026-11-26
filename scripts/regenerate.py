@@ -25,11 +25,13 @@ from config import (  # noqa: E402
     INTEGRATION_SITES,
     LINE_54_MELHORADO_PHASE_SHIFT_MIN,
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
+    NETWORK_DIFF_PAIRS,
     OUTPUTS_COMPARISON_DIR,
     OUTPUTS_OVERLAP_DIR,
     OUTPUTS_POPULATION_DIR,
     POPULATION_STADIUM_MAP_RADIUS_M,
     REACHABILITY_MAX_TRANSFERS,
+    SMTUC_LINE_CHANGES_CSV,
     STADIUM_COORD,
 )
 from gtfs_processing.gtfs import load_gtfs_cached  # noqa: E402
@@ -45,6 +47,7 @@ from gtfs_processing.scenarios import (  # noqa: E402
     scenario_output_path,
     scenario_reference_time,
 )
+from overlap import network_diff  # noqa: E402
 from overlap.overlap import compute_bgri_reachability_now  # noqa: E402
 from overlap.overlap_db import line_metrics_db_path, load_line_metrics_db  # noqa: E402
 from overlap.transit import resolve_reference_day  # noqa: E402
@@ -68,6 +71,7 @@ from visualizations import (  # noqa: E402
     write_folium_html,
 )
 from visualizations.dashboard import load_overlap_stats, overlap_stats_footer_html  # noqa: E402
+from visualizations.network_diff_page import create_network_diff_html, default_note_html  # noqa: E402
 from visualizations.scenario_comparison import create_scenario_comparison_html  # noqa: E402
 
 # Registo do que correu mal / foi saltado durante a execução, para o resumo final e o exit code.
@@ -478,6 +482,53 @@ def regenerate_comparison_html() -> None:
             _record_failure(f"{section} {stem}", e)
 
 
+def regenerate_network_diff_html() -> None:
+    """Diferenças de rede SMTUC linha a linha (N1.3) para cada par de NETWORK_DIFF_PAIRS ->
+    outputs/comparacao/rede_<antes>_vs_<depois>.{html,csv}. Usa o cache de métricas por linha de
+    cada cenário (já atualizado pelas secções de overlap) e os avisos de SMTUC_LINE_CHANGES_CSV."""
+    section = "diferenças de rede"
+    print("\n" + "=" * 60)
+    print("[INFO] Regenerando diferenças de rede SMTUC...")
+    print("=" * 60)
+
+    changes_path = project_root() / SMTUC_LINE_CHANGES_CSV
+    changes = network_diff.load_line_changes(changes_path) if changes_path.exists() else None
+    if changes is None:
+        _record_warning(section, f"sem avisos SMTUC ({SMTUC_LINE_CHANGES_CSV} não existe): linhas sem anotação")
+    out_dir = project_root() / OUTPUTS_COMPARISON_DIR
+    for before_name, after_name in NETWORK_DIFF_PAIRS:
+        stem = f"rede_{before_name}_vs_{after_name}"
+        before, after = get_scenario(before_name), get_scenario(after_name)
+        if not _require_dataset(before.smtuc) or not _require_dataset(after.smtuc):
+            _record_skip(f"{section} {stem}", f"datasets SMTUC {before.smtuc}/{after.smtuc} não disponíveis")
+            continue
+        try:
+            day_b = resolve_reference_day(scenario=before)
+            day_a = resolve_reference_day(scenario=after)
+            gtfs_b, gtfs_a = load_gtfs_cached(before.smtuc), load_gtfs_cached(after.smtuc)
+            diff = network_diff.compare_networks(
+                network_diff.line_profiles(gtfs_b, day_b),
+                network_diff.line_profiles(gtfs_a, day_a),
+                network_diff.stop_coordinates(gtfs_b),
+                network_diff.stop_coordinates(gtfs_a),
+            )
+            diff = network_diff.add_line_metrics(
+                diff, load_line_metrics_db(scenario=before), load_line_metrics_db(scenario=after)
+            )
+            diff = network_diff.annotate_line_changes(diff, changes)
+            created = create_network_diff_html(
+                out_dir / f"{stem}.html",
+                diff,
+                before_label=before.display_name,
+                after_label=after.display_name,
+                note_html=default_note_html(day_b.strftime("%d/%m/%Y"), day_a.strftime("%d/%m/%Y")),
+                csv_path=out_dir / f"{stem}.csv",
+            )
+            print(f"[SUCCESS] Diferenças de rede ({stem}): {created}")
+        except Exception as e:
+            _record_failure(f"{section} {stem}", e)
+
+
 def regenerate_master_dashboard() -> None:
     """Regenera o dashboard master."""
     print("\n" + "=" * 60)
@@ -550,6 +601,7 @@ def main() -> None:
     regenerate_overlap_other_scenarios_htmls()
     regenerate_integration_htmls()
     regenerate_comparison_html()
+    regenerate_network_diff_html()
     regenerate_master_dashboard()
     regenerate_presentation_dashboard()
     regenerate_feednplay_dashboard()

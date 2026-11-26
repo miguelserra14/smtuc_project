@@ -23,6 +23,7 @@ SECTIONS = (
     "regenerate_overlap_other_scenarios_htmls",
     "regenerate_integration_htmls",
     "regenerate_comparison_html",
+    "regenerate_network_diff_html",
     "regenerate_master_dashboard",
     "regenerate_presentation_dashboard",
     "regenerate_feednplay_dashboard",

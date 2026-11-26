@@ -138,7 +138,7 @@ Na mesma altura, uma origem ou um sentido que não existe no feed passa a ser um
 
 ## Metro novo com a rede antiga: cenário `fase2_ep212` (N1, 2026-11-26)
 
-Contrafactual para separar as duas mudanças de setembro de 2026: o metro da fase 2 (10/09) e o horário SMTUC Ep225 do Como Vou (18/09). O cenário junta o Metro da fase 2 ao SMTUC Ep212 no dia da fase 2. O `calendar.txt` do Ep212 vai até 31/12/2026, por isso não houve transformação de dados: são as mesmas 2373 viagens de 11/05. Entre 10 e 17/09/2026 a rede real era esta.
+Contrafactual para separar as duas mudanças de setembro de 2026: o metro da fase 2 e a reorganização SMTUC do Como Vou. As duas entraram no **mesmo dia, 10/09/2026** (avisos SMTUC de 09/09; o GTFS Ep225 do Município só é válido a partir de 18/09), por isso a rede real nunca as separou: esta rede nunca existiu. O cenário junta o Metro da fase 2 ao SMTUC Ep212 no dia da fase 2. O `calendar.txt` do Ep212 vai até 31/12/2026, por isso não houve transformação de dados: são as mesmas 2373 viagens de 11/05.
 
 | | `antes` (A) | `fase2_ep212` (B) | `fase2` (C) |
 |---|---|---|---|
@@ -154,5 +154,5 @@ Contrafactual para separar as duas mudanças de setembro de 2026: o metro da fas
 
 - **O aumento do overlap vem do metro.** De A para B a extensão a par do metro passa de 104 para 398 km. De B para C o horário SMTUC **reduz-a** em 60 km e tira 8 linhas do overlap.
 - **A espera na Portela piora por causa do metro.** O horário da 54 é o mesmo em A e B, e B já tem a espera de C.
-- **B → C não é só o Como Vou.** O Ep212 é de 09/03/2026, por isso inclui as alterações SMTUC de março a setembro (por exemplo, a reestruturação das linhas 5/5F/5T/33 avisada em maio). Procurar o horário em vigor a 17/09 fica para depois.
+- **B → C não é só o Como Vou.** O Ep212 é de 09/03/2026. Dos avisos SMTUC de março a setembro, a única alteração permanente antes do Como Vou é a reestruturação de 14/06 das linhas 5, 5T, 5F, 33 e 33R (as outras são obras, eventos ou horários sazonais); fica assinalada linha a linha nas diferenças de rede (`data/smtuc_alteracoes_2026.csv`). Procurar o horário em vigor a 09/09 fica para depois.
 - **A busca do desvio de fase em B daria −10 / +1.** Fica só como registo: o par adotado continua a ser −10 / 0, o ótimo da fase 2.
