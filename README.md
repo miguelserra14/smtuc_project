@@ -1,6 +1,6 @@
 # SMTUC: A caminho da complementaridade
 
-A chegada do Metrobus mudou a mobilidade em Coimbra. A fase 1 (Serpins – Portagem) reorganizou fluxos, criou sobreposição em alguns corredores e deixou outras zonas numa posição mais frágil. A fase 2, em operação desde 10/09/2026, levou o metro à Baixa, a Coimbra B e à República, e a extensão de linhas SMTUC a par do metro passou de 104 para 338 km. Este trabalho responde a uma pergunta prática e urgente: o que é que o SMTUC pode adaptar já para ter o máximo de utilidade neste novo cenário de mobilidade?
+A chegada do Metrobus mudou a mobilidade em Coimbra. A fase 1 (Serpins – Portagem) reorganizou fluxos, criou sobreposição em alguns corredores e deixou outras zonas numa posição mais frágil. A fase 2, em operação desde 10/09/2026, levou o metro à Baixa, a Coimbra B e à República. No mesmo dia o SMTUC reorganizou as linhas (o Como Vou). Só o metro fez a extensão de linhas SMTUC a par do metro passar de 104 para 398 km; o Como Vou baixou-a para 338 km. Este trabalho responde a uma pergunta prática e urgente: o que é que o SMTUC pode adaptar já para ter o máximo de utilidade neste novo cenário de mobilidade?
 
 O projeto combina análise de dados populacionais e visualizações interativas para construir uma leitura mais completa da cidade. Em vez de olhar só para linhas ou horários isolados, a abordagem cruza cobertura espacial, sobreposição entre SMTUC e Metrobus, pressão populacional e integração temporal entre serviços. O resultado é uma apresentação interativa, pensada também para a parede de ecrãs do FeedNPlay.
 
@@ -8,12 +8,15 @@ O projeto combina análise de dados populacionais e visualizações interativas 
 
 Todos os horários usados são **oficiais**: o SMTUC publicado pelo Município de Coimbra e o Metro Mondego publicado pela AGIT no dados.gov.pt. Os feeds do Metro que tinham sido construídos à mão a partir dos PDFs foram arquivados em `data/_arquivo/sintetico/`.
 
-A análise corre em dois cenários, definidos em `src/config.py` (`SCENARIOS`):
+A análise corre em três cenários, definidos em `src/config.py` (`SCENARIOS`):
 
 | Cenário | SMTUC | Metro Mondego | Dia de referência |
 |---|---|---|---|
-| `antes` (por omissão) | Ep212 (em vigor desde 09/03/2026) | fase 1: GTFS oficial de 19/12/2025 | segunda, 11/05/2026 |
-| `fase2` | Ep225 (em vigor desde 18/09/2026) | fase 2: NeTEx da AGIT de 11/11/2026 | segunda, 09/11/2026 |
+| `antes` (por omissão; degrau A) | Ep212 (em vigor desde 09/03/2026) | fase 1: GTFS oficial de 19/12/2025 | segunda, 11/05/2026 |
+| `fase2_ep212` (contrafactual; degrau B) | Ep212 | fase 2: NeTEx da AGIT de 11/11/2026 | segunda, 09/11/2026 |
+| `fase2` (degrau C, o Como Vou) | Ep225 (GTFS válido desde 18/09/2026; as alterações às linhas entraram a 10/09) | fase 2: NeTEx da AGIT de 11/11/2026 | segunda, 09/11/2026 |
+
+O `fase2_ep212` nunca existiu: o metro da fase 2 e o Como Vou entraram no mesmo dia. Serve para separar os dois efeitos. `antes` → `fase2_ep212` mede só o metro e `fase2_ep212` → `fase2` mede só o horário SMTUC.
 
 Já feito:
 - **População e subserviço**: a BGRI 2021 (INE) cruzada com a oferta a ≤ 500 m de cada subsecção: heatmap, índice de subserviço, zonas sem oferta, polos de emprego e locais concorridos.
@@ -21,29 +24,30 @@ Já feito:
   - espacial: troços e paragens SMTUC a ≤ 240 m (3 min a pé) de uma estação;
   - temporal: passagens de autocarro nessas paragens com um metro a ≤ 5 min.
 
-  Mapa de linhas e isócronas nos dois cenários.
+  Mapa de linhas e isócronas em todos os cenários.
 - **Isócronas** a partir do estádio (a pé e em transporte público, até 2 transbordos), com a população em cada faixa de tempo.
 - **Integração da linha 54 com o Metrobus** em Portela e em Portagem (onde conta também a 38). As esperas nos dois sentidos já incluem o transbordo a pé entre paragens e são calculadas para três horários:
   - **atual**;
   - **otimizado**: as mesmas viagens, deslocadas −10 min;
   - **melhorado**: um 2.º autocarro, que passa a linha de 40 em 40 para 20 em 20 min.
-- **Dashboards**: master (`outputs/dashboard.html`), apresentação (`outputs/mockups_dashboard.html`) e parede FeedNPlay de 9 ecrãs (`outputs/feednplay_dashboard.html`). A apresentação está organizada por secções (ver "O que falta fechar"); cada slide diz que cenário mostra. Já tem o overlap e as isócronas da fase 2, um slide "Fase 1 vs Como Vou" com os indicadores lado a lado e, no slide da 54 depois do Como Vou, um botão para trocar entre os dois cenários.
-- **Antes vs fase 2** (`outputs/comparacao/antes_vs_fase2.html` e `.csv`): overlap, acessibilidade a partir do estádio, população sem oferta e esperas da 54 lado a lado. Os números são os do `snapshot_metrics.py`, recalculados em cada regenerate.
+- **Dashboards**: master (`outputs/dashboard.html`), apresentação (`outputs/mockups_dashboard.html`) e parede FeedNPlay de 9 ecrãs (`outputs/feednplay_dashboard.html`). A apresentação está organizada por secções (ver "O que falta fechar"); cada slide diz que cenário mostra. Na secção 2 já tem o efeito do metro, o efeito do Como Vou, as diferenças de rede linha a linha e, no slide da 54, um botão para trocar entre o Como Vou e o horário de março com o mesmo metro.
+- **Comparações de cenários** (`outputs/comparacao/<antes>_vs_<depois>.html` e `.csv`, pares em `COMPARISON_PAIRS`): overlap, acessibilidade a partir do estádio, população sem oferta e esperas da 54 lado a lado. Os pares mudam uma coisa de cada vez (só o metro, só o horário SMTUC); `antes_vs_fase2` junta as duas e fica só no master. Os números são os do `snapshot_metrics.py`, recalculados em cada regenerate.
+- **Diferenças de rede SMTUC** (`outputs/comparacao/rede_fase2_ep212_vs_fase2.html` e `.csv`): cada linha como cortada, nova, renumerada, com percurso alterado, com ajuste de paragens, só com horário diferente, ou igual. Para cada uma, viagens no dia, paragens e extensão a par do metro. As linhas com avisos SMTUC (`data/smtuc_alteracoes_2026.csv`) ficam assinaladas, incluindo as alterações anteriores ao Como Vou.
 - **Dados verificáveis**: os ficheiros oficiais ficam congelados em `data/raw/`. Os feeds que o código lê são construídos a partir deles com transformações registadas. Antes e depois de cada troca de dados tira-se um snapshot dos números de controlo (`reports/metricas/`).
 
 ## Principais números
 
-Valores de `reports/metricas/oficial_fase1_t3.csv` (antes) e `oficial_fase2_t3.csv` (fase 2). Entre os dois cenários mudam o metro **e** o horário do SMTUC.
+Valores de `reports/metricas/oficial_fase1_t3.csv` (antes), `oficial_fase2_ep212.csv` (metro novo, SMTUC de março) e `oficial_fase2_t3.csv` (fase 2). Da 1.ª para a 2.ª coluna só muda o metro; da 2.ª para a 3.ª só muda o horário SMTUC.
 
-| | Antes (11/05/2026) | Fase 2 (09/11/2026) |
-|---|---|---|
-| Linhas SMTUC com troços a ≤ 240 m do metro | 68 | 86 |
-| Paragens SMTUC a ≤ 240 m de uma estação | 59 | 94 |
-| Extensão de linhas SMTUC a par do metro (soma por linha) | 103,6 km | 338,1 km |
-| Passagens nessas paragens com um metro a ≤ 5 min (no dia de referência) | 93,6 % | 95,6 % |
-| Tempo médio a partir do estádio, às 08:20 (ponderado pela população) | 39,5 min | 35,7 min |
-| População a ≤ 10 min do estádio | 14 141 | 16 633 |
-| População em subsecções sem oferta | 13 701 | 13 534 |
+| | Antes (11/05/2026) | Metro da fase 2 + SMTUC Ep212 (09/11/2026) | Fase 2, Como Vou (09/11/2026) |
+|---|---|---|---|
+| Linhas SMTUC com troços a ≤ 240 m do metro | 68 | 94 | 86 |
+| Paragens SMTUC a ≤ 240 m de uma estação | 59 | 96 | 94 |
+| Extensão de linhas SMTUC a par do metro (soma por linha) | 103,6 km | 398,2 km | 338,1 km |
+| Passagens nessas paragens com um metro a ≤ 5 min (no dia de referência) | 93,6 % | 95,9 % | 95,6 % |
+| Tempo médio a partir do estádio, às 08:20 (ponderado pela população) | 39,5 min | 35,3 min | 35,7 min |
+| População a ≤ 10 min do estádio | 14 141 | 16 952 | 16 633 |
+| População em subsecções sem oferta | 13 701 | 13 701 | 13 534 |
 
 A extensão soma o troço de cada linha, por isso um corredor com várias linhas conta várias vezes.
 
@@ -162,8 +166,8 @@ docs/integracao_dados_agit/   plano, decisões e protótipos da integração dos
 
 **Apresentação**
 - Narrativa (o esqueleto já está nos slides, `src/visualizations/presentation_content.py`): 1 fase 1 (set 2025 – set 2026), 1.5 linha 54, 2 Como Vou (a reorganização das linhas SMTUC de setembro de 2026), 3 fase 3 (Linha do Hospital, março de 2027), 4 para onde levar os autocarros que a fase 3 torna redundantes. Cada secção compara dois degraus de uma escada de cenários que diferem numa só coisa: A (fase 1), A′ (A sem a 54), B (SMTUC Ep212 + Metro fase 2), C (Como Vou), D (fase 3, planeado), E (proposta, planeado). Os slides marcados "por construir" esperam por:
-  - N1: cenário B, comparação por pares e diferenças Ep212 → Ep225 (secção 2);
-  - N2: ranking das redundâncias com o desperdício e a rede sem a 54 (secções 1 e 1.5);
+  - N1 (feito): cenário B, comparação por pares e diferenças Ep212 → Ep225 (secção 2). Fica para depois procurar o horário SMTUC em vigor a 09/09, para tirar de B → C a reestruturação de junho;
+  - N2: ranking das redundâncias com o desperdício e a rede sem a 54, por filtro de linhas no cenário (secções 1 e 1.5); com ele, "as maiores redundâncias depois do Como Vou" (secção 2);
   - N3: feed planeado da Linha do Hospital a partir do KMZ (secção 3);
   - N4: onde investir e a proposta E (secção 4).
 - Fazer os mockups finais e melhorar o design. Juntar tudo no dashboard e limar arestas (legendas, etc.). Fechar as transições.

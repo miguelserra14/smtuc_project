@@ -66,7 +66,7 @@ SCENARIO_LADDER: list[dict[str, Any]] = [
         "detail": "SMTUC Ep212 + Metro fase 2",
         "day": "09/11/2026",
         "nature": "contrafactual",
-        "status": "por construir",
+        "status": "existe",
     },
     {
         "id": "C",
@@ -126,12 +126,12 @@ SECTIONS: list[dict[str, Any]] = [
         "id": "s2",
         "number": "2",
         "title": "Como Vou",
-        "period": "desde 18/09/2026",
+        "period": "desde 10/09/2026",
         "thesis": "Impacto das medidas tomadas",
         "question": "O que mudou com a reorganização das linhas SMTUC, separado do que mudou por causa do metro da fase 2?",
         "compare": ["B", "C"],
         "context": ["A"],
-        "note": "O metro da fase 2 (10/09/2026) e o Como Vou (horário Ep225, 18/09/2026) chegaram com 8 dias de diferença. A → B isola o efeito do metro; B → C, com o mesmo metro e o mesmo dia, isola o do Como Vou.",
+        "note": "O metro da fase 2 e o Como Vou entraram no mesmo dia, 10/09/2026, por isso a rede real nunca separou os dois efeitos. O cenário B separa-os: A → B mede só o metro; B → C, com o mesmo metro e o mesmo dia, mede só o horário SMTUC.",
     },
     {
         "id": "s3",
@@ -325,18 +325,73 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
     # Secção 2: Como Vou (B -> C, com A -> B como contexto) - impacto das medidas tomadas
     # =====================================================================================
     {"id": "secao_2", "label": "2 · Como Vou", "kind": "section", "section": "s2"},
+    # Páginas de comparação por pares (regenerate_comparison_html, config.COMPARISON_PAIRS): A -> B
+    # é só o metro, B -> C só o horário SMTUC. A comparação A -> C (os dois juntos) fica só no
+    # separador do dashboard master.
+    {
+        "id": "efeito_metro",
+        "label": "Efeito do metro",
+        "kind": "scenario-compare",
+        "section": "s2",
+        "ladder": ["A", "B"],
+        "description": "O que mudou só por causa do metro da fase 2: o horário SMTUC é o mesmo nos dois lados.",
+        "note": "Contexto da secção. Com a fase 2 o metro passa a ir à Baixa, a Coimbra B e à República e a correr ao lado de muito mais rede SMTUC - antes de o SMTUC mudar uma única linha.",
+        "table": {
+            "title": "Indicadores: fase 1 → metro da fase 2 com o horário SMTUC de março",
+            "src": "comparacao/antes_vs_fase2_ep212.html",
+            "caption": "Overlap, acessibilidade a partir do estádio, população sem oferta e esperas da linha 54.",
+        },
+        "iframes": [
+            {
+                "title": "Linhas sobrepostas: fase 1",
+                "src": "overlap/overlap_lines_map.html",
+                "caption": "Fase 1 (11/05/2026).",
+            },
+            {
+                "title": "Linhas sobrepostas: metro da fase 2, SMTUC Ep212",
+                "src": "overlap/overlap_lines_map_fase2_ep212.html",
+                "caption": "As mesmas linhas SMTUC, com o metro da fase 2 (09/11/2026).",
+            },
+        ],
+    },
     {
         "id": "s2_rede",
         "label": "O que mudou na rede",
-        "kind": "pending",
+        "kind": "scenario-compare",
         "section": "s2",
         "ladder": ["B", "C"],
-        "status": "Por construir · N1",
-        "description": "As linhas SMTUC antes e depois do Como Vou.",
-        "shows": [
-            "Linhas cortadas, criadas e com percurso alterado entre o horário Ep212 e o Ep225.",
-            "Extensão e passagens diárias de cada linha, antes e depois.",
-            "Mapa das diferenças.",
+        "description": "As linhas SMTUC antes e depois do Como Vou, com o mesmo metro e o mesmo dia.",
+        "note": "Linha a linha: cortadas, novas, com percurso alterado ou só com ajustes de paragens. O horário de partida é o de março, por isso as linhas reestruturadas em junho (5, 5T, 5F, 33 e 33R) aparecem assinaladas como anteriores ao Como Vou.",
+        "table": {
+            "title": "Diferenças de rede, linha a linha",
+            "src": "comparacao/rede_fase2_ep212_vs_fase2.html",
+            "caption": "Viagens no dia, paragens mantidas / deslocadas / retiradas / novas e extensão a par do metro de cada linha.",
+        },
+    },
+    {
+        "id": "como_vou",
+        "label": "Efeito do Como Vou",
+        "kind": "scenario-compare",
+        "section": "s2",
+        "ladder": ["B", "C"],
+        "description": "O que mudou só por causa do horário SMTUC: o metro e o dia são os mesmos nos dois lados.",
+        "note": "Mesmo metro, mesmo dia: a diferença é toda do horário SMTUC - o Como Vou e, antes dele, a reestruturação de junho das linhas 5, 5T, 5F, 33 e 33R.",
+        "table": {
+            "title": "Indicadores: metro da fase 2 com o horário de março → Como Vou",
+            "src": "comparacao/fase2_ep212_vs_fase2.html",
+            "caption": "Overlap, acessibilidade a partir do estádio, população sem oferta e esperas da linha 54.",
+        },
+        "iframes": [
+            {
+                "title": "Linhas sobrepostas: SMTUC Ep212",
+                "src": "overlap/overlap_lines_map_fase2_ep212.html",
+                "caption": "Horário SMTUC de março, com o metro da fase 2 (09/11/2026).",
+            },
+            {
+                "title": "Linhas sobrepostas: Como Vou",
+                "src": "overlap/overlap_lines_map_fase2.html",
+                "caption": "Rede atual (09/11/2026).",
+            },
         ],
     },
     # "stats" também anexado em tempo real, a partir do cache do cenário fase2 (ver
@@ -348,7 +403,7 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
         "section": "s2",
         "ladder": ["C"],
         "description": "O overlap e as isócronas na rede atual: metro da fase 2 e horário SMTUC Ep225.",
-        "note": "Dados oficiais: Metro Mondego (NeTEx de 11/11/2026; fase 2 em operação desde 10/09/2026) e SMTUC (horário Ep225, desde 18/09/2026), num dia útil de referência, 09/11/2026. Dados: AGIT / dados.gov.pt (CC BY 4.0).",
+        "note": "Dados oficiais: Metro Mondego (NeTEx de 11/11/2026; fase 2 em operação desde 10/09/2026) e SMTUC (horário Ep225 do Como Vou, GTFS do Município), num dia útil de referência, 09/11/2026. Dados: AGIT / dados.gov.pt (CC BY 4.0).",
         "iframes": [
             {
                 "title": "Reachability e overlap temporal (rede atual)",
@@ -362,45 +417,16 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
             },
         ],
     },
-    # "table" é a página gerada por regenerate_comparison_html (números dos snapshots de
-    # scripts/snapshot_metrics.py, os mesmos de reports/metricas/); "iframes" ficam lado a lado.
-    # Ainda compara A com C; o passo N1 separa-a em A -> B (metro) e B -> C (Como Vou).
-    {
-        "id": "antes_vs_fase2",
-        "label": "Fase 1 vs Como Vou",
-        "kind": "scenario-compare",
-        "section": "s2",
-        "ladder": ["A", "C"],
-        "description": "Os indicadores da fase 1 e da rede atual, lado a lado, num dia útil de cada.",
-        "note": "Atenção: entre A e C mudam o metro e o SMTUC ao mesmo tempo, por isso esta tabela ainda não mede só o Como Vou. Vai ser separada em A → B (efeito do metro) e B → C (efeito do Como Vou).",
-        "table": {
-            "title": "Indicadores lado a lado",
-            "src": "comparacao/antes_vs_fase2.html",
-            "caption": "Overlap, acessibilidade a partir do estádio, população sem oferta e esperas da linha 54.",
-        },
-        "iframes": [
-            {
-                "title": "Linhas sobrepostas: fase 1",
-                "src": "overlap/overlap_lines_map.html",
-                "caption": "Rede da fase 1 (11/05/2026).",
-            },
-            {
-                "title": "Linhas sobrepostas: Como Vou",
-                "src": "overlap/overlap_lines_map_fase2.html",
-                "caption": "Rede atual (09/11/2026).",
-            },
-        ],
-    },
     {
         "id": "s2_redundancias",
         "label": "As maiores redundâncias depois do Como Vou",
         "kind": "pending",
         "section": "s2",
         "ladder": ["B", "C"],
-        "status": "Por construir · N1 + N2",
+        "status": "Por construir · N2",
         "description": "O que aconteceu a cada uma das maiores fontes de redundância da secção 1.",
         "shows": [
-            "Para cada linha do ranking da fase 1: cortada, encurtada, desviada ou igual.",
+            "Para cada linha do ranking da fase 1: cortada, com percurso alterado, só com ajustes ou igual (as diferenças de rede já existem).",
             "O overlap de cada uma antes e depois do Como Vou, com o mesmo metro.",
             "As que ficaram por resolver passam para a secção 3.",
         ],
@@ -410,9 +436,9 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
         "label": "A 54 depois do Como Vou",
         "kind": "comparison",
         "section": "s2",
-        "ladder": ["A", "C"],
+        "ladder": ["B", "C"],
         "description": "Esperas no transbordo entre a 54 e o metro, na rede atual.",
-        "note": "O mesmo cálculo da secção 1.5, na rede atual; o botão mostra a fase 1 para comparar. Na Portagem aparece também, só como informação, o sentido norte (para Coimbra B ou República), que só existe com a fase 2.",
+        "note": "O mesmo cálculo da secção 1.5, na rede atual; o botão mostra o mesmo metro com o horário SMTUC de março, para separar o que mudou com o Como Vou. Na Portagem aparece também, só como informação, o sentido norte (para Coimbra B ou República), que só existe com o metro da fase 2.",
         "columns": [
             {
                 "title": "Portagem",
@@ -424,7 +450,7 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
                 },
                 "scenarios": [
                     {"label": "Como Vou (C)", "src": "integration/portagem_fase2/l54_38_all.html"},
-                    {"label": "Fase 1 (A)", "src": "integration/portagem/l54_38_all.html"},
+                    {"label": "SMTUC de março (B)", "src": "integration/portagem_fase2_ep212/l54_38_all.html"},
                 ],
             },
             {
@@ -437,7 +463,7 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
                 },
                 "scenarios": [
                     {"label": "Como Vou (C)", "src": "integration/portela_fase2/l54_all.html"},
-                    {"label": "Fase 1 (A)", "src": "integration/portela/l54_all.html"},
+                    {"label": "SMTUC de março (B)", "src": "integration/portela_fase2_ep212/l54_all.html"},
                 ],
             },
         ],
