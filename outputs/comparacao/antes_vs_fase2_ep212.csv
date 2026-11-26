@@ -10,6 +10,9 @@ indicadores,isocrona_nos/Portagem | total/tempo_medio_ponderado_min,,32.9648,33.
 indicadores,isocrona_nos/Portagem | total/populacao_30min_media,,83477,83221.6667
 indicadores,isocrona_nos/Portela | total/tempo_medio_ponderado_min,,46.0133,44.1177
 indicadores,isocrona_nos/Portela | total/populacao_30min_media,,52375.3333,55977.8333
+indicadores,redundancia/total/km_metro,,815.2601,2442.8134
+indicadores,redundancia/total/horas_metro,,70.1667,193.9333
+indicadores,redundancia/desperdicio/ano_t_co2,,198.1922,588.1099
 esperas_54_mediana_min,Portagem metro→autocarro,atual,19.02,18.5
 esperas_54_mediana_min,Portagem metro→autocarro,otimizado,,18.09
 esperas_54_mediana_min,Portagem metro→autocarro,melhorado,,8.62

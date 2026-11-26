@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>O que mudou nas linhas mais redundantes: Metro da fase 2 + SMTUC Ep212 → Como Vou</title>
+  <!-- Sem recursos externos: a página tem de funcionar offline (parede FeedNPlay) e dentro de
+       um iframe num cartão branco dos slides - por isso fundo claro e as cores da apresentação. -->
+  <style>
+    :root {
+      --ink: #221d13;
+      --muted: #5c574c;
+      --border: #e7e2d8;
+      --card: #ffffff;
+      --card-soft: #faf8f4;
+      --accent: #ffdd2b;
+      --good: #1f7a3a;
+      --good-bg: #e6f4ea;
+      --bad: #a3361f;
+      --bad-bg: #fbe9e4;
+      color-scheme: light only;
+    }
+    html, body { margin: 0; background: var(--card); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
+      font-size: clamp(13px, 1.25vw, 17px);
+      line-height: 1.4;
+      padding: 1em 1.2em;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 1.05em;
+      margin: 0 0 0.5em;
+      letter-spacing: 0.01em;
+    }
+    section + section { margin-top: 1.4em; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 0.45em 0.6em; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+    thead th { background: var(--card-soft); font-size: 0.85em; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--accent); }
+    thead th span { font-weight: 400; }
+    th[scope="row"], thead th:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+    td { white-space: nowrap; }
+    .trend-melhor { color: var(--good); background: var(--good-bg); font-weight: 600; }
+    .trend-pior { color: var(--bad); background: var(--bad-bg); font-weight: 600; }
+    span.trend-melhor, span.trend-pior { padding: 0 0.3em; border-radius: 3px; }
+    .note { color: var(--muted); font-size: 0.85em; margin: 0.5em 0 0; }
+    .sources { margin-top: 1.4em; }
+    code { font-size: 0.95em; }
+    /* Diferenças de rede (network_diff_page.py): colunas de texto, nome da linha, tabela de contagens. */
+    td.text { text-align: left; white-space: normal; }
+    th .name { font-weight: 400; font-size: 0.8em; color: var(--muted); }
+    table.counts { width: auto; min-width: 50%; margin-top: 0.8em; }
+    .note code { overflow-wrap: anywhere; }
+    /* Redundância (redundancy_page.py): barra proporcional atrás do valor. */
+    td.barcell { position: relative; min-width: 9em; }
+    td.barcell .bar { position: absolute; left: 0; top: 18%; bottom: 18%; background: var(--accent); opacity: 0.55; border-radius: 0 3px 3px 0; }
+    td.barcell .barval { position: relative; }
+    @media (max-width: 560px) {
+      body { padding: 0.75em 0.5em; }
+      th, td { padding: 0.35em 0.3em; }
+      td { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+<section>
+  <h2>A par do metro: Metro da fase 2 + SMTUC Ep212 → Como Vou</h2>
+  <table>
+    <thead><tr><th scope="col">Indicador</th><th scope="col">Metro da fase 2 + SMTUC Ep212</th><th scope="col">Como Vou</th><th scope="col">Diferença</th></tr></thead>
+    <tbody><tr><th scope="row">Autocarros·km a par do metro, dia útil</th><td>2 443</td><td>1 970</td><td class="trend-melhor">−473</td></tr><tr><th scope="row">Autocarros·hora a par do metro, dia útil</th><td>194</td><td>150</td><td class="trend-melhor">−44</td></tr><tr><th scope="row">Autocarros·km a par do metro, ano (estimativa)</th><td>773 378</td><td>604 136</td><td class="trend-melhor">−169 242</td></tr><tr><th scope="row">t CO2 a par do metro, ano (estimativa)</th><td>588</td><td>459</td><td class="trend-melhor">−129</td></tr></tbody>
+  </table>
+</section>
+<section>
+  <h2>As 15 linhas mais redundantes de Metro da fase 2 + SMTUC Ep212</h2>
+  <table>
+    <thead><tr><th scope="col">Linha</th><th scope="col">Autocarros·km/dia<br><span>Metro da fase 2 + SMTUC Ep212</span></th><th scope="col">Autocarros·km/dia<br><span>Como Vou</span></th><th scope="col">Diferença</th><th scope="col">O que mudou na linha</th><th scope="col">Aviso SMTUC</th></tr></thead>
+    <tbody><tr><th scope="row">7T</th><td>191</td><td>—</td><td class="trend-melhor">−191</td><td class="text">cortada</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">5</th><td>149</td><td>184</td><td class="trend-pior">+35</td><td class="text">percurso alterado</td><td class="text">antes do Como Vou (14/06/2026)</td></tr><tr><th scope="row">29</th><td>123</td><td>114</td><td class="trend-melhor">−9</td><td class="text">ajuste de paragens</td><td class="text"></td></tr><tr><th scope="row">7</th><td>117</td><td>47</td><td class="trend-melhor">−70</td><td class="text">percurso alterado</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">24T</th><td>112</td><td>117</td><td class="trend-pior">+5</td><td class="text">igual</td><td class="text"></td></tr><tr><th scope="row">28</th><td>109</td><td>123</td><td class="trend-pior">+14</td><td class="text">ajuste de paragens</td><td class="text"></td></tr><tr><th scope="row">33</th><td>98</td><td>—</td><td class="trend-melhor">−98</td><td class="text">cortada</td><td class="text">antes do Como Vou (14/06/2026)</td></tr><tr><th scope="row">6</th><td>88</td><td>84</td><td class="trend-melhor">−5</td><td class="text">ajuste de paragens</td><td class="text"></td></tr><tr><th scope="row">27</th><td>88</td><td>95</td><td class="trend-pior">+7</td><td class="text">percurso alterado</td><td class="text"></td></tr><tr><th scope="row">4</th><td>86</td><td>20</td><td class="trend-melhor">−66</td><td class="text">percurso alterado</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">50T</th><td>79</td><td>60</td><td class="trend-melhor">−20</td><td class="text">percurso alterado</td><td class="text"></td></tr><tr><th scope="row">19T</th><td>69</td><td>79</td><td class="trend-pior">+10</td><td class="text">percurso alterado</td><td class="text"></td></tr><tr><th scope="row">10</th><td>69</td><td>39</td><td class="trend-melhor">−30</td><td class="text">percurso alterado</td><td class="text">Como Vou (10/09/2026)</td></tr><tr><th scope="row">2T</th><td>66</td><td>50</td><td class="trend-melhor">−16</td><td class="text">ajuste de paragens</td><td class="text"></td></tr><tr><th scope="row">14</th><td>52</td><td>52</td><td>=</td><td class="text">igual</td><td class="text"></td></tr></tbody>
+  </table>
+  <p class="note">Estas linhas faziam 1 495 autocarros·km por dia útil a par do metro; depois fazem 1 063. Uma linha cortada conta 0. O estado vem das diferenças de rede linha a linha (mesmo número, ou renumerada pelas paragens).</p>
+</section>
+<p class="note sources">Viagem a viagem no dia útil de referência, cada viagem com as suas paragens. Um troço conta como a par do metro quando as duas paragens ficam a ≤ 3 min a pé de uma estação (a mesma regra da extensão a par do metro). Corredor = as estações mais próximas das duas pontas do troço. Ano estimado = semana-tipo (o dia útil × 5, mais o sábado e o domingo mais próximos dentro do período do horário) × 52, sem descontar feriados nem agosto. CO2 com a frota SMTUC de fev/2025 repartida por igual pelas linhas e consumos típicos (fontes em reports/estatisticas.txt). Dados: SMTUC / Município de Coimbra; Metro Mondego (AGIT).</p>
+
+</body>
+</html>
