@@ -7,6 +7,8 @@ try:
 except Exception:  # pragma: no cover - optional dependency guard
     folium = None
 
+from visualizations.basemap import new_map
+
 
 def create_overlap_reachability_map(
     reach_gdf: gpd.GeoDataFrame,
@@ -75,7 +77,7 @@ def create_overlap_reachability_map(
 
     gdf = reach_gdf.copy()
     if gdf.empty or "geometry" not in gdf.columns:
-        m = folium.Map(location=[origin_lat, origin_lon], zoom_start=13, tiles="cartodbpositron", control_scale=True)
+        m = new_map([origin_lat, origin_lon], zoom_start=13, control_scale=True)
         _add_mouse_origin_marker(m)
         return m
 
@@ -136,7 +138,7 @@ def create_overlap_reachability_map(
     dynamic_zones = dynamic_zones[dynamic_zones.geometry.is_valid].copy()
 
     if dynamic_zones.empty:
-        m = folium.Map(location=[origin_lat, origin_lon], zoom_start=13, tiles="cartodbpositron", control_scale=True)
+        m = new_map([origin_lat, origin_lon], zoom_start=13, control_scale=True)
         _add_mouse_origin_marker(m)
         return m
 
@@ -166,10 +168,9 @@ def create_overlap_reachability_map(
     pt_count = int((dynamic_zones["reach_mode"].astype(str) == "transporte público").sum())
     walk_count = int((dynamic_zones["reach_mode"].astype(str) == "a pé").sum())
 
-    m = folium.Map(
-        location=[origin_lat, origin_lon],
+    m = new_map(
+        [origin_lat, origin_lon],
         zoom_start=13,
-        tiles="cartodbpositron",
         control_scale=True,
         prefer_canvas=False,
     )

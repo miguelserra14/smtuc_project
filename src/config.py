@@ -261,6 +261,12 @@ FEEDNPLAY_CLICK_TO_ADVANCE: bool = True
 FEEDNPLAY_PREVIEW_MODE: bool = True
 FEEDNPLAY_PREVIEW_BASE_FONT_PX = 16
 
+# Mapa base dos mapas Folium (visualizations/basemap.py). A CARTO (Positron) exige chave desde
+# set/2026 - sem ela os tiles saem com a marca "API KEY REQUIRED". Chave gratuita para uso não
+# comercial, sem conta: https://carto.com/basemaps/apikey. Põe-na em src/config_local.py (fica
+# visível no HTML gerado, como qualquer chave de tiles, mas fora do git). None = Esri Light Gray.
+BASEMAP_CARTO_KEY: str | None = None
+
 
 r"""
 Runbook (comandos manuais) - caminhos relativos à raiz do repo; o executável do Python é o do

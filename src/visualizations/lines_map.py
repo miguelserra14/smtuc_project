@@ -17,6 +17,7 @@ from gtfs_processing.scenarios import DEFAULT_METRO_DATASET, DEFAULT_SMTUC_DATAS
 from gtfs_processing.gtfs import load_gtfs_cached
 from overlap.overlap_db import iter_route_direction_stop_arrays, line_metrics_db_path, line_to_route_ids
 from paths import project_path
+from visualizations.basemap import new_map
 
 
 def create_overlap_lines_map(
@@ -74,7 +75,7 @@ def create_overlap_lines_map(
     gtfs_metro = load_gtfs_cached(metrobus_dataset)
 
     center = (float(STADIUM_COORD[0]), float(STADIUM_COORD[1]))
-    m = folium.Map(location=center, zoom_start=13, tiles="cartodbpositron")
+    m = new_map(center, zoom_start=13)
 
     # Metrobus layer: prefer shapes if available
     metro_fg = FeatureGroup(name="Metrobus (shapes)", show=True)

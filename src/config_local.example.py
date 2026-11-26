@@ -9,3 +9,7 @@ Os valores carregados ficam listados em `config.LOCAL_OVERRIDES`.
 # ficheiro, config.py usa pontos públicos (Estação Coimbra-B e Polo I).
 # HOME_COORD = (40.0, -8.0)
 # WORK_COORD = (40.0, -8.0)
+
+# Chave CARTO para o mapa base Positron (gratuita, uso não comercial: https://carto.com/basemaps/apikey).
+# Sem ela os mapas usam o Esri Light Gray. Depois de a pôr: python scripts/regenerate.py
+# BASEMAP_CARTO_KEY = "a-tua-chave"
