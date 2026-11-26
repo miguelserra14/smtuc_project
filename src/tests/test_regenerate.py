@@ -178,9 +178,10 @@ def test_without_fix_redirected_stdout_really_breaks() -> None:
 
 
 def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    # D2.5: a secção tira um snapshot por cenário de COMPARISON_SCENARIOS (aqui falso) e grava a
-    # página + CSV em <raiz>/outputs/comparacao/ (aqui tmp_path); erro no snapshot = falha registada.
-    from tests.test_scenario_comparison import AFTER, BEFORE
+    # D2.5/N1: a secção tira UM snapshot por cenário de COMPARISON_PAIRS (aqui falso), mesmo que
+    # entre em vários pares, e grava página + CSV por par em <raiz>/outputs/comparacao/ (aqui
+    # tmp_path); erro no snapshot = falha registada.
+    from tests.test_scenario_comparison import AFTER, BEFORE, MIDDLE
 
     taken: list[tuple[str, tuple[str, ...]]] = []
 
@@ -188,7 +189,7 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
         @staticmethod
         def take_snapshot(phase, scenario=None, sections=()):
             taken.append((scenario, tuple(sections)))
-            return {"antes": BEFORE, "fase2": AFTER}[scenario]
+            return {"antes": BEFORE, "fase2_ep212": MIDDLE, "fase2": AFTER}[scenario]
 
     monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
     monkeypatch.setattr(regen, "require_geo_stack", lambda: None)
@@ -197,11 +198,13 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(regen, "_load_snapshot_module", lambda: _FakeSnapshot)
     regen.regenerate_comparison_html()
     assert regen._FAILURES == []
-    assert [s for s, _ in taken] == list(regen.COMPARISON_SCENARIOS)
+    assert sorted(s for s, _ in taken) == sorted({n for pair in regen.COMPARISON_PAIRS for n in pair})
     assert all("busca_fase_54" not in secs and "linhas" not in secs for _, secs in taken)
     out = tmp_path / "outputs" / "comparacao"
+    for before, after in regen.COMPARISON_PAIRS:
+        assert (out / f"{before}_vs_{after}.html").exists() and (out / f"{before}_vs_{after}.csv").exists()
     assert "338,1 km" in (out / "antes_vs_fase2.html").read_text(encoding="utf-8")
-    assert (out / "antes_vs_fase2.csv").exists()
+    assert "só muda o <strong>horário do SMTUC</strong>" in (out / "fase2_ep212_vs_fase2.html").read_text(encoding="utf-8")
 
     def _boom(*a, **k):
         raise RuntimeError("snapshot falhou")

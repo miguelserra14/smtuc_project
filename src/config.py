@@ -69,11 +69,16 @@ POPULATION_STADIUM_MAP_RADIUS_M = 3000.0
 OUTPUTS_POPULATION_DIR = "outputs/population"
 OUTPUTS_OVERLAP_DIR = "outputs/overlap"
 OUTPUTS_INTEGRATION_DIR = "outputs/integration"
-# Comparação lado a lado de dois cenários (D2.5; ver visualizations/scenario_comparison.py):
-# página + CSV em OUTPUTS_COMPARISON_DIR/<antes>_vs_<depois>.{html,csv}, usada pelo slide
-# "Antes vs Fase 2" e pelo separador do dashboard master.
+# Comparações lado a lado de dois cenários (D2.5; ver visualizations/scenario_comparison.py): uma
+# página + CSV por par em OUTPUTS_COMPARISON_DIR/<antes>_vs_<depois>.{html,csv}. Desde o N1 são
+# pares que mudam UMA coisa de cada vez (só o metro; só o horário SMTUC), usados nos slides da
+# secção 2; antes -> fase2 (mudam os dois) fica só no separador do dashboard master.
 OUTPUTS_COMPARISON_DIR = "outputs/comparacao"
-COMPARISON_SCENARIOS = ("antes", "fase2")
+COMPARISON_PAIRS: tuple[tuple[str, str], ...] = (
+    ("antes", "fase2_ep212"),  # efeito do metro da fase 2
+    ("fase2_ep212", "fase2"),  # efeito do horário SMTUC (Como Vou + mudanças de março a setembro)
+    ("antes", "fase2"),        # os dois juntos (visão geral, só no master)
+)
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 
@@ -279,10 +284,13 @@ Integração linha 54 <-> Metrobus (nós em INTEGRATION_SITES; cada página tem 
 metro->autocarro e autocarro->metro, espera de transbordo e equidade temporal):
 http://localhost:8000/outputs/integration/portela/l54_all.html
 http://localhost:8000/outputs/integration/portagem/l54_38_all.html
-Fase 2 (cenário fase2): as mesmas páginas em integration/portela_fase2/ e portagem_fase2/.
+Outros cenários: as mesmas páginas em integration/<nó><sufixo>/ (ex.: portela_fase2/,
+portagem_fase2_ep212/); overlap/isócronas em overlap/*<sufixo>.html.
 
-Antes vs Fase 2 (COMPARISON_SCENARIOS; números de scripts/snapshot_metrics.py):
-http://localhost:8000/outputs/comparacao/antes_vs_fase2.html
+Comparações de cenários (COMPARISON_PAIRS; números de scripts/snapshot_metrics.py):
+http://localhost:8000/outputs/comparacao/antes_vs_fase2_ep212.html   (só o metro)
+http://localhost:8000/outputs/comparacao/fase2_ep212_vs_fase2.html   (só o horário SMTUC)
+http://localhost:8000/outputs/comparacao/antes_vs_fase2.html         (os dois)
 """
 
 

@@ -262,14 +262,25 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
             "src": "integration/portela/l54_all.html",
         },
         # D2.5: comparação antes vs fase 2 (página de regenerate_comparison_html) + as vistas da
-        # fase 2 que não têm separador próprio.
+        # fase 2 que não têm separador próprio. Desde o N1 também os dois pares que separam o
+        # efeito do metro do efeito do horário SMTUC (os slides usam só esses).
         {
             "id": "antes-vs-fase2",
-            "label": "Antes vs Fase 2",
-            "description": "Indicadores lado a lado: rede antes da fase 2 (11/05/2026) e rede em vigor (09/11/2026).",
+            "label": "Fase 1 vs Como Vou",
+            "description": "Indicadores lado a lado: rede da fase 1 (11/05/2026) e rede em vigor (09/11/2026). Entre as duas mudam o metro e o horário SMTUC; as duas páginas a seguir separam os dois efeitos.",
             "kind": "iframe",
             "src": "comparacao/antes_vs_fase2.html",
             "extra_frames": [
+                {
+                    "title": "Efeito do metro: fase 1 → metro da fase 2 com o SMTUC Ep212",
+                    "src": "comparacao/antes_vs_fase2_ep212.html",
+                    "caption": "Só muda o metro: o horário SMTUC é o mesmo (Ep212).",
+                },
+                {
+                    "title": "Efeito do horário SMTUC: metro da fase 2 com o Ep212 → Como Vou",
+                    "src": "comparacao/fase2_ep212_vs_fase2.html",
+                    "caption": "Só muda o horário SMTUC (Como Vou e as mudanças de março a setembro): o metro e o dia são os mesmos.",
+                },
                 {
                     "title": "Mapa de linhas sobrepostas (fase 2)",
                     "src": "overlap/overlap_lines_map_fase2.html",

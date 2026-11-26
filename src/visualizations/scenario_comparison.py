@@ -1,4 +1,5 @@
-"""Comparação lado a lado de dois cenários (D2.5): por omissão `antes` vs `fase2`.
+"""Comparação lado a lado de dois cenários (D2.5; um par de cada vez desde o N1, ver
+config.COMPARISON_PAIRS: fase 1 -> metro novo com o Ep212 -> Como Vou, e fase 1 -> Como Vou).
 
 Os números vêm de snapshots de `scripts/snapshot_metrics.py` (DataFrame longo
 section,key,metric,value) - a MESMA definição dos registos em `reports/metricas/` e da tabela do
@@ -6,8 +7,12 @@ README, para a página nunca divergir deles. Este módulo só formata e escreve:
 snapshots é o chamador (`scripts/regenerate.py`, `regenerate_comparison_html`), porque
 `snapshot_metrics` vive em `scripts/` e não é importável como módulo de `src/`.
 
-Saídas: uma página HTML só com tabelas (usada como iframe no slide "Antes vs Fase 2" e no
-separador do dashboard master) e um CSV com os mesmos valores, para se poder conferir.
+Os nomes dos cenários vêm de config.SCENARIOS[...]["label"] e a frase sobre o que muda entre os
+dois é calculada a partir dos feeds de cada snapshot (só o metro, só o SMTUC, ou os dois), para
+uma página nunca dizer que mudaram coisas que não mudaram.
+
+Saídas: uma página HTML só com tabelas (usada como iframe nos slides e no separador do dashboard
+master) e um CSV com os mesmos valores, para se poder conferir.
 """
 
 from __future__ import annotations
@@ -20,6 +25,8 @@ from pathlib import Path
 from typing import Callable
 
 import pandas as pd
+
+from gtfs_processing.scenarios import get_scenario
 
 from .io import _read_template
 
@@ -179,10 +186,40 @@ def build_comparison_rows(before: pd.DataFrame, after: pd.DataFrame) -> dict[str
     return {"kpis": kpis, "waits": waits}
 
 
+def scenario_label(name: str) -> str:
+    """Nome curto de um cenário (config.SCENARIOS[...]["label"]); o próprio nome se o cenário não
+    existir (ex.: um snapshot ad hoc com --smtuc/--metro)."""
+    try:
+        return get_scenario(name).display_name
+    except ValueError:
+        return name
+
+
+def _snapshot_label(snap: pd.DataFrame, fallback: str) -> str:
+    return scenario_label(snapshot_value(snap, "meta", "snapshot", "cenario") or fallback)
+
+
 def _scenario_heading(snap: pd.DataFrame, fallback: str) -> str:
-    name = snapshot_value(snap, "meta", "snapshot", "cenario") or fallback
-    label = {"antes": "Antes", "fase2": "Fase 2"}.get(name, name)
-    return f"{label} ({_fmt_day(snapshot_value(snap, 'meta', 'dados', 'dia_referencia'))})"
+    return f"{_snapshot_label(snap, fallback)} ({_fmt_day(snapshot_value(snap, 'meta', 'dados', 'dia_referencia'))})"
+
+
+def what_changes(before: pd.DataFrame, after: pd.DataFrame) -> str:
+    """Frase (HTML, sem dados por escapar) sobre o que muda entre os dois snapshots, a partir dos
+    feeds de cada um: só o metro, só o horário do SMTUC, os dois, ou nenhum."""
+    changed = [
+        role for role in ("metro", "smtuc")
+        if snapshot_value(before, "meta", "dados", role) != snapshot_value(after, "meta", "dados", role)
+    ]
+    sentence = {
+        ("metro", "smtuc"): "Entre os dois cenários mudam o metro <strong>e</strong> o horário do SMTUC.",
+        ("metro",): "Entre os dois cenários só muda o <strong>metro</strong>: o horário do SMTUC é o mesmo.",
+        ("smtuc",): "Entre os dois cenários só muda o <strong>horário do SMTUC</strong>: o metro é o mesmo.",
+        (): "Os dois cenários usam os mesmos horários.",
+    }[tuple(changed)]
+    days = {snapshot_value(snap, "meta", "dados", "dia_referencia") for snap in (before, after)}
+    if len(days) > 1:
+        sentence += " Cada um é medido no seu dia de referência."
+    return sentence
 
 
 def _cell(text: str, trend: str = "") -> str:
@@ -199,12 +236,14 @@ def _render_body(before: pd.DataFrame, after: pd.DataFrame, rows: dict[str, list
         for r in rows["kpis"]
     )
     informative_note = (
-        '<p class="note">* Informativo: só existe na fase 2, em que o metro continua de Portagem para '
+        '<p class="note">* Informativo: só existe com o metro da fase 2, que continua de Portagem para '
         "Coimbra B e para a República (conta a primeira partida em qualquer dos ramos). Fica fora da "
         "busca do desvio de fase da 54.</p>"
         if any(r["label"].endswith(" *") for r in rows["waits"])
         else ""
     )
+    label_b = html.escape(_snapshot_label(before, "antes"))
+    label_a = html.escape(_snapshot_label(after, "depois"))
     wait_rows = "".join(
         f"<tr><th scope=\"row\">{html.escape(r['label'])}</th>{_cell(r['before'])}"
         f"{_cell(r['atual'], r['trend'])}{_cell(r['otimizado'], r.get('otimizado_trend', ''))}"
@@ -233,10 +272,10 @@ def _render_body(before: pd.DataFrame, after: pd.DataFrame, rows: dict[str, list
     <thead><tr><th scope="col">Sentido</th><th scope="col">{head_b}<br><span>atual</span></th><th scope="col">{head_a}<br><span>atual</span></th><th scope="col">{head_a}<br><span>otimizado</span></th><th scope="col">{head_a}<br><span>melhorado (2 autocarros)</span></th></tr></thead>
     <tbody>{wait_rows}</tbody>
   </table>
-  <p class="note">A cor compara com o horário atual da fase 2 (e esse com o antes): <span class="trend-melhor">menos espera</span>, <span class="trend-pior">mais espera</span>.</p>
+  <p class="note">A cor compara as propostas com o horário atual de {label_a} (e esse com {label_b}): <span class="trend-melhor">menos espera</span>, <span class="trend-pior">mais espera</span>.</p>
   {informative_note}
 </section>
-<p class="note sources">Entre os dois cenários mudam o metro <strong>e</strong> o horário do SMTUC. {' · '.join(feeds)}. Dados: AGIT / dados.gov.pt (CC BY 4.0), SMTUC, INE (BGRI 2021).</p>
+<p class="note sources">{what_changes(before, after)} {' · '.join(feeds)}. Dados: AGIT / dados.gov.pt (CC BY 4.0), SMTUC, INE (BGRI 2021).</p>
 """
 
 
@@ -259,13 +298,16 @@ def create_scenario_comparison_html(
     output_path: Path | str,
     before: pd.DataFrame,
     after: pd.DataFrame,
-    title: str = "Antes vs Fase 2",
+    title: str | None = None,
     csv_path: Path | str | None = None,
 ) -> str:
-    """Escreve a página de comparação (e, se `csv_path`, o CSV com os mesmos valores)."""
+    """Escreve a página de comparação (e, se `csv_path`, o CSV com os mesmos valores). Sem `title`,
+    o título é "<cenário antes> vs <cenário depois>" (nomes de config.SCENARIOS)."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     rows = build_comparison_rows(before, after)
+    if title is None:
+        title = f"{_snapshot_label(before, 'antes')} vs {_snapshot_label(after, 'depois')}"
     page = _read_template("scenario_comparison.html")
     page = page.replace("__TITLE__", html.escape(title))
     page = page.replace("__BODY__", _render_body(before, after, rows))

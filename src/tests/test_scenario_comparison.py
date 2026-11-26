@@ -50,6 +50,13 @@ BEFORE = _snap("antes", "2026-05-11", {
     ("esperas_54", "Portagem metro→bus | atual", "median"): 19.0,
     ("esperas_54", "Portela metro→bus | atual", "median"): 15.3,
 })
+# Cenário do meio (N1): mesmo SMTUC do BEFORE, mesmo metro do AFTER.
+MIDDLE = _snap("fase2_ep212", "2026-11-09", {
+    ("overlap_resumo", "total", "total_overlap_extension_m"): 398216.5,
+    ("esperas_54", "Portagem metro→bus | atual", "median"): 18.5,
+})
+MIDDLE.loc[MIDDLE["metric"] == "smtuc", "value"] = "smtuc_antes"
+MIDDLE.loc[MIDDLE["metric"] == "metro", "value"] = "metro_fase2"
 AFTER = _snap("fase2", "2026-11-09", {
     ("overlap_resumo", "total", "overlap_lines"): 86,
     ("overlap_resumo", "total", "total_overlap_extension_m"): 338075.3,
@@ -134,7 +141,10 @@ def test_page_and_csv(tmp_path: Path) -> None:
     hostile.loc[hostile["metric"] == "smtuc", "value"] = "<script>alert(1)</script>"
     page = Path(create_scenario_comparison_html(tmp_path / "c.html", BEFORE, hostile, csv_path=tmp_path / "c.csv"))
     text = page.read_text(encoding="utf-8")
-    assert "Antes (11/05/2026)" in text and "Fase 2 (09/11/2026)" in text
+    # Nomes dos cenários de config.SCENARIOS[...]["label"] e título "<antes> vs <depois>".
+    assert "Fase 1 (11/05/2026)" in text and "Como Vou (09/11/2026)" in text
+    assert "<title>Fase 1 vs Como Vou</title>" in text
+    assert "mudam o metro <strong>e</strong> o horário do SMTUC" in text
     assert "338,1 km" in text and 'class="trend-melhor"' in text
     assert "<script>" not in text  # tudo o que vem dos dados é escapado
     assert "http" not in text.replace("dados.gov.pt", "")  # sem recursos externos (offline)
@@ -174,3 +184,18 @@ def test_slides_and_master_link_both_scenarios(tmp_path: Path) -> None:
         assert any(t["id"] == "antes_vs_fase2" for t in data)
     master_html = Path(create_master_dashboard_html(tmp_path / "m.html")).read_text(encoding="utf-8")
     assert "integration/portela_fase2/l54_all.html" in master_html
+
+
+def test_what_changes_is_computed_from_the_feeds(tmp_path: Path) -> None:
+    # N1: a frase sobre o que muda sai dos feeds de cada snapshot, nunca escrita à mão - a página
+    # "fase 1 -> metro novo" não pode dizer que mudou o SMTUC, nem a "metro novo -> Como Vou" o metro.
+    from visualizations.scenario_comparison import what_changes
+
+    assert "só muda o <strong>metro</strong>" in what_changes(BEFORE, MIDDLE)
+    assert "Cada um é medido no seu dia" in what_changes(BEFORE, MIDDLE)
+    assert "só muda o <strong>horário do SMTUC</strong>" in what_changes(MIDDLE, AFTER)
+    assert "Cada um é medido" not in what_changes(MIDDLE, AFTER)  # mesmo dia
+    assert "mudam o metro <strong>e</strong>" in what_changes(BEFORE, AFTER)
+    text = Path(create_scenario_comparison_html(tmp_path / "m.html", MIDDLE, AFTER)).read_text(encoding="utf-8")
+    assert "Metro da fase 2 + SMTUC Ep212 (09/11/2026)" in text
+    assert "horário atual de Como Vou (e esse com Metro da fase 2 + SMTUC Ep212)" in text

@@ -21,7 +21,7 @@ sys.path[:0] = [str(ROOT / "src")]
 
 from config import (  # noqa: E402
     CATCHMENT_M,
-    COMPARISON_SCENARIOS,
+    COMPARISON_PAIRS,
     INTEGRATION_SITES,
     LINE_54_MELHORADO_PHASE_SHIFT_MIN,
     LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,
@@ -424,20 +424,27 @@ def _load_snapshot_module():
 
 
 def regenerate_comparison_html() -> None:
-    """Página "Antes vs Fase 2" (D2.5): snapshot de cada cenário de COMPARISON_SCENARIOS (nada
-    gravado em outputs/ pelo snapshot) -> outputs/comparacao/<antes>_vs_<depois>.{html,csv}.
-    Corre depois das secções de overlap, para reaproveitar o cache de métricas já atualizado."""
+    """Páginas de comparação de cenários (D2.5; pares desde o N1): um snapshot por cenário de
+    COMPARISON_PAIRS, tirado uma só vez e reaproveitado por todos os pares (nada gravado em
+    outputs/ pelo snapshot) -> outputs/comparacao/<antes>_vs_<depois>.{html,csv} por par.
+    Corre depois das secções de overlap, para reaproveitar o cache de métricas já atualizado.
+    Um par com um feed em falta é saltado; os outros continuam."""
     section = "comparação de cenários"
     print("\n" + "=" * 60)
     print("[INFO] Regenerando comparação de cenários...")
     print("=" * 60)
 
-    before_name, after_name = COMPARISON_SCENARIOS
-    for name in COMPARISON_SCENARIOS:
+    names = list(dict.fromkeys(name for pair in COMPARISON_PAIRS for name in pair))
+    available = set()
+    for name in names:
         sc = get_scenario(name)
-        if not _require_dataset(sc.smtuc) or not _require_dataset(sc.metro):
-            _record_skip(section, f"datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
-            return
+        if _require_dataset(sc.smtuc) and _require_dataset(sc.metro):
+            available.add(name)
+        else:
+            _record_skip(section, f"{name}: datasets GTFS {sc.smtuc}/{sc.metro} não disponíveis")
+    pairs = [pair for pair in COMPARISON_PAIRS if set(pair) <= available]
+    if not pairs:
+        return
     try:
         require_geo_stack()
         require_bgri_data()
@@ -449,19 +456,26 @@ def regenerate_comparison_html() -> None:
         snapshot_metrics = _load_snapshot_module()
         snaps = {
             name: snapshot_metrics.take_snapshot(f"pagina_{name}", scenario=name, sections=_COMPARISON_SECTIONS)
-            for name in COMPARISON_SCENARIOS
+            for name in names
+            if any(name in pair for pair in pairs)
         }
-        out_dir = project_root() / OUTPUTS_COMPARISON_DIR
-        stem = f"{before_name}_vs_{after_name}"
-        created = create_scenario_comparison_html(
-            out_dir / f"{stem}.html",
-            before=snaps[before_name],
-            after=snaps[after_name],
-            csv_path=out_dir / f"{stem}.csv",
-        )
-        print(f"[SUCCESS] Comparação de cenários: {created}")
     except Exception as e:
         _record_failure(section, e)
+        return
+
+    out_dir = project_root() / OUTPUTS_COMPARISON_DIR
+    for before_name, after_name in pairs:
+        stem = f"{before_name}_vs_{after_name}"
+        try:
+            created = create_scenario_comparison_html(
+                out_dir / f"{stem}.html",
+                before=snaps[before_name],
+                after=snaps[after_name],
+                csv_path=out_dir / f"{stem}.csv",
+            )
+            print(f"[SUCCESS] Comparação de cenários ({stem}): {created}")
+        except Exception as e:
+            _record_failure(f"{section} {stem}", e)
 
 
 def regenerate_master_dashboard() -> None:
