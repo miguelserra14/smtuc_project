@@ -2,7 +2,7 @@ section,key,metric,value
 meta,snapshot,fase,n2_redundancia_antes
 meta,snapshot,cenario,antes
 meta,snapshot,criado_em,2026-11-26
-meta,snapshot,commit,59282a1+alterações
+meta,snapshot,commit,f1c1b91+alterações
 meta,dados,smtuc,smtuc
 meta,dados,metro,metrobus
 meta,dados,pasta_smtuc,data/gtfs/smtuc/antigo_ep212
@@ -23,6 +23,30 @@ meta,parametros,REACHABILITY_MAX_MIN,60
 meta,parametros,REACHABILITY_MAX_TRANSFERS,2
 meta,parametros,LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,-10
 meta,parametros,LINE_54_MELHORADO_PHASE_SHIFT_MIN,0
+redundancia,desperdicio,dia_km_metro,815.2601
+redundancia,desperdicio,dia_horas_metro,70.1667
+redundancia,desperdicio,dia_t_co2,0.62
+redundancia,desperdicio,semana_km_metro,5012.0612
+redundancia,desperdicio,semana_horas_metro,418.75
+redundancia,desperdicio,ano_km_metro,260627.1828
+redundancia,desperdicio,ano_horas_metro,21775
+redundancia,desperdicio,ano_t_co2,198.1922
+redundancia,desperdicio,kg_co2_por_km,0.7604
+redundancia,semana-tipo dia útil,dia,2026-05-11
+redundancia,semana-tipo dia útil,peso,5
+redundancia,semana-tipo dia útil,viagens,2110
+redundancia,semana-tipo dia útil,km_metro,815.2601
+redundancia,semana-tipo dia útil,horas_metro,70.1667
+redundancia,semana-tipo sábado,dia,2026-05-09
+redundancia,semana-tipo sábado,peso,1
+redundancia,semana-tipo sábado,viagens,1269
+redundancia,semana-tipo sábado,km_metro,565.7026
+redundancia,semana-tipo sábado,horas_metro,40.9833
+redundancia,semana-tipo domingo,dia,2026-05-10
+redundancia,semana-tipo domingo,peso,1
+redundancia,semana-tipo domingo,viagens,699
+redundancia,semana-tipo domingo,km_metro,370.0581
+redundancia,semana-tipo domingo,horas_metro,26.9333
 redundancia,total,linhas,89
 redundancia,total,linhas_com_troco_metro,63
 redundancia,total,viagens,2110

@@ -26,7 +26,7 @@ Secções:
   populacao       população sem oferta (total e no raio do painel do estádio), top 10 de subserviço
   redundancia     (opcional, só com --secoes) autocarros·km e ·hora a par do metro viagem a viagem
                   no dia de referência (overlap/redundancy.py): totais, por linha e por corredor
-                  do metro. Fora das secções por omissão para os registos antigos continuarem
+                  do metro; desperdício (CO2 e ano estimado pela semana-tipo, N2.2). Fora das secções por omissão para os registos antigos continuarem
                   comparáveis.
 
 Nada é escrito em outputs/: o cache de métricas é copiado para uma pasta temporária e as tabelas
@@ -139,9 +139,15 @@ def _section_overlap_summary(snap: Snapshot, metrics_csv: Path) -> None:
 
 
 def _section_redundancy(snap: Snapshot, scenario) -> None:
-    from overlap.redundancy import scenario_redundancy
+    from overlap.redundancy import scenario_waste
 
-    red = scenario_redundancy(scenario)
+    waste = scenario_waste(scenario)
+    red = waste.reference
+    for name, value in waste.summary().items():
+        snap.add("redundancia", "desperdicio", name, value)
+    for row in waste.week.itertuples(index=False):
+        for col in ("dia", "peso", "viagens", "km_metro", "horas_metro"):
+            snap.add("redundancia", f"semana-tipo {row.tipo}", col, getattr(row, col))
     for name, value in red.totals().items():
         snap.add("redundancia", "total", name, value)
     for row in red.by_line.sort_values("line", key=lambda s: s.astype(str)).itertuples(index=False):

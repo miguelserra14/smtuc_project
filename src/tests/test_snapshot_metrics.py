@@ -76,6 +76,7 @@ def test_redundancy_section_matches_the_module() -> None:
     assert float(data[("total", "km_metro")]) == pytest.approx(totals["km_metro"], abs=1e-3)
     assert int(float(data[("total", "viagens")])) == totals["viagens"]
     assert set(df["section"]) == {"meta", "redundancia"}
+    assert ("desperdicio", "ano_t_co2") in data.index and ("semana-tipo sábado", "peso") in data.index
 
 
 def test_diff_classifies_changes() -> None:

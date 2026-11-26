@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
@@ -209,3 +209,145 @@ def scenario_redundancy(scenario: str | Scenario | None = None, day: date | None
     day = day or scenario_reference_day(sc)
     segments = trip_segments(load_gtfs_cached(sc.smtuc), load_gtfs_cached(sc.metro), day)
     return Redundancy(sc.name, day, redundancy_by_line(segments), redundancy_by_corridor(segments))
+
+
+# --------------------------------------------------------------------------- desperdício (N2.2)
+
+
+@dataclass(frozen=True)
+class WasteFactors:
+    """Fatores de conversão autocarros·km -> CO2 (config.WASTE_*; fontes em reports/estatisticas.txt)."""
+
+    fleet_total: int
+    fleet_electric: int
+    diesel_l_per_km: float
+    electric_kwh_per_km: float
+    diesel_kg_co2_per_l: float
+    grid_kg_co2_per_kwh: float
+    weeks_per_year: int
+
+    @property
+    def electric_share(self) -> float:
+        return self.fleet_electric / self.fleet_total
+
+    @property
+    def kg_co2_per_km(self) -> float:
+        """Média da frota: a parte a combustão em gasóleo, a elétrica na rede (frota repartida por igual)."""
+        e = self.electric_share
+        return (1 - e) * self.diesel_l_per_km * self.diesel_kg_co2_per_l + e * self.electric_kwh_per_km * self.grid_kg_co2_per_kwh
+
+
+def waste_factors() -> WasteFactors:
+    import config
+
+    factors = WasteFactors(
+        fleet_total=int(config.WASTE_FLEET_TOTAL),
+        fleet_electric=int(config.WASTE_FLEET_ELECTRIC),
+        diesel_l_per_km=float(config.WASTE_DIESEL_L_PER_KM),
+        electric_kwh_per_km=float(config.WASTE_ELECTRIC_KWH_PER_KM),
+        diesel_kg_co2_per_l=float(config.WASTE_DIESEL_KG_CO2_PER_L),
+        grid_kg_co2_per_kwh=float(config.WASTE_GRID_KG_CO2_PER_KWH),
+        weeks_per_year=int(config.WASTE_WEEKS_PER_YEAR),
+    )
+    if not 0 <= factors.fleet_electric <= factors.fleet_total or factors.fleet_total <= 0:
+        raise ValueError(f"frota inválida em config.WASTE_FLEET_*: {factors.fleet_electric}/{factors.fleet_total}")
+    return factors
+
+
+WEEKDAYS_PER_WEEK = 5
+WEEK_COLUMNS = ("tipo", "dia", "peso", "viagens", "km", "km_metro", "horas_metro")
+_SEARCH_DAYS = 28
+
+
+def _in_period(gtfs, day: date) -> bool:
+    from gtfs_processing.gtfs_probe import feed_service_period
+
+    period = feed_service_period(gtfs)
+    if period is None:
+        return True
+    ymd = day.year * 10000 + day.month * 100 + day.day
+    return period[0] <= ymd <= period[1]
+
+
+def nearest_weekday(gtfs, day: date, weekday: int) -> date:
+    """O dia com o `weekday` pedido (5 = sábado, 6 = domingo) mais próximo de `day`, dentro do
+    período do feed e que não seja feriado; empate -> o seguinte. Levanta ValueError se não houver
+    nenhum a <= 4 semanas."""
+    from gtfs_processing.gtfs_probe import is_public_holiday
+
+    for offset in range(1, _SEARCH_DAYS + 1):
+        for candidate in (day + timedelta(days=offset), day - timedelta(days=offset)):
+            if candidate.weekday() == weekday and not is_public_holiday(candidate) and _in_period(gtfs, candidate):
+                return candidate
+    raise ValueError(f"nenhum dia {weekday} (0 = 2.ª) fora de feriados no período do feed a <= {_SEARCH_DAYS} dias de {day}")
+
+
+def typical_week(gtfs, reference_day: date) -> list[tuple[str, date, int]]:
+    """Semana-tipo: (tipo, dia, peso). O dia útil é o dia de referência (peso 5); o sábado e o
+    domingo são os mais próximos dele dentro do período do feed, fora de feriados (peso 1 cada).
+    O dia de referência tem de ser um dia útil que não seja feriado."""
+    from gtfs_processing.gtfs_probe import is_public_holiday
+
+    if reference_day.weekday() >= 5 or is_public_holiday(reference_day):
+        raise ValueError(f"o dia de referência {reference_day} não é um dia útil: a semana-tipo parte de um dia útil")
+    return [
+        ("dia útil", reference_day, WEEKDAYS_PER_WEEK),
+        ("sábado", nearest_weekday(gtfs, reference_day, 5), 1),
+        ("domingo", nearest_weekday(gtfs, reference_day, 6), 1),
+    ]
+
+
+@dataclass(frozen=True)
+class Waste:
+    """Desperdício de um cenário: o dia de referência, a semana-tipo e o ano estimado."""
+
+    scenario: str
+    reference: Redundancy
+    week: pd.DataFrame          # WEEK_COLUMNS: dia útil, sábado e domingo, com o peso de cada um
+    line_week: pd.DataFrame     # por linha: km_metro e horas_metro da semana-tipo (pesados)
+    factors: WasteFactors
+
+    def summary(self) -> dict[str, float]:
+        f = self.factors
+        ref = self.reference.totals()
+        week_km = float((self.week["km_metro"] * self.week["peso"]).sum())
+        week_h = float((self.week["horas_metro"] * self.week["peso"]).sum())
+        return {
+            "dia_km_metro": ref["km_metro"],
+            "dia_horas_metro": ref["horas_metro"],
+            "dia_t_co2": ref["km_metro"] * f.kg_co2_per_km / 1000.0,
+            "semana_km_metro": week_km,
+            "semana_horas_metro": week_h,
+            "ano_km_metro": week_km * f.weeks_per_year,
+            "ano_horas_metro": week_h * f.weeks_per_year,
+            "ano_t_co2": week_km * f.weeks_per_year * f.kg_co2_per_km / 1000.0,
+            "kg_co2_por_km": f.kg_co2_per_km,
+        }
+
+    def line_year(self) -> pd.DataFrame:
+        """Por linha: ano estimado (semana-tipo x semanas por ano) em autocarros·km, ·hora e t CO2."""
+        f = self.factors
+        out = self.line_week.copy()
+        out["ano_km_metro"] = out["km_metro"] * f.weeks_per_year
+        out["ano_horas_metro"] = out["horas_metro"] * f.weeks_per_year
+        out["ano_t_co2"] = out["ano_km_metro"] * f.kg_co2_per_km / 1000.0
+        return out[["line", "ano_km_metro", "ano_horas_metro", "ano_t_co2"]]
+
+
+def scenario_waste(scenario: str | Scenario | None = None) -> Waste:
+    """Dia de referência + sábado e domingo da semana-tipo (`typical_week`), cada um com o serviço
+    GTFS desse dia; ano = semana-tipo x config.WASTE_WEEKS_PER_YEAR (estimativa)."""
+    sc = get_scenario(scenario)
+    ref_day = scenario_reference_day(sc)
+    reference = scenario_redundancy(sc, ref_day)
+    rows, lines = [], []
+    for kind, day, weight in typical_week(load_gtfs_cached(sc.smtuc), ref_day):
+        red = reference if day == ref_day else scenario_redundancy(sc, day)
+        t = red.totals()
+        rows.append({"tipo": kind, "dia": day.isoformat(), "peso": weight, "viagens": t["viagens"], "km": t["km"],
+                     "km_metro": t["km_metro"], "horas_metro": t["horas_metro"]})
+        lines.append(red.by_line[["line", "km_metro", "horas_metro"]].assign(
+            km_metro=lambda d, w=weight: d["km_metro"] * w, horas_metro=lambda d, w=weight: d["horas_metro"] * w))
+    line_week = pd.concat(lines).groupby("line", as_index=False)[["km_metro", "horas_metro"]].sum()
+    line_week = line_week.sort_values(["km_metro", "line"], ascending=[False, True], kind="mergesort").reset_index(drop=True)
+    return Waste(sc.name, reference, pd.DataFrame(rows, columns=list(WEEK_COLUMNS)), line_week, waste_factors())

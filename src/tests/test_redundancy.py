@@ -12,11 +12,16 @@ import pytest
 from gtfs_processing.gtfs import GTFSData
 from overlap.overlap_db import _route_direction_summaries
 from overlap.redundancy import (
+    Redundancy,
+    Waste,
+    WasteFactors,
     bus_stop_overlap,
     redundancy_by_corridor,
     redundancy_by_line,
     station_name,
     trip_segments,
+    typical_week,
+    waste_factors,
 )
 
 MONDAY = date(2026, 11, 9)
@@ -134,3 +139,63 @@ def test_no_service_gives_empty_tables() -> None:
     seg = trip_segments(_bus_feed(), _metro_feed(), sunday, CATCHMENT_M)
     assert seg.empty
     assert redundancy_by_line(seg).empty and redundancy_by_corridor(seg).empty
+
+
+# --------------------------------------------------------------------------- desperdício (N2.2)
+
+
+def _feed_with_period(start: int, end: int) -> GTFSData:
+    feed = _bus_feed()
+    calendar = feed.calendar.assign(start_date=start, end_date=end)
+    return GTFSData(routes=feed.routes, trips=feed.trips, stop_times=feed.stop_times, stops=feed.stops,
+                    shapes=feed.shapes, calendar=calendar, calendar_dates=feed.calendar_dates)
+
+
+def test_typical_week_takes_the_nearest_weekend_days() -> None:
+    week = typical_week(_bus_feed(), MONDAY)
+    assert week == [("dia útil", MONDAY, 5), ("sábado", date(2026, 11, 7), 1), ("domingo", date(2026, 11, 8), 1)]
+
+
+def test_typical_week_stays_inside_the_feed_period() -> None:
+    # Como o Ep225 (até 12/11): com uma 6.ª de referência, o sábado seguinte (14/11) fica fora.
+    friday = date(2026, 11, 13)
+    feed = _feed_with_period(20260918, 20261113)
+    assert [d for _, d, _ in typical_week(feed, friday)] == [friday, date(2026, 11, 7), date(2026, 11, 8)]
+
+
+def test_typical_week_skips_holidays() -> None:
+    # 01/11/2026 é domingo e feriado (Todos os Santos): conta o domingo seguinte.
+    monday = date(2026, 11, 2)
+    assert typical_week(_bus_feed(), monday)[2] == ("domingo", date(2026, 11, 8), 1)
+
+
+def test_typical_week_needs_a_working_day() -> None:
+    with pytest.raises(ValueError, match="dia útil"):
+        typical_week(_bus_feed(), SATURDAY)
+    with pytest.raises(ValueError, match="dia útil"):
+        typical_week(_bus_feed(), date(2026, 12, 8))  # 3.ª, feriado
+
+
+def test_co2_per_km_mixes_the_fleet() -> None:
+    f = WasteFactors(fleet_total=4, fleet_electric=1, diesel_l_per_km=0.5, electric_kwh_per_km=1.0,
+                     diesel_kg_co2_per_l=2.0, grid_kg_co2_per_kwh=0.1, weeks_per_year=52)
+    assert f.electric_share == 0.25
+    assert f.kg_co2_per_km == pytest.approx(0.75 * 0.5 * 2.0 + 0.25 * 1.0 * 0.1)
+    assert 0 < waste_factors().kg_co2_per_km < 2  # fatores do config
+
+
+def test_week_and_year_are_weighted() -> None:
+    f = WasteFactors(fleet_total=1, fleet_electric=0, diesel_l_per_km=1.0, electric_kwh_per_km=0.0,
+                     diesel_kg_co2_per_l=1.0, grid_kg_co2_per_kwh=0.0, weeks_per_year=52)
+    by_line = pd.DataFrame({"line": ["5"], "viagens": [10], "km": [100.0], "km_metro": [10.0], "pct_km_metro": [10.0],
+                            "horas": [5.0], "horas_metro": [1.0], "viagens_com_troco_metro": [10]})
+    ref = Redundancy("x", MONDAY, by_line, pd.DataFrame())
+    week = pd.DataFrame({"tipo": ["dia útil", "sábado", "domingo"], "dia": ["", "", ""], "peso": [5, 1, 1],
+                         "viagens": [10, 5, 2], "km": [100.0, 50.0, 20.0], "km_metro": [10.0, 4.0, 2.0],
+                         "horas_metro": [1.0, 0.5, 0.25]})
+    line_week = pd.DataFrame({"line": ["5"], "km_metro": [56.0], "horas_metro": [5.75]})
+    s = Waste("x", ref, week, line_week, f).summary()
+    assert s["semana_km_metro"] == pytest.approx(5 * 10 + 4 + 2)
+    assert s["ano_km_metro"] == pytest.approx(56 * 52)
+    assert s["ano_t_co2"] == pytest.approx(56 * 52 / 1000)
+    assert s["dia_t_co2"] == pytest.approx(10 / 1000)

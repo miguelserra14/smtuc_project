@@ -17,7 +17,7 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `oficial_fase2_norte.csv` | Cenário `fase2` (2026-11-24, mesmos dados): + o sentido informativo Portagem autocarro→metro para norte. Linha de base atual da fase 2 |
 | `diff_oficial_fase2_t3_vs_norte.csv` | Diferenças (12 números novos, só esse sentido; a busca de fase não muda) |
 | `oficial_fase2_ep212.csv` | **Cenário `fase2_ep212`** (N1, 2026-11-26): contrafactual, Metro fase 2 com o SMTUC Ep212 a 2026-11-09 (as mesmas 2373 viagens do Ep212 a 11/05). Separa as mudanças de setembro: `antes` → `fase2_ep212` é só o metro, `fase2_ep212` → `fase2` é só o horário SMTUC (Como Vou + o que mudou de março a setembro). Os registos `oficial_fase1_t3` e `oficial_fase2_norte` não mudaram |
-| `n2_redundancia_antes.csv`, `n2_redundancia_fase2_ep212.csv`, `n2_redundancia_fase2.csv` | **Redundância viagem a viagem** (N2.1, 2026-11-26; só a secção opcional `redundancia`, `--secoes redundancia`): autocarros·km e autocarros·hora a par do metro no dia de referência de cada cenário, no total, por linha e por corredor do metro. Mesma regra da extensão a par do metro; nenhum número dos outros registos mudou |
+| `n2_redundancia_antes.csv`, `n2_redundancia_fase2_ep212.csv`, `n2_redundancia_fase2.csv` | **Redundância viagem a viagem** (N2.1, 2026-11-26; só a secção opcional `redundancia`, `--secoes redundancia`): autocarros·km e autocarros·hora a par do metro no dia de referência de cada cenário, no total, por linha e por corredor do metro. Mesma regra da extensão a par do metro; nenhum número dos outros registos mudou. Regravados com `--force` no N2.2 só com 24 números novos cada (desperdício e semana-tipo; os outros iguais) |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -171,3 +171,20 @@ Registos `n2_redundancia_<cenário>.csv` (`--secoes redundancia`, código em `sr
 
 - Conferido com as métricas por linha: por linha, autocarros·km a par do metro ÷ (viagens × extensão a par do metro por sentido) tem mediana 1,00 em A e em C. Os desvios vêm das viagens curtas e das variantes.
 - O corredor do metro de cada troço são as estações mais próximas das duas pontas; as plataformas "(asc)"/"(desc)" contam como uma estação. Em A o mais carregado é Parque–Portagem; em B e C são Mercado–República e Açude–Casa do Sal.
+
+## Desperdício: CO2 e ano estimado (N2.2, 2026-11-26)
+
+Os fatores estão em `src/config.py` (`WASTE_*`), com as fontes de `reports/estatisticas.txt`: frota de 118 autocarros com 46 elétricos, repartida por igual por todas as linhas; 0,45 L/km e 2,68 kg CO2/L no gasóleo; 0,65 kWh/km e 0,097 kg CO2/kWh na eletricidade. Dá 0,76 kg CO2 por autocarro·km. Não há euros (decisão do utilizador).
+
+O ano é uma **estimativa**: semana-tipo × 52. A semana-tipo é o dia útil de referência × 5 mais o sábado e o domingo mais próximos dele dentro do período do feed e fora de feriados. Cada dia usa o seu serviço GTFS. Não se descontam feriados nem agosto. O Ep225 só cobre até 12/11/2026, por isso não se podia usar a semana de 09/11 inteira; em todos os cenários o fim de semana é o anterior ao dia de referência.
+
+| A par do metro | A (fase 1) | B (metro fase 2 + Ep212) | C (Como Vou) |
+|---|---|---|---|
+| Dia útil: autocarros·km / t CO2 | 815 / 0,6 | 2443 / 1,9 | 1970 / 1,5 |
+| Sábado / domingo: autocarros·km | 566 / 370 | 1688 / 970 | 1123 / 644 |
+| Ano estimado: autocarros·km | 260 600 | 773 400 | 604 100 |
+| Ano estimado: autocarros·hora | 21 800 | 59 800 | 45 300 |
+| Ano estimado: t CO2 | 198 | 588 | 459 |
+
+- Substitui as contas à mão de `reports/estatisticas.txt` (503 574 km/ano e ~383 t CO2/ano na fase 1). Essas partiam de 85,4 km de extensão, viagens = 19 h ÷ intervalo médio e 365 dias iguais. Calculado viagem a viagem, a fase 1 dá cerca de metade.
+- Linhas com mais CO2 por ano: A 7T, 24T, 33; B 7T, 29, 24T; C 5, 24T, 29.

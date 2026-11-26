@@ -46,6 +46,21 @@ FERIADOS_MOVEIS_OFFSET_PASCOA: tuple[int, ...] = (
 # duplicar esta constante. Usado como `walk_speed_m_min * SPATIAL_OVERLAP_WALK_MIN`.
 SPATIAL_OVERLAP_WALK_MIN = 3.0
 
+# Desperdício dos autocarros a par do metro (N2.2, overlap/redundancy.py): fatores para passar
+# autocarros·km a CO2. Valores e fontes compilados em reports/estatisticas.txt (fontes 1, 8 e 9):
+# frota SMTUC fev/2025 = 118 autocarros, 46 elétricos (coimbra.pt), repartida por igual por todas
+# as linhas (não há dados de que veículo serve que linha); consumos típicos da literatura (não da
+# frota SMTUC); gasóleo 2,68 kg CO2/L (combustão direta); eletricidade 0,097 kg CO2/kWh (APA, 2025).
+# O ano é uma ESTIMATIVA: semana do dia de referência (2.ª a domingo, cada dia com o seu serviço
+# GTFS) x WASTE_WEEKS_PER_YEAR, sem descontar feriados nem agosto.
+WASTE_FLEET_TOTAL = 118
+WASTE_FLEET_ELECTRIC = 46
+WASTE_DIESEL_L_PER_KM = 0.45
+WASTE_ELECTRIC_KWH_PER_KM = 0.65
+WASTE_DIESEL_KG_CO2_PER_L = 2.68
+WASTE_GRID_KG_CO2_PER_KWH = 0.097
+WASTE_WEEKS_PER_YEAR = 52
+
 # Origem/destino de exemplo dos testes de percurso (test_overlap.py). Por omissão são pontos
 # PÚBLICOS (Estação Coimbra-B e Polo I, do catálogo population/points_of_interest.py); valores
 # pessoais (ex.: casa/trabalho) vão em src/config_local.py, que o git ignora - ver o fim deste ficheiro.

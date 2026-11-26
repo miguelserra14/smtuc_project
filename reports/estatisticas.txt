@@ -37,6 +37,12 @@ TRAJETÓRIA (plano de renovação em curso)
   novos/ano até 2030 (investimento ~40M€ nesse horizonte).
 
 
+NOTA (2026-11-26, N2.2): as contas de km, horas e CO2 nos troços em overlap
+abaixo foram SUBSTITUÍDAS pelo cálculo viagem a viagem do GTFS
+(src/overlap/redundancy.py; fatores em src/config.py WASTE_*; números em
+reports/metricas/README.md, secção "Desperdício"). Ficam aqui como registo
+das fontes e dos fatores de consumo/emissão, que continuam a ser os usados.
+
 DESPESA ANUAL ESTIMADA EM GASÓLEO E ELETRICIDADE NOS TROÇOS EM OVERLAP
 (set/2025 - set/2026)
 ----------------------------------------------------------------------------
