@@ -16,6 +16,7 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `oficial_fase2_t3.csv` | O mesmo para o cenário `fase2` |
 | `oficial_fase2_norte.csv` | Cenário `fase2` (2026-11-24, mesmos dados): + o sentido informativo Portagem autocarro→metro para norte. Linha de base atual da fase 2 |
 | `diff_oficial_fase2_t3_vs_norte.csv` | Diferenças (12 números novos, só esse sentido; a busca de fase não muda) |
+| `oficial_fase2_ep212.csv` | **Cenário `fase2_ep212`** (N1, 2026-11-26): contrafactual, Metro fase 2 com o SMTUC Ep212 a 2026-11-09 (as mesmas 2373 viagens do Ep212 a 11/05). Separa as mudanças de setembro: `antes` → `fase2_ep212` é só o metro, `fase2_ep212` → `fase2` é só o horário SMTUC (Como Vou + o que mudou de março a setembro). Os registos `oficial_fase1_t3` e `oficial_fase2_norte` não mudaram |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -134,3 +135,24 @@ Mesmos dados. Na fase 2 o metro continua de Portagem para Coimbra B (U1, S1) e p
 Por ramo (análise de 2026-11-24, horário atual): só Coimbra B 9,8 min; só República 6,8 min (média 11,3 e p90 21, por causa de buracos de até 41 min).
 
 Na mesma altura, uma origem ou um sentido que não existe no feed passa a ser um **erro**. Antes, a lista vazia de paragens desligava o filtro de sentido e contava os dois sentidos: o metro "vindo de Coimbra B" no feed da fase 1 dava as 257 passagens. Nenhum número publicado dependia disso.
+
+## Metro novo com a rede antiga: cenário `fase2_ep212` (N1, 2026-11-26)
+
+Contrafactual para separar as duas mudanças de setembro de 2026: o metro da fase 2 (10/09) e o horário SMTUC Ep225 do Como Vou (18/09). O cenário junta o Metro da fase 2 ao SMTUC Ep212 no dia da fase 2. O `calendar.txt` do Ep212 vai até 31/12/2026, por isso não houve transformação de dados: são as mesmas 2373 viagens de 11/05. Entre 10 e 17/09/2026 a rede real era esta.
+
+| | `antes` (A) | `fase2_ep212` (B) | `fase2` (C) |
+|---|---|---|---|
+| Linhas SMTUC com troços a ≤ 240 m do metro | 68 | 94 | 86 |
+| Paragens SMTUC a ≤ 240 m de uma estação | 59 | 96 | 94 |
+| Extensão de linhas SMTUC a par do metro | 103,6 km | 398,2 km | 338,1 km |
+| Passagens com um metro a ≤ 5 min | 93,6 % | 95,9 % | 95,6 % |
+| Tempo médio a partir do estádio (ponderado) | 39,5 min | 35,3 min | 35,7 min |
+| População a ≤ 10 min do estádio | 14 141 | 16 952 | 16 633 |
+| População em subsecções sem oferta | 13 701 | 13 701 | 13 534 |
+| Portagem metro→autocarro (54+38, mediana, atual) | 19,0 min | 18,5 min | 19,0 min |
+| Portela metro→autocarro (54, mediana, atual) | 15,3 min | 19,8 min | 19,8 min |
+
+- **O aumento do overlap vem do metro.** De A para B a extensão a par do metro passa de 104 para 398 km. De B para C o horário SMTUC **reduz-a** em 60 km e tira 8 linhas do overlap.
+- **A espera na Portela piora por causa do metro.** O horário da 54 é o mesmo em A e B, e B já tem a espera de C.
+- **B → C não é só o Como Vou.** O Ep212 é de 09/03/2026, por isso inclui as alterações SMTUC de março a setembro (por exemplo, a reestruturação das linhas 5/5F/5T/33 avisada em maio). Procurar o horário em vigor a 17/09 fica para depois.
+- **A busca do desvio de fase em B daria −10 / +1.** Fica só como registo: o par adotado continua a ser −10 / 0, o ótimo da fase 2.

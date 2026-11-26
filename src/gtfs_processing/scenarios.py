@@ -30,6 +30,11 @@ class Scenario:
     reference_day: date
     reference_time: str
     output_suffix: str
+    label: str = ""  # nome curto (páginas de comparação); "" = usar o nome
+
+    @property
+    def display_name(self) -> str:
+        return self.label or self.name
 
     @property
     def datasets(self) -> tuple[str, str]:
@@ -67,6 +72,7 @@ def get_scenario(scenario: str | Scenario | None = None) -> Scenario:
         reference_day=date.fromisoformat(str(spec["reference_day"])),
         reference_time=str(spec["reference_time"]),
         output_suffix=str(spec["output_suffix"]),
+        label=str(spec.get("label") or ""),
     )
 
 

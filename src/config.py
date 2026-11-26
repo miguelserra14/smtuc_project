@@ -107,20 +107,39 @@ DATASET_DIRS: dict[str, str] = {
 # gerados (outputs/overlap/line_metrics_db<sufixo>.csv, overlap_*<sufixo>.html, ...). O cenário
 # por omissão tem sufixo vazio. Cada cenário tem o SEU dia: as redes antes e depois da fase 2 não
 # têm nenhum dia em comum (Ep212 + Metro fase 1 até 09/09/2026; Ep225 + Metro fase 2 depois).
+# "label" (opcional; por omissão o nome) é o nome curto das páginas de comparação. Na narrativa
+# da apresentação (visualizations/presentation_content.py, SCENARIO_LADDER) antes = degrau A,
+# fase2_ep212 = B e fase2 = C.
 SCENARIOS: dict[str, dict[str, str]] = {
     "antes": {
         "description": "Antes da fase 2 do Metro: SMTUC Ep212 + Metro fase 1 (GTFS oficial 2025-12-19)",
+        "label": "Fase 1",
         "smtuc": "smtuc",
         "metro": "metrobus",
         "reference_day": "2026-05-11",
         "reference_time": "08:20:00",
         "output_suffix": "",
     },
+    # CONTRAFACTUAL (N1, 2026-11-26): o metro da fase 2 com o horário SMTUC Ep212, no dia da fase
+    # 2. Separa as duas mudanças de setembro de 2026: antes -> fase2_ep212 é só o metro;
+    # fase2_ep212 -> fase2 é só o horário SMTUC (o Como Vou, mais as alterações de março a
+    # setembro que o Ep212 ainda não tem). O calendar.txt do Ep212 vai até 31/12/2026 ("Dias
+    # Uteis"), por isso cobre 09/11 sem transformar dados: são as mesmas viagens de 11/05.
+    "fase2_ep212": {
+        "description": "Contrafactual: Metro fase 2 (NeTEx AGIT 2026-11-11) com o SMTUC Ep212 (horário de março, anterior ao Como Vou)",
+        "label": "Metro da fase 2 + SMTUC Ep212",
+        "smtuc": "smtuc",
+        "metro": "metro_fase2_oficial",
+        "reference_day": "2026-11-09",
+        "reference_time": "08:20:00",
+        "output_suffix": "_fase2_ep212",
+    },
     # Fase 2 com dados OFICIAIS (D2.7; até lá era o metro sintético com o SMTUC Ep212): slide
     # dedicado da fase 2. 2026-11-09 é uma 2ª feira dentro dos dois feeds (Ep225 até 12/11) e
     # depois do início do bilhete intermodal (1/10).
     "fase2": {
         "description": "Fase 2 do Metro (desde 10/09/2026), OFICIAL: SMTUC Ep225 + Metro NeTEx AGIT 2026-11-11",
+        "label": "Como Vou",
         "smtuc": "smtuc_atual",
         "metro": "metro_fase2_oficial",
         "reference_day": "2026-11-09",
@@ -178,13 +197,14 @@ INTEGRATION_SITES: tuple[dict, ...] = (
         # página de integração, nos snapshots (esperas_54) e na comparação, mas NÃO entra na
         # busca do desvio de fase (o par -10/0 continua a otimizar só os 4 sentidos acima; com
         # o norte no objetivo o ótimo mudava por ~0,1 min). Não existe na fase 1 (o metro acaba
-        # em Portagem). Ver overlap.transit.informative_reverse_senses.
+        # em Portagem); existe em todos os cenários com o metro da fase 2. Ver
+        # overlap.transit.informative_reverse_senses.
         "informative_reverse_senses": (
             {
                 "key": "norte",
                 "label": "metro para norte (Coimbra B ou República)",
                 "towards_refs": ("Coimbra B", "República"),
-                "scenarios": ("fase2",),
+                "scenarios": ("fase2", "fase2_ep212"),
             },
         ),
     },

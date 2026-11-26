@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SECTIONS = (
     "regenerate_population_htmls",
     "regenerate_overlap_htmls",
-    "regenerate_overlap_fase2_htmls",
+    "regenerate_overlap_other_scenarios_htmls",
     "regenerate_integration_htmls",
     "regenerate_comparison_html",
     "regenerate_master_dashboard",
@@ -111,12 +111,21 @@ def test_real_integration_section_records_failure_instead_of_swallowing(monkeypa
 
     monkeypatch.setattr(regen, "generate_connection_visualizations", _boom)
     regen.regenerate_integration_htmls()
-    assert [s for s, _ in regen._FAILURES] == [
-        "integração Portagem (54+38)",
-        "integração Portela (54)",
-        "integração fase2 Portagem (54+38)",
-        "integração fase2 Portela (54)",
-    ]
+    expected = []
+    for name in regen.scenario_names():  # o cenário por omissão sai sem o nome
+        prefix = "integração" if not regen.get_scenario(name).output_suffix else f"integração {name}"
+        expected += [f"{prefix} Portagem (54+38)", f"{prefix} Portela (54)"]
+    assert [s for s, _ in regen._FAILURES] == expected
+    assert "integração fase2 Portela (54)" in expected and "integração fase2_ep212 Portela (54)" in expected
+
+
+def test_overlap_section_covers_every_other_scenario(monkeypatch: pytest.MonkeyPatch) -> None:
+    # N1: o overlap/isócronas sai para TODOS os cenários (antes só o "fase2", escrito à mão).
+    seen: list[str] = []
+    monkeypatch.setattr(regen, "regenerate_overlap_scenario_htmls", seen.append)
+    regen.regenerate_overlap_other_scenarios_htmls()
+    assert seen == [n for n in regen.scenario_names() if n != regen.get_scenario().name]
+    assert "fase2_ep212" in seen and "fase2" in seen
 
 
 def test_integration_section_covers_every_scenario(monkeypatch: pytest.MonkeyPatch) -> None:

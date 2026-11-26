@@ -250,9 +250,13 @@ def regenerate_overlap_htmls() -> None:
     regenerate_overlap_scenario_htmls(get_scenario().name)
 
 
-def regenerate_overlap_fase2_htmls() -> None:
-    """Slide dedicado da fase 2 da apresentação (cenário "fase2" de config.SCENARIOS)."""
-    regenerate_overlap_scenario_htmls("fase2")
+def regenerate_overlap_other_scenarios_htmls() -> None:
+    """Overlap/isócronas de TODOS os outros cenários de config.SCENARIOS (fase 2, contrafactual
+    fase2_ep212, ...), cada um com o seu sufixo. Antes só gerava o "fase2", escrito à mão."""
+    default = get_scenario().name
+    for name in scenario_names():
+        if name != default:
+            regenerate_overlap_scenario_htmls(name)
 
 
 def regenerate_overlap_scenario_htmls(scenario: str) -> None:
@@ -529,7 +533,7 @@ def main() -> None:
     # Regenerar em ordem
     regenerate_population_htmls()
     regenerate_overlap_htmls()
-    regenerate_overlap_fase2_htmls()
+    regenerate_overlap_other_scenarios_htmls()
     regenerate_integration_htmls()
     regenerate_comparison_html()
     regenerate_master_dashboard()
