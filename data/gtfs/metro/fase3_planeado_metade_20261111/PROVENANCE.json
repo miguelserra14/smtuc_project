@@ -1,0 +1,229 @@
+{
+ "pasta": "data/gtfs/metro/fase3_planeado_metade_20261111",
+ "descricao": "PLANEADO (hipotético, sensibilidade): como metro/fase3_planeado_20261111, mas só uma em cada duas viagens U2, U3 e S2 segue para o Pediátrico (as outras acabam na República). Não é um horário oficial",
+ "origem": {
+  "ficheiro": "data/raw/agit/metro-mondego-netex/20261111-151447-135a5e2b/metro-mondego-netex.zip",
+  "sha256": "135a5e2b1f248b07c595db5b0c1f0e2b1a4c630db98f1a3fc3bb7c5d2eaf0db2",
+  "versao": "20261111-151447-135a5e2b",
+  "url": "https://api.planner.agit.pt/v1/datasets/metro-mondego/distributions/netex/download",
+  "verificacoes_no_download": "sha256=validacao;identidade;membros=validacao;contagens=validacao"
+ },
+ "ignorados_do_zip": [
+  "metadata.jsonld"
+ ],
+ "conversao_netex": {
+  "conversor": "gtfs_processing/netex_to_gtfs.py",
+  "xml": "netex.xml",
+  "metadata": {
+   "identificador": "urn:agit:Dataset:metro-mondego",
+   "modificado": "2026-11-11",
+   "periodo": [
+    "2026-06-10",
+    "2026-12-31"
+   ]
+  },
+  "verificacao_semantica": {
+   "validation_json_sha256": "c0ae3a2dd2369fef3aa100fea640ef17b18f3cb2292cc65d35348704e99f4d9a",
+   "releaseId_origem": "20261111T151217Z-04485ac4",
+   "contagens": {
+    "agencies": 1,
+    "routes": 5,
+    "services": 3,
+    "stopTimes": 15676,
+    "stops": 40,
+    "trips": 979
+   },
+   "igual_a_counts_gtfs": true
+  },
+  "calendario": {
+   "1": {
+    "dias": "------sun",
+    "de": "20260913",
+    "ate": "20261227",
+    "datas_ativas": 16,
+    "excecoes_acrescentadas": 0,
+    "excecoes_retiradas": 0
+   },
+   "10": {
+    "dias": "-----sat-",
+    "de": "20260613",
+    "ate": "20261226",
+    "datas_ativas": 29,
+    "excecoes_acrescentadas": 0,
+    "excecoes_retiradas": 0
+   },
+   "11": {
+    "dias": "montuewedthufri--",
+    "de": "20260910",
+    "ate": "20261231",
+    "datas_ativas": 81,
+    "excecoes_acrescentadas": 0,
+    "excecoes_retiradas": 0
+   }
+  },
+  "meia_noite": {
+   "viagens_com_day_offset": 32,
+   "viagens_que_passam_a_meia_noite": 0,
+   "viagens_noturnas_passadas_a_24h": 0,
+   "regra_noturna": "viagem sem DayOffset que começa antes das 04:00:00 = cauda da noite anterior (+24 h)"
+  },
+  "embarque": {
+   "passagens_sem_embarque": 979,
+   "passagens_sem_desembarque": 979
+  }
+ },
+ "transformacoes": [
+  {
+   "passo": "trocar route_short_name/route_long_name em todas as rotas",
+   "depois": {
+    "3605": [
+     "U2",
+     "Vermelho"
+    ],
+    "3622": [
+     "U1",
+     "Azul"
+    ],
+    "3623": [
+     "U3",
+     "Verde"
+    ],
+    "3624": [
+     "S1",
+     "Azul"
+    ],
+    "3625": [
+     "S2",
+     "Vermelho"
+    ]
+   },
+   "motivo": "Mesma troca que em metro/fase2_netex_20261111."
+  },
+  {
+   "passo": "PLANEADO: prolongar até ao Pediátrico (Linha do Hospital)",
+   "kmz": {
+    "ficheiro": "data/raw/dados-gov/metro-mondego-kmz/20260817-153951-91f456a7/rede-metrobus.kmz",
+    "sha256": "a17dd21d11a473db0d323c307f98efa9823d558542a213267a78c647378f9c32"
+   },
+   "linhas": [
+    "U2",
+    "U3",
+    "S2"
+   ],
+   "uma_em_cada": 2,
+   "paragens_novas": {
+    "LH1": "Sereia (asc)",
+    "LH2": "Celas",
+    "LH3": "Polo Ciências da Saúde",
+    "LH4": "Hospitais (H.U.C.)",
+    "LH5": "Pediátrico",
+    "LH6": "Sereia (desc)"
+   },
+   "velocidade_referencia": {
+    "subir": {
+     "troco": "Loja do Cidadão -> República (asc)",
+     "eixo_m": 1179.8,
+     "viagens": 318,
+     "minutos_medios": 3.4733,
+     "km_h": 20.38
+    },
+    "descer": {
+     "troco": "República (desc) -> Loja do Cidadão",
+     "eixo_m": 1216.2,
+     "viagens": 316,
+     "minutos_medios": 4.1167,
+     "km_h": 17.73
+    }
+   },
+   "trocos": {
+    "subir": [
+     {
+      "de": "República (asc)",
+      "para": "Sereia (asc)",
+      "eixo_m": 525.1,
+      "minutos": 1.546
+     },
+     {
+      "de": "Sereia (asc)",
+      "para": "Celas",
+      "eixo_m": 458.8,
+      "minutos": 1.351
+     },
+     {
+      "de": "Celas",
+      "para": "Polo Ciências da Saúde",
+      "eixo_m": 573.2,
+      "minutos": 1.688
+     },
+     {
+      "de": "Polo Ciências da Saúde",
+      "para": "Hospitais (H.U.C.)",
+      "eixo_m": 269.2,
+      "minutos": 0.793
+     },
+     {
+      "de": "Hospitais (H.U.C.)",
+      "para": "Pediátrico",
+      "eixo_m": 836.9,
+      "minutos": 2.464
+     }
+    ],
+    "descer": [
+     {
+      "de": "Pediátrico",
+      "para": "Hospitais (H.U.C.)",
+      "eixo_m": 836.9,
+      "minutos": 2.833
+     },
+     {
+      "de": "Hospitais (H.U.C.)",
+      "para": "Polo Ciências da Saúde",
+      "eixo_m": 269.2,
+      "minutos": 0.911
+     },
+     {
+      "de": "Polo Ciências da Saúde",
+      "para": "Celas",
+      "eixo_m": 573.2,
+      "minutos": 1.94
+     },
+     {
+      "de": "Celas",
+      "para": "Sereia (desc)",
+      "eixo_m": 467.9,
+      "minutos": 1.584
+     },
+     {
+      "de": "Sereia (desc)",
+      "para": "República (desc)",
+      "eixo_m": 405.4,
+      "minutos": 1.372
+     }
+    ]
+   },
+   "viagens_prolongadas": {
+    "S2 descer": "25/50",
+    "S2 subir": "27/53",
+    "U2 descer": "51/102",
+    "U2 subir": "57/113",
+    "U3 descer": "82/164",
+    "U3 subir": "76/152"
+   },
+   "passagens_novas": 1590,
+   "motivo": "Sensibilidade do horário assumido (decisão do utilizador, 2026-11-27): metade das viagens prolongadas."
+  }
+ ],
+ "ficheiros": {
+  "agency.txt": "1f769d3d03da34350ba77b54850cafe2b2b4d8ce4095e72de99b455834c930a8",
+  "calendar.txt": "396d748747fd58394deac1c155d4b8b7fecbfbcf9b2c474284f9a3ed0ab963e0",
+  "calendar_dates.txt": "aaa66bee57e81ca0cd63d4afe576f993aba0441428a79cf6fe5c58721e39421f",
+  "feed_info.txt": "96b778b98a7fdd3a996e0441221f8d1fa9881501a0d5a0a9b8c7b12c7b81ac05",
+  "routes.txt": "9067f3e62f514fa0759e36a62e40d0992c7ddea80265d4750d95e4878dd411bf",
+  "stop_times.txt": "4a2b30b60fed112c94bdb7b52330e1455e3eb0f0073403b3f69ee0c5b9317eb0",
+  "stops.txt": "3adf833d8d5bd50a48f8b8de14a13052acb0e86249214a2833103de21919904c",
+  "trips.txt": "e8bff12d45bfbe7b95ed0384e17515b07d4cacc55ea1dd3cb0a96e072de154dd"
+ },
+ "impressao_digital": "56c649045b4e10e2",
+ "construido_por": "scripts/build_feeds.py",
+ "commit": "78bf30e"
+}

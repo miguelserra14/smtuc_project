@@ -1,0 +1,6 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+3605,1,U2,Vermelho,3,FF5349,FFFFFF
+3622,1,U1,Azul,3,2B6CC4,FFFFFF
+3623,1,U3,Verde,3,00FF40,FFFFFF
+3624,1,S1,Azul,3,0080FF,FFFFFF
+3625,1,S2,Vermelho,3,FF0000,FFFFFF
