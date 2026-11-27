@@ -303,6 +303,36 @@ def _default_dashboard_tabs() -> list[dict[str, Any]]:
                 },
             ],
         },
+        # N2: redundância autocarro x metro (regenerate_redundancy_html) e a rede sem a 54.
+        {
+            "id": "redundancia",
+            "label": "Redundância",
+            "description": "Serviço SMTUC a par do metro, viagem a viagem: autocarros·km, horas e CO2 por linha e por troço do metro, em cada cenário, e o que o Como Vou fez às linhas mais redundantes.",
+            "kind": "iframe",
+            "src": "redundancia/ranking_fase2.html",
+            "extra_frames": [
+                {
+                    "title": "O que o Como Vou fez às linhas mais redundantes",
+                    "src": "redundancia/medidas_fase2_ep212_vs_fase2.html",
+                    "caption": "Metro da fase 2 com o horário SMTUC de março → Como Vou.",
+                },
+                {
+                    "title": "Ranking: fase 1",
+                    "src": "redundancia/ranking.html",
+                    "caption": "Fase 1 (11/05/2026).",
+                },
+                {
+                    "title": "Ranking: metro da fase 2 com o SMTUC Ep212",
+                    "src": "redundancia/ranking_fase2_ep212.html",
+                    "caption": "Contrafactual: o horário de março com o metro da fase 2.",
+                },
+                {
+                    "title": "Contributo da 54: fase 1 sem a 54 → fase 1",
+                    "src": "comparacao/antes_sem54_vs_antes.html",
+                    "caption": "Só muda a linha 54.",
+                },
+            ],
+        },
     ]
 
 

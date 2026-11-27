@@ -33,11 +33,13 @@ Já feito:
 - **Dashboards**: master (`outputs/dashboard.html`), apresentação (`outputs/mockups_dashboard.html`) e parede FeedNPlay de 9 ecrãs (`outputs/feednplay_dashboard.html`). A apresentação está organizada por secções (ver "O que falta fechar"); cada slide diz que cenário mostra. Na secção 2 já tem o efeito do metro, o efeito do Como Vou, as diferenças de rede linha a linha e, no slide da 54, um botão para trocar entre o Como Vou e o horário de março com o mesmo metro.
 - **Comparações de cenários** (`outputs/comparacao/<antes>_vs_<depois>.html` e `.csv`, pares em `COMPARISON_PAIRS`): overlap, acessibilidade a partir do estádio, população sem oferta e esperas da 54 lado a lado. Os pares mudam uma coisa de cada vez (só o metro, só o horário SMTUC); `antes_vs_fase2` junta as duas e fica só no master. Os números são os do `snapshot_metrics.py`, recalculados em cada regenerate.
 - **Diferenças de rede SMTUC** (`outputs/comparacao/rede_fase2_ep212_vs_fase2.html` e `.csv`): cada linha como cortada, nova, renumerada, com percurso alterado, com ajuste de paragens, só com horário diferente, ou igual. Para cada uma, viagens no dia, paragens e extensão a par do metro. As linhas com avisos SMTUC (`data/smtuc_alteracoes_2026.csv`) ficam assinaladas, incluindo as alterações anteriores ao Como Vou.
+- **Redundância e desperdício** (`outputs/redundancia/`): viagem a viagem, no dia útil de referência, os autocarros·km e as horas que o SMTUC faz a par do metro, por linha e por troço do metro, com o CO₂ e um ano estimado pela semana-tipo do horário (fatores da frota em `reports/estatisticas.txt`, sem euros). Há um ranking por cenário e uma página com o que o Como Vou fez às linhas mais redundantes. As comparações de cenários levam também estes números.
+- **Rede da fase 1 sem a 54** (cenário A′, `antes_sem54`): o mesmo horário de março com a linha 54 retirada em memória, para medir o que a 54 acrescenta. As comparações incluem isócronas a partir das estações de Portagem e da Portela, em média das partidas da ponta da manhã.
 - **Dados verificáveis**: os ficheiros oficiais ficam congelados em `data/raw/`. Os feeds que o código lê são construídos a partir deles com transformações registadas. Antes e depois de cada troca de dados tira-se um snapshot dos números de controlo (`reports/metricas/`).
 
 ## Principais números
 
-Valores de `reports/metricas/oficial_fase1_t3.csv` (antes), `oficial_fase2_ep212.csv` (metro novo, SMTUC de março) e `oficial_fase2_t3.csv` (fase 2). Da 1.ª para a 2.ª coluna só muda o metro; da 2.ª para a 3.ª só muda o horário SMTUC.
+Valores de `reports/metricas/oficial_fase1_t3.csv` (antes), `oficial_fase2_ep212.csv` (metro novo, SMTUC de março) e `oficial_fase2_t3.csv` (fase 2); as duas últimas linhas vêm de `n2_redundancia_<cenário>.csv`. Da 1.ª para a 2.ª coluna só muda o metro; da 2.ª para a 3.ª só muda o horário SMTUC.
 
 | | Antes (11/05/2026) | Metro da fase 2 + SMTUC Ep212 (09/11/2026) | Fase 2, Como Vou (09/11/2026) |
 |---|---|---|---|
@@ -48,8 +50,12 @@ Valores de `reports/metricas/oficial_fase1_t3.csv` (antes), `oficial_fase2_ep212
 | Tempo médio a partir do estádio, às 08:20 (ponderado pela população) | 39,5 min | 35,3 min | 35,7 min |
 | População a ≤ 10 min do estádio | 14 141 | 16 952 | 16 633 |
 | População em subsecções sem oferta | 13 701 | 13 701 | 13 534 |
+| Autocarros·km a par do metro num dia útil (viagem a viagem) | 815 | 2 443 | 1 970 |
+| t CO₂ por ano a par do metro (estimativa) | 198 | 588 | 459 |
 
-A extensão soma o troço de cada linha, por isso um corredor com várias linhas conta várias vezes.
+A extensão soma o troço de cada linha, por isso um corredor com várias linhas conta várias vezes. Os autocarros·km somam ainda cada viagem.
+
+**Sem a 54** (A′ → A, `oficial_fase1_sem54.csv`): a população sem oferta e as isócronas do estádio não mudam, porque todas as zonas que a 54 serve têm outra linha. O que a 54 acrescenta vê-se a partir da estação da Portela (`n2_isocronas_nos_*.csv`): cerca de 1 min a menos no tempo médio e mais ~1 200 pessoas a ≤ 30 min.
 
 **Linha 54 na fase 2**: espera mediana, em minutos.
 
@@ -160,14 +166,14 @@ docs/integracao_dados_agit/   plano, decisões e protótipos da integração dos
 ## O que falta fechar
 
 **Análise**
-- Estimar o desperdício causado pela sobreposição: quantos autocarros, minutos e CO₂. A composição da frota já está em `reports/estatisticas.txt`. Propor 2 ou 3 versões otimizadas da rede que resolvam pelo menos os casos mais graves.
+- Propor 2 ou 3 versões otimizadas da rede que resolvam pelo menos os casos mais graves (N4, proposta E). O desperdício já está medido (N2).
 - Incluir locais de trabalho e de convívio nas isócronas. Hoje só entram nos mapas de população.
 - SIT, a rede interurbana, na fase 2: acessibilidade, cobertura, sobreposição SIT × SMTUC e transbordos SIT ↔ Metro em Portagem e Coimbra B. O plano está em `docs/integracao_dados_agit/README.md` (fase D3).
 
 **Apresentação**
 - Narrativa (o esqueleto já está nos slides, `src/visualizations/presentation_content.py`): 1 fase 1 (set 2025 – set 2026), 1.5 linha 54, 2 Como Vou (a reorganização das linhas SMTUC de setembro de 2026), 3 fase 3 (Linha do Hospital, março de 2027), 4 para onde levar os autocarros que a fase 3 torna redundantes. Cada secção compara dois degraus de uma escada de cenários que diferem numa só coisa: A (fase 1), A′ (A sem a 54), B (SMTUC Ep212 + Metro fase 2), C (Como Vou), D (fase 3, planeado), E (proposta, planeado). Os slides marcados "por construir" esperam por:
   - N1 (feito): cenário B, comparação por pares e diferenças Ep212 → Ep225 (secção 2). Fica para depois procurar o horário SMTUC em vigor a 09/09, para tirar de B → C a reestruturação de junho;
-  - N2: ranking das redundâncias com o desperdício e a rede sem a 54, por filtro de linhas no cenário (secções 1 e 1.5); com ele, "as maiores redundâncias depois do Como Vou" (secção 2);
+  - N2 (feito): ranking das redundâncias com o desperdício, a rede sem a 54 (A′) e as isócronas a partir dos nós (secções 1 e 1.5), e "as maiores redundâncias depois do Como Vou" (secção 2). Fica para depois um mapa dos troços do metro com mais autocarros a par;
   - N3: feed planeado da Linha do Hospital a partir do KMZ (secção 3);
   - N4: onde investir e a proposta E (secção 4).
 - Fazer os mockups finais e melhorar o design. Juntar tudo no dashboard e limar arestas (legendas, etc.). Fechar as transições.

@@ -57,7 +57,7 @@ SCENARIO_LADDER: list[dict[str, Any]] = [
         "detail": "SMTUC Ep212 sem a linha 54 + Metro fase 1",
         "day": "11/05/2026",
         "nature": "contrafactual",
-        "status": "por construir",
+        "status": "existe",
     },
     {
         "id": "B",
@@ -257,19 +257,20 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
             },
         ],
     },
+    # N2: páginas de regenerate_redundancy_html (viagem a viagem; números só dos dados).
     {
         "id": "s1_ranking",
         "label": "Maiores fontes de redundância",
-        "kind": "pending",
+        "kind": "scenario-compare",
         "section": "s1",
         "ladder": ["A"],
-        "status": "Por construir · N2",
-        "description": "As linhas e os corredores com mais sobreposição, e o que ela custa por dia.",
-        "shows": [
-            "Ranking das linhas e corredores SMTUC por overlap espacial e temporal com o metro.",
-            "Desperdício por dia: autocarros·km, horas de condução e CO₂.",
-            "Esta lista é a referência a que as secções 2 e 3 voltam.",
-        ],
+        "description": "As linhas e os troços do metro onde mais autocarros fazem o mesmo percurso que o metro, e o que isso custa.",
+        "note": "Conta-se cada viagem do dia útil, com as suas paragens: um autocarro que passa 60 vezes no mesmo troço pesa 60 vezes. O ano é uma estimativa pela semana-tipo do horário; o CO₂ usa a frota SMTUC repartida por igual pelas linhas. Esta lista é a referência a que as secções 2 e 3 voltam.",
+        "table": {
+            "title": "Redundância autocarro × metro na fase 1",
+            "src": "redundancia/ranking.html",
+            "caption": "Autocarros·km, horas e CO₂ a par do metro, por linha e por troço do metro.",
+        },
     },
     # =====================================================================================
     # Secção 1.5: linha 54 (A′ -> A) - impacto das medidas tomadas
@@ -278,16 +279,16 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
     {
         "id": "s1_5_contributo",
         "label": "O que a 54 acrescenta",
-        "kind": "pending",
+        "kind": "scenario-compare",
         "section": "s1_5",
         "ladder": ["A_sem54", "A"],
-        "status": "Por construir · N2",
-        "description": "A mesma rede da fase 1, com e sem a linha 54.",
-        "shows": [
-            "População que chega ao metro em transporte público, com e sem a 54, por faixas de tempo.",
-            "Isócronas a partir de Portela e de Portagem (as atuais partem do estádio).",
-            "Paragens e subsecções que só a 54 liga ao metro.",
-        ],
+        "description": "A mesma rede da fase 1, com e sem a linha 54: só muda essa linha.",
+        "note": "Não há horário oficial sem a 54 (começou antes do horário de março), por isso a rede sem ela é o mesmo horário com a linha retirada. O que a 54 traz não está na cobertura nem no estádio: está nas viagens a partir das estações do metro. As isócronas dos nós são a média das partidas da ponta da manhã, para não dependerem de uma hora que calhe ou não com a 54.",
+        "table": {
+            "title": "Indicadores: fase 1 sem a 54 → fase 1",
+            "src": "comparacao/antes_sem54_vs_antes.html",
+            "caption": "Overlap, população sem oferta, isócronas do estádio e das estações de Portagem e da Portela, redundância.",
+        },
     },
     # "scenarios" (opcional, por coluna): botões que trocam o iframe entre cenários; o primeiro é
     # o que abre (= "current.src"). "optimized" (opcional): cartão por baixo do iframe, com o
@@ -420,15 +421,22 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
     {
         "id": "s2_redundancias",
         "label": "As maiores redundâncias depois do Como Vou",
-        "kind": "pending",
+        "kind": "scenario-compare",
         "section": "s2",
         "ladder": ["B", "C"],
-        "status": "Por construir · N2",
-        "description": "O que aconteceu a cada uma das maiores fontes de redundância da secção 1.",
-        "shows": [
-            "Para cada linha do ranking da fase 1: cortada, com percurso alterado, só com ajustes ou igual (as diferenças de rede já existem).",
-            "O overlap de cada uma antes e depois do Como Vou, com o mesmo metro.",
-            "As que ficaram por resolver passam para a secção 3.",
+        "description": "O que o Como Vou fez às linhas que mais corriam a par do metro, e quais ficam no topo depois dele.",
+        "note": "Mesmo metro, mesmo dia: a diferença é só do horário SMTUC. Cada linha leva o estado das diferenças de rede e o aviso SMTUC. As que continuam no topo do ranking da rede atual são a redundância por resolver que passa para a secção 3.",
+        "table": {
+            "title": "As linhas mais redundantes antes do Como Vou, e depois",
+            "src": "redundancia/medidas_fase2_ep212_vs_fase2.html",
+            "caption": "Autocarros·km por dia útil a par do metro, linha a linha, com o que mudou em cada uma.",
+        },
+        "iframes": [
+            {
+                "title": "Ranking da rede atual",
+                "src": "redundancia/ranking_fase2.html",
+                "caption": "Como Vou (09/11/2026): as linhas e os troços do metro com mais redundância.",
+            },
         ],
     },
     {

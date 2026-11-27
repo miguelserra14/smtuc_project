@@ -173,6 +173,10 @@ def test_slides_and_master_link_both_scenarios(tmp_path: Path) -> None:
     assert "antes_vs_fase2" not in ids
     tables = {t["id"]: t["table"]["src"] for t in tabs if t["kind"] == "scenario-compare"}
     assert tables == {
+        # N2: ranking da fase 1 (A), contributo da 54 (A′ -> A), redundâncias depois do Como Vou (B -> C).
+        "s1_ranking": "redundancia/ranking.html",
+        "s1_5_contributo": "comparacao/antes_sem54_vs_antes.html",
+        "s2_redundancias": "redundancia/medidas_fase2_ep212_vs_fase2.html",
         "efeito_metro": "comparacao/antes_vs_fase2_ep212.html",
         "s2_rede": "comparacao/rede_fase2_ep212_vs_fase2.html",
         "como_vou": "comparacao/fase2_ep212_vs_fase2.html",
@@ -187,6 +191,10 @@ def test_slides_and_master_link_both_scenarios(tmp_path: Path) -> None:
 
     master = {t["id"]: t for t in _default_dashboard_tabs()}
     assert master["antes-vs-fase2"]["src"] == "comparacao/antes_vs_fase2.html"
+    assert master["redundancia"]["src"] == "redundancia/ranking_fase2.html"
+    assert "comparacao/antes_sem54_vs_antes.html" in [f["src"] for f in master["redundancia"]["extra_frames"]]
+    # N2 fechado: nenhum slide das secções 1, 1.5 e 2 continua por construir.
+    assert not [t["id"] for t in tabs if t["kind"] == "pending" and t.get("section") in ("s1", "s1_5", "s2")]
 
     for create in (create_presentation_dashboard_html, create_feednplay_dashboard_html):
         out = Path(create(tmp_path / f"{create.__name__}.html"))
