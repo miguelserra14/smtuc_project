@@ -16,8 +16,11 @@ from overlap.redundancy import (
     Waste,
     WasteFactors,
     bus_stop_overlap,
+    metro_extension_increase,
+    new_station_corridors,
     redundancy_by_corridor,
     redundancy_by_line,
+    redundancy_by_line_corridor,
     station_name,
     trip_segments,
     typical_week,
@@ -199,3 +202,71 @@ def test_week_and_year_are_weighted() -> None:
     assert s["ano_km_metro"] == pytest.approx(56 * 52)
     assert s["ano_t_co2"] == pytest.approx(56 * 52 / 1000)
     assert s["dia_t_co2"] == pytest.approx(10 / 1000)
+
+
+# --------------------------------------------------------------------------- metro novo (N3.4)
+
+
+def test_line_corridor_breakdown_adds_up_to_the_corridors() -> None:
+    seg = trip_segments(_bus_feed(), _metro_feed(), MONDAY, CATCHMENT_M)
+    by_lc = redundancy_by_line_corridor(seg)
+    assert by_lc[["line", "station_a", "station_b", "passagens"]].values.tolist() == [["5", "Alfa", "Beta", 3]]
+    corridor = redundancy_by_corridor(seg)
+    assert by_lc["km_metro"].sum() == pytest.approx(corridor["km_metro"].sum())
+    assert by_lc["horas_metro"].sum() == pytest.approx(corridor["horas_metro"].sum())
+    assert redundancy_by_line_corridor(seg.iloc[0:0]).empty
+
+
+_F = WasteFactors(fleet_total=1, fleet_electric=0, diesel_l_per_km=1.0, electric_kwh_per_km=0.0,
+                  diesel_kg_co2_per_l=1.0, grid_kg_co2_per_kwh=0.0, weeks_per_year=52)
+
+
+def _extension_waste(lines: dict[str, tuple[float, float]], line_corridors: list[tuple]) -> Waste:
+    """lines = {linha: (km_metro, horas_metro)} no dia; line_corridors = (linha, a, b, km, horas, passagens).
+    A semana-tipo é o dia x 7 (pesos já aplicados)."""
+    by_line = pd.DataFrame({"line": list(lines), "viagens": 10, "km": 100.0,
+                            "km_metro": [v[0] for v in lines.values()], "pct_km_metro": 0.0, "horas": 5.0,
+                            "horas_metro": [v[1] for v in lines.values()], "viagens_com_troco_metro": 1})
+    lc = pd.DataFrame(line_corridors, columns=["line", "station_a", "station_b", "km_metro", "horas_metro", "passagens"])
+    corridors = lc.groupby(["station_a", "station_b"], as_index=False).agg(
+        km_metro=("km_metro", "sum"), horas_metro=("horas_metro", "sum"), passagens=("passagens", "sum"),
+        linhas=("line", lambda s: ";".join(sorted(s))))
+    week = pd.DataFrame({"tipo": ["dia útil"], "dia": ["2026-11-09"], "peso": [5], "viagens": [10], "km": [100.0],
+                         "km_metro": [by_line["km_metro"].sum()], "horas_metro": [by_line["horas_metro"].sum()]})
+    line_week = by_line[["line", "km_metro", "horas_metro"]].assign(km_metro=lambda d: d["km_metro"] * 7,
+                                                                   horas_metro=lambda d: d["horas_metro"] * 7)
+    lc_week = lc.assign(km_metro=lc["km_metro"] * 7, horas_metro=lc["horas_metro"] * 7, passagens=lc["passagens"] * 7)
+    return Waste("x", Redundancy("x", MONDAY, by_line, corridors, lc), week, line_week, _F, lc_week)
+
+
+def test_metro_extension_increase_line_by_line() -> None:
+    # C: a 6 já corre 10 km a par da República; em D passa também por Celas e pelos HUC; a 7
+    # aparece; a 5 não muda e não passa por estações novas -> fica de fora.
+    before = _extension_waste({"6": (10.0, 1.0), "5": (4.0, 0.5)},
+                              [("6", "República", "República", 10.0, 1.0, 5), ("5", "Alfa", "Beta", 4.0, 0.5, 2)])
+    after = _extension_waste(
+        {"6": (25.0, 2.5), "5": (4.0, 0.5), "7": (30.0, 2.0)},
+        [("6", "República", "República", 10.0, 1.0, 5), ("6", "Celas", "Hospitais", 15.0, 1.5, 6),
+         ("5", "Alfa", "Beta", 4.0, 0.5, 2), ("7", "Celas", "Celas", 30.0, 2.0, 9)],
+    )
+    stations = ("Celas", "Hospitais")
+    table = metro_extension_increase(before, after, stations).set_index("line")
+    assert list(table.index) == ["7", "6"]  # maior aumento primeiro; a 5 sai
+    six = table.loc["6"]
+    assert (six["km_antes"], six["km_depois"], six["delta_km"], six["delta_horas"]) == (10.0, 25.0, 15.0, 1.5)
+    assert six["ano_delta_horas"] == pytest.approx(1.5 * 7 * 52)
+    assert six["ano_delta_t_co2"] == pytest.approx(15.0 * 7 * 52 / 1000.0)  # 1 kg CO2/km nos fatores do teste
+    assert (six["horas_novas"], six["ano_horas_novas"]) == (1.5, pytest.approx(1.5 * 7 * 52))
+    assert six["estacoes_novas"] == "Celas, Hospitais" and six["corredores_novos"] == "Celas – Hospitais"
+    seven = table.loc["7"]
+    assert (seven["km_antes"], seven["delta_km"], seven["corredores_novos"]) == (0.0, 30.0, "junto a Celas")
+    # a ordem das estações vem de `stations`, não do alfabeto
+    assert metro_extension_increase(before, after, ("Hospitais", "Celas")).set_index("line").loc["6", "estacoes_novas"] == "Hospitais, Celas"
+    # uma linha só de fim de semana (fora do dia útil) entra pela semana-tipo: conta no ano
+    weekend = pd.DataFrame({"line": ["W"], "km_metro": [2.0], "horas_metro": [0.5]})
+    after_we = Waste("x", after.reference, after.week, pd.concat([after.line_week, weekend], ignore_index=True), _F,
+                     after.line_corridor_week)
+    w = metro_extension_increase(before, after_we, stations).set_index("line").loc["W"]
+    assert (w["delta_km"], w["ano_delta_horas"]) == (0.0, pytest.approx(0.5 * 52))
+    corridors = new_station_corridors(after, stations)
+    assert sorted(zip(corridors["station_a"], corridors["station_b"])) == [("Celas", "Celas"), ("Celas", "Hospitais")]

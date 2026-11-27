@@ -21,6 +21,7 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `oficial_fase1_sem54.csv`, `n2_redundancia_antes_sem54.csv` | **Cenário `antes_sem54`** (A′, N2.3, 2026-11-26): a rede da fase 1 sem a linha 54 (Ep212 filtrado em memória, vista `smtuc-sem-54`; mesmos metro e dia). Sem esperas nem busca da 54 (secções omitidas) |
 | `n2_isocronas_nos_<cenário>.csv` (antes, antes_sem54, fase2_ep212, fase2) | **Isócronas a partir dos nós de integração** (N2.4, 2026-11-26; secção opcional `isocrona_nos`): estações Portagem e Portela, média das partidas de 10 em 10 min das 07:30 às 09:20 |
 | `planeado_fase3.csv`, `planeado_fase3_metade.csv` | **PLANEADOS** (N3.3, 2026-11-27): cenários `fase3` (D) e `fase3_metade` (sensibilidade) = C com o metro planeado da Linha do Hospital (mesmo SMTUC Ep225, mesmo dia). Todas as secções, incluindo as opcionais `redundancia` e `isocrona_nos`. Não são dados oficiais |
+| `n3_isocrona_huc_fase2.csv`, `n3_isocrona_huc_fase3.csv`, `n3_isocrona_huc_fase3_metade.csv` | N3.4 (2026-11-27): secção opcional `isocrona_huc` em C, D e na sensibilidade - isócronas a partir do ponto FIXO dos Hospitais (H.U.C.) (`config.HOSPITAL_ISOCHRONE_ORIGIN`, a estação do KMZ), média das partidas 07:30-09:20 |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -235,3 +236,18 @@ O horário é **assumido** (`data/gtfs/metro/fase3_planeado*`, `build_feeds.exte
 - **A Linha do Hospital cria redundância nova.** Mais 434 autocarros·km por dia útil passam a correr a par do metro. As linhas que mais ganham extensão a par do metro são a 6, a 19T, a 36F, a 29 e a 16G.
 - **Com metade das viagens, a redundância espacial é a mesma** (a regra só olha para a distância às estações). Só desce o overlap temporal: em menos passagens há um metro a ≤ 5 min.
 - As esperas da 54, a busca do desvio de fase, a população sem oferta e o tempo médio a partir do estádio não mudam.
+
+## O que a Linha do Hospital torna redundante (N3.4, 2026-11-27)
+
+Página `outputs/redundancia/aumento_fase2_vs_fase3.html` (CSV ao lado, mais `_corredores.csv`). As isócronas dos HUC partem de um ponto fixo, que em C ainda não tem estação.
+
+| | C (Como Vou) | D (fase 3, planeado) | D, metade das viagens |
+|---|---|---|---|
+| HUC: tempo médio ponderado (média das partidas) | 46,6 min | 41,6 min | 42,9 min |
+| HUC: população a ≤ 30 min | 51 161 | 60 828 | 56 926 |
+| Autocarros·hora a par do metro por ano (estimativa) | 45 298 | 56 258 | igual a D |
+
+- **Capacidade ao lado da linha nova:** 35,5 autocarros·hora por dia útil (cerca de 10 960 por ano) nos corredores com uma estação nova numa ponta, de 19 linhas (a 36F só ao fim de semana). Todo o aumento C → D cai nesses corredores.
+- **Linhas com mais aumento (autocarros·km/dia):** 7 (+119), 6 (+90), 29 (+55), 37 (+42) e 19T (+24).
+- **Corredores com mais autocarros·km:** Celas – Sereia (92 km, 15 linhas) e Hospitais – Pediátrico (79 km, linhas 6, 6F, 7 e 35).
+- **Duas frequências:** com metade das viagens, o overlap temporal destas linhas desce. Por exemplo, a 7 passa de 98 % para 85 % e a 6F de 89 % para 67 %.

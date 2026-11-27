@@ -108,9 +108,9 @@ def _param(snap: pd.DataFrame, name: str, default: str) -> str:
     return _fmt_number(number) if number is not None else default
 
 
-def _node_window(snap: pd.DataFrame, node: str) -> str:
-    """"07:30–09:20" a partir de "07:30:00-09:20:00/12" (snapshot isocrona_nos, chave origem)."""
-    raw = snapshot_value(snap, "isocrona_nos", f"{node} | origem", "partidas") or ""
+def _node_window(snap: pd.DataFrame, node: str, section: str = "isocrona_nos") -> str:
+    """"07:30–09:20" a partir de "07:30:00-09:20:00/12" (snapshot isocrona_nos/_huc, chave origem)."""
+    raw = snapshot_value(snap, section, f"{node} | origem", "partidas") or ""
     span = raw.split("/")[0].split("-")
     return f"{span[0][:5]}–{span[1][:5]}" if len(span) == 2 else "?"
 
@@ -131,6 +131,21 @@ def _node_kpis() -> tuple[_Kpi, ...]:
     return tuple(out)
 
 
+def _hospital_kpis() -> tuple[_Kpi, ...]:
+    """Isócrona a partir dos Hospitais (N3.4, secção opcional isocrona_huc): ponto fixo do KMZ."""
+    from config import HOSPITAL_ISOCHRONE_ORIGIN
+
+    name = str(HOSPITAL_ISOCHRONE_ORIGIN[0])
+    sec = "isocrona_huc"
+    return (
+        _Kpi(lambda s: f"Tempo médio a partir dos {name} (ponto fixo; média das partidas "
+             f"{_node_window(s, name, sec)}, ponderado pela população)",
+             sec, f"{name} | total", "tempo_medio_ponderado_min", decimals=1, unit="min", better="lower", optional=True),
+        _Kpi(lambda s: f"População a ≤ 30 min dos {name} (média das partidas)",
+             sec, f"{name} | total", "populacao_30min_media", better="higher", optional=True),
+    )
+
+
 KPIS: tuple[_Kpi, ...] = (
     _Kpi(lambda s: f"Linhas SMTUC com troços a ≤ {_param(s, 'walk_distance_threshold', '240')} m do metro",
          "overlap_resumo", "total", "overlap_lines"),
@@ -148,6 +163,7 @@ KPIS: tuple[_Kpi, ...] = (
     _Kpi(lambda s: "População em subsecções sem oferta",
          "populacao", "sem_oferta", "populacao", better="lower"),
     *_node_kpis(),
+    *_hospital_kpis(),
     # Redundância viagem a viagem (N2.1/N2.2; secção opcional "redundancia" do snapshot).
     _Kpi(lambda s: "Autocarros·km a par do metro num dia útil (viagem a viagem)",
          "redundancia", "total", "km_metro", better="lower", optional=True),

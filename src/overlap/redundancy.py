@@ -18,7 +18,7 @@ sequência (os vizinhos passam a ser consecutivos), como no percurso representat
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 import numpy as np
@@ -40,6 +40,7 @@ LINE_COLUMNS = (
     "line", "viagens", "km", "km_metro", "pct_km_metro", "horas", "horas_metro", "viagens_com_troco_metro",
 )
 CORRIDOR_COLUMNS = ("station_a", "station_b", "km_metro", "horas_metro", "passagens", "linhas")
+LINE_CORRIDOR_COLUMNS = ("line", "station_a", "station_b", "km_metro", "horas_metro", "passagens")
 
 
 def station_name(stop_name: object) -> str:
@@ -175,6 +176,24 @@ def redundancy_by_corridor(segments: pd.DataFrame) -> pd.DataFrame:
     return out[list(CORRIDOR_COLUMNS)].reset_index(drop=True)
 
 
+def redundancy_by_line_corridor(segments: pd.DataFrame) -> pd.DataFrame:
+    """Por linha e corredor do metro: autocarros·km, ·hora e passagens a par dele (N3.4: a
+    capacidade de uma linha nos corredores das estações novas)."""
+    seg = segments[segments["overlap"]] if not segments.empty else segments
+    if seg.empty:
+        return _empty_line_corridor()
+    g = seg.groupby(["line", "station_a", "station_b"])
+    out = pd.DataFrame(
+        {"km_metro": g["length_m"].sum() / 1000.0, "horas_metro": g["minutes"].sum() / 60.0, "passagens": g.size()}
+    ).reset_index()
+    out = out.sort_values(["line", "km_metro", "station_a", "station_b"], ascending=[True, False, True, True], kind="mergesort")
+    return out[list(LINE_CORRIDOR_COLUMNS)].reset_index(drop=True)
+
+
+def _empty_line_corridor() -> pd.DataFrame:
+    return pd.DataFrame(columns=list(LINE_CORRIDOR_COLUMNS))
+
+
 def _line_key(line: str) -> tuple[float, str]:
     prefix = _line_numeric_prefix(line)
     return (prefix if prefix is not None else float("inf"), line)
@@ -186,6 +205,7 @@ class Redundancy:
     day: date
     by_line: pd.DataFrame
     by_corridor: pd.DataFrame
+    by_line_corridor: pd.DataFrame = field(default_factory=_empty_line_corridor)
 
     def totals(self) -> dict[str, float]:
         bl = self.by_line
@@ -208,7 +228,8 @@ def scenario_redundancy(scenario: str | Scenario | None = None, day: date | None
     sc = get_scenario(scenario)
     day = day or scenario_reference_day(sc)
     segments = trip_segments(load_gtfs_cached(sc.smtuc), load_gtfs_cached(sc.metro), day)
-    return Redundancy(sc.name, day, redundancy_by_line(segments), redundancy_by_corridor(segments))
+    return Redundancy(sc.name, day, redundancy_by_line(segments), redundancy_by_corridor(segments),
+                      redundancy_by_line_corridor(segments))
 
 
 # --------------------------------------------------------------------------- desperdício (N2.2)
@@ -306,6 +327,8 @@ class Waste:
     week: pd.DataFrame          # WEEK_COLUMNS: dia útil, sábado e domingo, com o peso de cada um
     line_week: pd.DataFrame     # por linha: km_metro e horas_metro da semana-tipo (pesados)
     factors: WasteFactors
+    # por linha e corredor (LINE_CORRIDOR_COLUMNS): a semana-tipo pesada (N3.4)
+    line_corridor_week: pd.DataFrame = field(default_factory=_empty_line_corridor)
 
     def summary(self) -> dict[str, float]:
         f = self.factors
@@ -340,7 +363,7 @@ def scenario_waste(scenario: str | Scenario | None = None) -> Waste:
     sc = get_scenario(scenario)
     ref_day = scenario_reference_day(sc)
     reference = scenario_redundancy(sc, ref_day)
-    rows, lines = [], []
+    rows, lines, line_corridors = [], [], []
     for kind, day, weight in typical_week(load_gtfs_cached(sc.smtuc), ref_day):
         red = reference if day == ref_day else scenario_redundancy(sc, day)
         t = red.totals()
@@ -348,6 +371,90 @@ def scenario_waste(scenario: str | Scenario | None = None) -> Waste:
                      "km_metro": t["km_metro"], "horas_metro": t["horas_metro"]})
         lines.append(red.by_line[["line", "km_metro", "horas_metro"]].assign(
             km_metro=lambda d, w=weight: d["km_metro"] * w, horas_metro=lambda d, w=weight: d["horas_metro"] * w))
+        line_corridors.append(red.by_line_corridor.assign(
+            km_metro=lambda d, w=weight: d["km_metro"] * w, horas_metro=lambda d, w=weight: d["horas_metro"] * w,
+            passagens=lambda d, w=weight: d["passagens"] * w))
     line_week = pd.concat(lines).groupby("line", as_index=False)[["km_metro", "horas_metro"]].sum()
     line_week = line_week.sort_values(["km_metro", "line"], ascending=[False, True], kind="mergesort").reset_index(drop=True)
-    return Waste(sc.name, reference, pd.DataFrame(rows, columns=list(WEEK_COLUMNS)), line_week, waste_factors())
+    keys = ["line", "station_a", "station_b"]
+    line_corridor_week = pd.concat(line_corridors).groupby(keys, as_index=False)[["km_metro", "horas_metro", "passagens"]].sum()
+    return Waste(sc.name, reference, pd.DataFrame(rows, columns=list(WEEK_COLUMNS)), line_week, waste_factors(),
+                 line_corridor_week[list(LINE_CORRIDOR_COLUMNS)])
+
+
+# --------------------------------------------------------------------------- metro novo (N3.4)
+
+
+def new_stations(before: str | Scenario, after: str | Scenario) -> tuple[str, ...]:
+    """Estações (sem sufixo de plataforma) do metro de `after` que não existem no de `before`."""
+    def names(sc) -> set[str]:
+        return set(_metro_stations(load_gtfs_cached(get_scenario(sc).metro))["station"])
+
+    return tuple(sorted(names(after) - names(before)))
+
+
+INCREASE_COLUMNS = (
+    "line", "km_antes", "km_depois", "delta_km", "horas_antes", "horas_depois", "delta_horas",
+    "ano_delta_horas", "ano_delta_t_co2", "horas_novas", "ano_horas_novas", "estacoes_novas", "corredores_novos",
+)
+
+
+def _touches(frame: pd.DataFrame, stations: tuple[str, ...]) -> pd.Series:
+    return frame["station_a"].isin(stations) | frame["station_b"].isin(stations)
+
+
+def new_station_corridors(after: Waste, stations: tuple[str, ...]) -> pd.DataFrame:
+    """Corredores (CORRIDOR_COLUMNS) do dia de referência de `after` com uma estação nova numa ponta."""
+    corridors = after.reference.by_corridor
+    return corridors[_touches(corridors, stations)].reset_index(drop=True)
+
+
+def _corridor_label(a: str, b: str) -> str:
+    return f"junto a {a}" if a == b else f"{a} – {b}"
+
+
+def metro_extension_increase(before: Waste, after: Waste, stations: tuple[str, ...]) -> pd.DataFrame:
+    """O que um metro novo (mesmo SMTUC) faz à redundância, linha a linha (INCREASE_COLUMNS):
+    autocarros·km e ·hora a par do metro num dia útil antes/depois e a diferença; a diferença no ano
+    estimado (semana-tipo x semanas, em horas e t CO2); e as horas nos corredores com uma estação
+    nova (`stations`) numa ponta, no dia e no ano - a capacidade que passa a correr ao lado da
+    linha nova -, as estações novas junto às quais a linha passa no dia útil (pela ordem de
+    `stations`) e esses corredores. Entram as linhas do dia útil E da semana-tipo (uma linha só de
+    fim de semana conta no ano) com alguma diferença ou horas nesses corredores; maior aumento em km
+    no dia útil primeiro. Somando a coluna do ano obtém-se a diferença dos totais da semana-tipo."""
+    f = after.factors
+    cols = ["line", "km_metro", "horas_metro"]
+    b = before.reference.by_line[cols].rename(columns={"km_metro": "km_antes", "horas_metro": "horas_antes"})
+    a = after.reference.by_line[cols].rename(columns={"km_metro": "km_depois", "horas_metro": "horas_depois"})
+    # Linhas da semana-tipo também (uma linha só de fim de semana não está no dia útil mas conta no ano).
+    week_lines = pd.DataFrame({"line": pd.concat([before.line_week["line"], after.line_week["line"]]).unique()})
+    out = b.merge(a, on="line", how="outer").merge(week_lines, on="line", how="outer")
+    for col in ("km_antes", "km_depois", "horas_antes", "horas_depois"):
+        out[col] = out[col].fillna(0.0).astype(float)
+
+    def week(w: Waste, col: str):
+        return out["line"].map(w.line_week.set_index("line")[col]).fillna(0.0).astype(float)
+
+    out["delta_km"] = out["km_depois"] - out["km_antes"]
+    out["delta_horas"] = out["horas_depois"] - out["horas_antes"]
+    out["ano_delta_horas"] = (week(after, "horas_metro") - week(before, "horas_metro")) * f.weeks_per_year
+    out["ano_delta_t_co2"] = (week(after, "km_metro") - week(before, "km_metro")) * f.weeks_per_year * f.kg_co2_per_km / 1000.0
+
+    day_lc = after.reference.by_line_corridor
+    day_new = day_lc[_touches(day_lc, stations)]
+    week_lc = after.line_corridor_week
+    week_new = week_lc[_touches(week_lc, stations)]
+    out["horas_novas"] = out["line"].map(day_new.groupby("line")["horas_metro"].sum()).fillna(0.0).astype(float)
+    out["ano_horas_novas"] = (out["line"].map(week_new.groupby("line")["horas_metro"].sum()).fillna(0.0).astype(float)
+                              * f.weeks_per_year)
+    labels = day_new.assign(_c=[_corridor_label(x, y) for x, y in zip(day_new["station_a"], day_new["station_b"])])
+    by_line = labels.groupby("line")["_c"].apply(lambda s: "; ".join(dict.fromkeys(s))) if not labels.empty else pd.Series(dtype=str)
+    out["corredores_novos"] = out["line"].map(by_line).fillna("")
+    touched = {line: set(g["station_a"]) | set(g["station_b"]) for line, g in day_new.groupby("line")}
+    out["estacoes_novas"] = out["line"].map(
+        lambda line: ", ".join(s for s in stations if s in touched.get(line, set()))).fillna("")
+    changed = (out["delta_km"].abs() > 1e-9) | (out["ano_delta_horas"].abs() > 1e-9) | (out["ano_delta_t_co2"].abs() > 1e-9)
+    out = out[changed | (out["horas_novas"] > 0) | (out["ano_horas_novas"] > 0)]
+    out = out.assign(_k=out["line"].astype(str).map(_line_key))
+    out = out.sort_values(["delta_km", "_k"], ascending=[False, True], kind="mergesort")
+    return out[list(INCREASE_COLUMNS)].reset_index(drop=True)

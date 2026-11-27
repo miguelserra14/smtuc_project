@@ -104,3 +104,17 @@ def test_official_hospital_line() -> None:
         for leg in legs[sense]:
             # Eixo nunca muito mais curto do que a reta (só pelo desvio das estações à via) nem absurdo.
             assert 0.8 * leg.reta_m < leg.eixo_m < 2.5 * leg.reta_m, leg
+
+
+def test_hospital_isochrone_origin_is_the_kmz_station() -> None:
+    # N3.4: a origem fixa das isócronas dos HUC (config) é a estação do KMZ oficial.
+    if not OFFICIAL_KMZ.exists():
+        pytest.skip("KMZ oficial não disponível")
+    from config import HOSPITAL_ISOCHRONE_ORIGIN
+    from gtfs_processing.geo import haversine_m
+
+    name, lat, lon = HOSPITAL_ISOCHRONE_ORIGIN
+    points = kmz.stations(kmz.read_placemarks(OFFICIAL_KMZ), kmz.HOSPITAL_STATIONS_FOLDER)
+    assert name in points
+    k_lat, k_lon = points[name]
+    assert float(haversine_m(lat, lon, k_lat, k_lon)) < 1.0

@@ -248,6 +248,10 @@ def test_redundancy_section_writes_rankings_and_measures(monkeypatch: pytest.Mon
     monkeypatch.setattr(regen, "scenario_waste", lambda sc: _waste({"5": 10.0}))
     diff = pd.DataFrame({"linha_antes": ["5"], "linha_depois": ["5"], "estado": ["igual"], "aviso": [""]})
     monkeypatch.setattr(regen, "_network_diff", lambda b, a, c: diff)
+    monkeypatch.setattr(regen, "_ordered_new_stations", lambda b, a: ("Celas",))
+    metrics = pd.DataFrame({"line": ["5"], "temporal_overlaps_count": [1], "temporal_spatial_candidates_count": [2],
+                            "temporal_overlaps_pct": [50.0]})
+    monkeypatch.setattr(regen, "load_line_metrics_db", lambda scenario=None: metrics)
     regen.regenerate_redundancy_html()
     assert regen._FAILURES == []
     out = tmp_path / "outputs" / "redundancia"
@@ -257,6 +261,9 @@ def test_redundancy_section_writes_rankings_and_measures(monkeypatch: pytest.Mon
     assert (out / "ranking.html").exists() and (out / "ranking_sem54.html").exists()
     for before, after in regen.NETWORK_DIFF_PAIRS:
         assert (out / f"medidas_{before}_vs_{after}.html").exists()
+    # N3.4: uma página do aumento por METRO_EXTENSION_PAGES
+    for before, after, _ in regen.METRO_EXTENSION_PAGES:
+        assert (out / f"aumento_{before}_vs_{after}.html").exists() and (out / f"aumento_{before}_vs_{after}.csv").exists()
 
     def _boom(sc):
         raise RuntimeError("falhou")

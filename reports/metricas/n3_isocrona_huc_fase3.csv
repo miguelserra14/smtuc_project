@@ -1,0 +1,37 @@
+section,key,metric,value
+meta,snapshot,fase,n3_isocrona_huc_fase3
+meta,snapshot,cenario,fase3
+meta,snapshot,criado_em,2026-11-27
+meta,snapshot,commit,ae967cc+alterações
+meta,dados,smtuc,smtuc_atual
+meta,dados,metro,metro_fase3_planeado
+meta,dados,pasta_smtuc,data/gtfs/smtuc/atual_ep225
+meta,dados,impressao_digital_smtuc,12aefeabe5782c22
+meta,dados,pasta_metro,data/gtfs/metro/fase3_planeado_20261111
+meta,dados,impressao_digital_metro,b7982e9dad0502be
+meta,dados,dia_referencia,2026-11-09
+meta,dados,hora_isocrona,08:20:00
+meta,parametros,WALK_SPEED_M_MIN,80
+meta,parametros,CATCHMENT_M,500
+meta,parametros,TRANSFER_BUFFER_MIN,1
+meta,parametros,FREQUENCY_WINDOW_START_H,7
+meta,parametros,FREQUENCY_WINDOW_END_H,20
+meta,parametros,TEMPORAL_OVERLAP_MAX_MIN,5
+meta,parametros,SPATIAL_OVERLAP_WALK_MIN,3
+meta,parametros,STADIUM_RADIUS_M,2000
+meta,parametros,REACHABILITY_MAX_MIN,60
+meta,parametros,REACHABILITY_MAX_TRANSFERS,2
+meta,parametros,LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,-10
+meta,parametros,LINE_54_MELHORADO_PHASE_SHIFT_MIN,0
+isocrona_huc,Hospitais (H.U.C.) | origem,partidas,07:30:00-09:20:00/12
+isocrona_huc,Hospitais (H.U.C.) | faixa 0-10,populacao_media,4782.25
+isocrona_huc,Hospitais (H.U.C.) | faixa 10-15,populacao_media,10506.75
+isocrona_huc,Hospitais (H.U.C.) | faixa 15-30,populacao_media,45538.9167
+isocrona_huc,Hospitais (H.U.C.) | faixa 30-60,populacao_media,53444.6667
+isocrona_huc,Hospitais (H.U.C.) | faixa >60,populacao_media,26543.4167
+isocrona_huc,Hospitais (H.U.C.) | total,populacao_30min_media,60827.9167
+isocrona_huc,Hospitais (H.U.C.) | total,tempo_medio_ponderado_min,41.617
+isocrona_huc,Hospitais (H.U.C.) | total,melhor_partida_min,37.1057
+isocrona_huc,Hospitais (H.U.C.) | total,pior_partida_min,47.3504
+meta,snapshot,secoes,isocrona_huc
+meta,snapshot,secoes_omitidas,

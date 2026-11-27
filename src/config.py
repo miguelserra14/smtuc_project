@@ -69,6 +69,11 @@ WASTE_WEEKS_PER_YEAR = 52
 NODE_ISOCHRONE_START = "07:30:00"
 NODE_ISOCHRONE_END = "09:30:00"
 NODE_ISOCHRONE_STEP_MIN = 10
+# Isócrona a partir dos Hospitais (N3.4, snapshot "isocrona_huc"): coordenada FIXA da estação
+# "Hospitais (H.U.C.)" no KMZ oficial (Paragens LH; test_kmz confere-a), a MESMA em todos os
+# cenários - em C ainda não há lá estação, por isso C -> D mede o que a Linha do Hospital muda
+# para quem parte dos HUC. Mesma janela de partidas que os nós (NODE_ISOCHRONE_*).
+HOSPITAL_ISOCHRONE_ORIGIN = ("Hospitais (H.U.C.)", 40.220792, -8.410586)
 
 # Origem/destino de exemplo dos testes de percurso (test_overlap.py). Por omissão são pontos
 # PÚBLICOS (Estação Coimbra-B e Polo I, do catálogo population/points_of_interest.py); valores
@@ -76,8 +81,8 @@ NODE_ISOCHRONE_STEP_MIN = 10
 HOME_COORD = (40.22521, -8.4407)  # Estação Coimbra-B
 WORK_COORD = (40.2075, -8.42611)  # Universidade de Coimbra - Polo I
 STADIUM_COORD = (40.203809, -8.407904)
-# TODO: acrescentar outras origens de referência (Vale das Flores, CHUC/HUC, ...) e documentar que
-# métricas usa cada uma.
+# TODO: acrescentar outras origens de referência (Vale das Flores, ...) e documentar que métricas
+# usa cada uma (os HUC já são origem desde o N3.4: HOSPITAL_ISOCHRONE_ORIGIN).
 OVERLAP_TABLE_TOP_N = 5
 OVERLAP_SCAN_TOP_N = 10000
 UNDERSERVED_TOP_N = 20
@@ -117,6 +122,11 @@ SMTUC_LINE_CHANGES_CSV = "data/smtuc_alteracoes_2026.csv"
 # (OUTPUTS_REDUNDANCY_DIR/medidas_<antes>_vs_<depois>.{html,csv}).
 OUTPUTS_REDUNDANCY_DIR = "outputs/redundancia"
 REDUNDANCY_TOP_N = 15
+# O que um metro novo faz à redundância (N3.4): (antes, depois, sensibilidade ou None), mesmo SMTUC
+# -> OUTPUTS_REDUNDANCY_DIR/aumento_<antes>_vs_<depois>.{html,csv}: linhas que passam a correr a par
+# do metro, capacidade nos corredores das estações novas e overlap temporal (a sensibilidade só
+# muda as frequências do metro, por isso só entra no overlap temporal).
+METRO_EXTENSION_PAGES: tuple[tuple[str, str, str | None], ...] = (("fase2", "fase3", "fase3_metade"),)
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 

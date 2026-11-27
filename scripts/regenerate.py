@@ -29,6 +29,7 @@ from config import (  # noqa: E402
     OUTPUTS_COMPARISON_DIR,
     OUTPUTS_REDUNDANCY_DIR,
     REDUNDANCY_TOP_N,
+    METRO_EXTENSION_PAGES,
     OUTPUTS_OVERLAP_DIR,
     OUTPUTS_POPULATION_DIR,
     POPULATION_STADIUM_MAP_RADIUS_M,
@@ -53,7 +54,7 @@ from gtfs_processing.scenarios import (  # noqa: E402
 from overlap import network_diff  # noqa: E402
 from overlap.overlap import compute_bgri_reachability_now  # noqa: E402
 from overlap.overlap_db import line_metrics_db_path, load_line_metrics_db  # noqa: E402
-from overlap.redundancy import scenario_waste  # noqa: E402
+from overlap.redundancy import new_stations, scenario_waste  # noqa: E402
 from overlap.transit import resolve_reference_day  # noqa: E402
 from population.data_processing import (  # noqa: E402
     compute_poi_underservice,
@@ -76,7 +77,7 @@ from visualizations import (  # noqa: E402
 )
 from visualizations.dashboard import load_overlap_stats, overlap_stats_footer_html  # noqa: E402
 from visualizations.network_diff_page import create_network_diff_html, default_note_html  # noqa: E402
-from visualizations.redundancy_page import create_measures_html, create_ranking_html  # noqa: E402
+from visualizations.redundancy_page import create_extension_html, create_measures_html, create_ranking_html  # noqa: E402
 from visualizations.scenario_comparison import create_scenario_comparison_html  # noqa: E402
 
 # Registo do que correu mal / foi saltado durante a execução, para o resumo final e o exit code.
@@ -424,7 +425,7 @@ def regenerate_integration_scenario_htmls(scenario: str | None = None) -> None:
 
 # Secções do snapshot que a página de comparação usa (sem "linhas" nem a busca de fase, que é a
 # parte lenta e não entra na página).
-_COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao", "isocrona_nos", "redundancia")
+_COMPARISON_SECTIONS = ("overlap_resumo", "esperas_54", "isocrona", "populacao", "isocrona_nos", "isocrona_huc", "redundancia")
 
 
 def _load_snapshot_module():
@@ -516,7 +517,8 @@ def _network_diff(before, after, changes):
 def regenerate_redundancy_html() -> None:
     """Redundância autocarro x metro (N2.5): ranking de cada cenário -> outputs/redundancia/
     ranking<sufixo>.{html,csv}; e, por par de NETWORK_DIFF_PAIRS, o que o horário novo fez às
-    linhas mais redundantes do anterior -> medidas_<antes>_vs_<depois>.{html,csv}."""
+    linhas mais redundantes do anterior -> medidas_<antes>_vs_<depois>.{html,csv}; e, por página de
+    METRO_EXTENSION_PAGES (N3.4), o que o metro novo faz à redundância -> aumento_<antes>_vs_<depois>."""
     section = "redundância"
     print("\n" + "=" * 60)
     print("[INFO] Regenerando páginas de redundância...")
@@ -551,6 +553,31 @@ def regenerate_redundancy_html() -> None:
             print(f"[SUCCESS] Medidas nas linhas mais redundantes ({stem}): {created}")
         except Exception as e:
             _record_failure(f"{section} {stem}", e)
+    for before_name, after_name, sensitivity in METRO_EXTENSION_PAGES:
+        stem = f"aumento_{before_name}_vs_{after_name}"
+        names = [before_name, after_name] + ([sensitivity] if sensitivity else [])
+        if any(name not in wastes for name in names):
+            _record_skip(f"{section} {stem}", "falta o ranking de um dos cenários")
+            continue
+        try:
+            temporal = {get_scenario(name).display_name: load_line_metrics_db(scenario=name) for name in names}
+            created = create_extension_html(
+                out_dir / f"{stem}.html", wastes[before_name], wastes[after_name],
+                _ordered_new_stations(before_name, after_name), get_scenario(before_name).display_name,
+                get_scenario(after_name).display_name, temporal, top_n=REDUNDANCY_TOP_N, csv_path=out_dir / f"{stem}.csv",
+            )
+            print(f"[SUCCESS] Aumento da redundância com o metro novo ({stem}): {created}")
+        except Exception as e:
+            _record_failure(f"{section} {stem}", e)
+
+
+def _ordered_new_stations(before_name: str, after_name: str) -> tuple[str, ...]:
+    """Estações novas do metro de `after`, pela ordem da Linha do Hospital a subir quando lá estão."""
+    from gtfs_processing.kmz import HOSPITAL_UP
+    from overlap.redundancy import station_name
+
+    order = {station_name(s): i for i, s in enumerate(HOSPITAL_UP)}
+    return tuple(sorted(new_stations(before_name, after_name), key=lambda s: (order.get(s, len(order)), s)))
 
 
 def regenerate_network_diff_html() -> None:

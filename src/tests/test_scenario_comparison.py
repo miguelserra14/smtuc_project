@@ -257,3 +257,26 @@ def test_node_isochrone_rows_only_when_a_snapshot_has_them() -> None:
     assert (pop_row["delta"], pop_row["trend"]) == ("+1 238", "melhor")
     # Portagem não está em nenhum dos dois: não sai.
     assert not any("estação Portagem" in r["label"] for r in rows)
+
+
+def test_hospital_isochrone_rows_only_when_a_snapshot_has_them() -> None:
+    # N3.4: secção opcional isocrona_huc (ponto fixo dos HUC) - sem ela as linhas não saem.
+    from config import HOSPITAL_ISOCHRONE_ORIGIN
+    from visualizations.scenario_comparison import build_comparison_rows
+
+    name = HOSPITAL_ISOCHRONE_ORIGIN[0]
+    assert not any(name in r["label"] for r in build_comparison_rows(BEFORE, AFTER)["kpis"])
+
+    def with_huc(snap: pd.DataFrame, minutes: float, pop: float) -> pd.DataFrame:
+        extra = pd.DataFrame([
+            ("isocrona_huc", f"{name} | origem", "partidas", "07:30:00-09:20:00/12"),
+            ("isocrona_huc", f"{name} | total", "tempo_medio_ponderado_min", str(minutes)),
+            ("isocrona_huc", f"{name} | total", "populacao_30min_media", str(pop)),
+        ], columns=snap.columns)
+        return pd.concat([snap, extra], ignore_index=True)
+
+    rows = [r for r in build_comparison_rows(with_huc(BEFORE, 40.0, 70000), with_huc(AFTER, 38.5, 72000))["kpis"]
+            if name in r["label"]]
+    assert len(rows) == 2 and "07:30–09:20" in rows[0]["label"]
+    assert (rows[0]["delta"], rows[0]["trend"]) == ("−1,5 min", "melhor")
+    assert (rows[1]["delta"], rows[1]["trend"]) == ("+2 000", "melhor")

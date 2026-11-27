@@ -31,6 +31,8 @@ Secções:
                   Portagem, Portela; origem = a estação do metro desse nome no feed do cenário),
                   MÉDIA das partidas da janela NODE_ISOCHRONE_* do config: população média por
                   faixa e tempo médio ponderado (médio, melhor e pior partida) (N2.4).
+  isocrona_huc    (opcional) o mesmo a partir dos Hospitais (H.U.C.): coordenada fixa
+                  HOSPITAL_ISOCHRONE_ORIGIN do config, igual em todos os cenários (N3.4).
 As secções opcionais ficam fora das por omissão para os registos antigos continuarem comparáveis.
 
 Nada é escrito em outputs/: o cache de métricas é copiado para uma pasta temporária e as tabelas
@@ -62,7 +64,7 @@ import pandas as pd  # noqa: E402
 COLUMNS = ["section", "key", "metric", "value"]
 SECTIONS = ("linhas", "overlap_resumo", "esperas_54", "busca_fase_54", "isocrona", "populacao")
 # Secções que só entram quando pedidas (--secoes): os registos já gravados não as têm.
-OPTIONAL_SECTIONS = ("redundancia", "isocrona_nos")
+OPTIONAL_SECTIONS = ("redundancia", "isocrona_nos", "isocrona_huc")
 ALL_SECTIONS = SECTIONS + OPTIONAL_SECTIONS
 DEFAULT_OUT_DIR = ROOT / "reports" / "metricas"
 DECIMALS = 4
@@ -219,7 +221,8 @@ def node_departure_times() -> list[str]:
     return [seconds_to_hhmmss(t) for t in range(start, end, step)]
 
 
-def _node_isochrone_rows(snap: Snapshot, node: str, merged, lat: float, lon: float, datasets, day_str: str) -> None:
+def _node_isochrone_rows(snap: Snapshot, node: str, merged, lat: float, lon: float, datasets, day_str: str,
+                         section: str = "isocrona_nos") -> None:
     from config import REACHABILITY_MAX_TRANSFERS
     from overlap.overlap import compute_bgri_reachability_now
 
@@ -240,15 +243,15 @@ def _node_isochrone_rows(snap: Snapshot, node: str, merged, lat: float, lon: flo
         if weights.sum() > 0:
             means.append(float((finite * weights).sum() / weights.sum()))
     key = f"{node} | "
-    snap.add("isocrona_nos", f"{key}origem", "partidas", f"{times[0]}-{times[-1]}/{len(times)}")
+    snap.add(section, f"{key}origem", "partidas", f"{times[0]}-{times[-1]}/{len(times)}")
     for band in bands:
-        snap.add("isocrona_nos", f"{key}faixa {band}", "populacao_media", sum(pops[band]) / len(times))
+        snap.add(section, f"{key}faixa {band}", "populacao_media", sum(pops[band]) / len(times))
     within_30 = sum(sum(pops[b]) for b in ("0-10", "10-15", "15-30")) / len(times)
-    snap.add("isocrona_nos", f"{key}total", "populacao_30min_media", within_30)
+    snap.add(section, f"{key}total", "populacao_30min_media", within_30)
     if means:
-        snap.add("isocrona_nos", f"{key}total", "tempo_medio_ponderado_min", sum(means) / len(means))
-        snap.add("isocrona_nos", f"{key}total", "melhor_partida_min", min(means))
-        snap.add("isocrona_nos", f"{key}total", "pior_partida_min", max(means))
+        snap.add(section, f"{key}total", "tempo_medio_ponderado_min", sum(means) / len(means))
+        snap.add(section, f"{key}total", "melhor_partida_min", min(means))
+        snap.add(section, f"{key}total", "pior_partida_min", max(means))
 
 
 def integration_node_origins(metro_dataset: str) -> list[tuple[str, float, float]]:
@@ -267,7 +270,8 @@ def integration_node_origins(metro_dataset: str) -> list[tuple[str, float, float
 
 
 def _section_population(snap: Snapshot, datasets: tuple[str, str], day_str: str, time_str: str, workdir: Path,
-                        with_isochrone: bool, with_population: bool, with_nodes: bool = False) -> None:
+                        with_isochrone: bool, with_population: bool, with_nodes: bool = False,
+                        with_hospital: bool = False) -> None:
     from config import POPULATION_STADIUM_MAP_RADIUS_M, REACHABILITY_MAX_TRANSFERS, STADIUM_COORD
     from overlap.overlap import compute_bgri_reachability_now
     from population.data_processing import compute_underserved_zones, filter_zones_by_distance
@@ -306,6 +310,12 @@ def _section_population(snap: Snapshot, datasets: tuple[str, str], day_str: str,
     if with_nodes:
         for node, lat, lon in integration_node_origins(datasets[1]):
             _node_isochrone_rows(snap, node, merged, lat, lon, datasets, day_str)
+
+    if with_hospital:
+        from config import HOSPITAL_ISOCHRONE_ORIGIN
+
+        name, lat, lon = HOSPITAL_ISOCHRONE_ORIGIN
+        _node_isochrone_rows(snap, str(name), merged, float(lat), float(lon), datasets, day_str, section="isocrona_huc")
 
 
 # --------------------------------------------------------------------------- snapshot
@@ -410,12 +420,13 @@ def take_snapshot(phase: str, smtuc: str | None = None, metro: str | None = None
             print("[snapshot] esperas da 54" + (" + busca de fase (meio ciclo)" if "busca_fase_54" in sections else "") + "...")
             _section_waits(snap, work, with_search="busca_fase_54" in sections, scenario=sc)
 
-        if {"isocrona", "populacao", "isocrona_nos"} & set(sections):
+        if {"isocrona", "populacao", "isocrona_nos", "isocrona_huc"} & set(sections):
             print("[snapshot] população BGRI" + (" + isócronas do estádio" if "isocrona" in sections else "")
-                  + (" + isócronas dos nós" if "isocrona_nos" in sections else "") + "...")
+                  + (" + isócronas dos nós" if "isocrona_nos" in sections else "")
+                  + (" + isócronas dos HUC" if "isocrona_huc" in sections else "") + "...")
             _section_population(snap, (smtuc, metro), day_str, time_str, work,
                                 with_isochrone="isocrona" in sections, with_population="populacao" in sections,
-                                with_nodes="isocrona_nos" in sections)
+                                with_nodes="isocrona_nos" in sections, with_hospital="isocrona_huc" in sections)
 
         if "redundancia" in sections:
             print("[snapshot] redundância viagem a viagem...")
