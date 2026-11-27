@@ -20,6 +20,7 @@ Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os 
 | `n2_redundancia_antes.csv`, `n2_redundancia_fase2_ep212.csv`, `n2_redundancia_fase2.csv` | **Redundância viagem a viagem** (N2.1, 2026-11-26; só a secção opcional `redundancia`, `--secoes redundancia`): autocarros·km e autocarros·hora a par do metro no dia de referência de cada cenário, no total, por linha e por corredor do metro. Mesma regra da extensão a par do metro; nenhum número dos outros registos mudou. Regravados com `--force` no N2.2 só com 24 números novos cada (desperdício e semana-tipo; os outros iguais) |
 | `oficial_fase1_sem54.csv`, `n2_redundancia_antes_sem54.csv` | **Cenário `antes_sem54`** (A′, N2.3, 2026-11-26): a rede da fase 1 sem a linha 54 (Ep212 filtrado em memória, vista `smtuc-sem-54`; mesmos metro e dia). Sem esperas nem busca da 54 (secções omitidas) |
 | `n2_isocronas_nos_<cenário>.csv` (antes, antes_sem54, fase2_ep212, fase2) | **Isócronas a partir dos nós de integração** (N2.4, 2026-11-26; secção opcional `isocrona_nos`): estações Portagem e Portela, média das partidas de 10 em 10 min das 07:30 às 09:20 |
+| `planeado_fase3.csv`, `planeado_fase3_metade.csv` | **PLANEADOS** (N3.3, 2026-11-27): cenários `fase3` (D) e `fase3_metade` (sensibilidade) = C com o metro planeado da Linha do Hospital (mesmo SMTUC Ep225, mesmo dia). Todas as secções, incluindo as opcionais `redundancia` e `isocrona_nos`. Não são dados oficiais |
 | `diff_oficial_fase1_d24_vs_t3.csv`, `diff_oficial_fase2_vs_t3.csv` | Diferenças do T3 (só colunas `temporal_*`) |
 | `diff_oficial_fase1_desvios_vs_d24.csv` | Diferenças da D2.4 (19 números: só esperas em Portagem e a busca de fase) |
 | `busca_fase_54_oficial_fase1_com_38.csv` | Busca de desvio no cenário `antes` com a 38: daria 0 / −10 |
@@ -216,3 +217,21 @@ A origem é a estação do metro de cada nó (`INTEGRATION_SITES`). Não se usa 
 
 - **A 54 conta na Portela e não na Portagem.** A partir da Portela tira cerca de 1 min ao tempo médio e põe mais ~1 200 pessoas a ≤ 30 min. A partir da Portagem não muda nada: tudo o que a 54 alcança dali também se alcança por outras linhas.
 - **O metro da fase 2 melhora a Portela** (A → B, −1,9 min). O Como Vou melhora-a um pouco mais (−0,2 min) e piora um pouco a Portagem (+0,5 min, −1 500 pessoas a ≤ 30 min).
+
+## Fase 3 planeada: a Linha do Hospital (N3.3, 2026-11-27)
+
+O horário é **assumido** (`data/gtfs/metro/fase3_planeado*`, `build_feeds.extend_to_hospital`). As viagens U2, U3 e S2 da República seguem até ao Pediátrico; na sensibilidade, só uma em cada duas. De C para D só muda o metro: o SMTUC (Ep225) e o dia (09/11/2026) são os mesmos.
+
+| | C (Como Vou) | D (fase 3, planeado) | D, metade das viagens |
+|---|---|---|---|
+| Paragens SMTUC a ≤ 240 m de uma estação | 94 | 115 | 115 |
+| Extensão de linhas SMTUC a par do metro | 338,1 km | 382,8 km | 382,8 km |
+| Passagens nessas paragens com um metro a ≤ 5 min | 95,6 % | 96,1 % | 92,4 % |
+| Autocarros·km a par do metro num dia útil | 1970 | 2404 | 2404 |
+| Autocarros·hora a par do metro num dia útil | 150 | 186 | 186 |
+| t CO₂ por ano a par do metro (estimativa) | 459 | 563 | 563 |
+| Portagem: população a ≤ 30 min (média das partidas) | 81 750 | 82 424 | 82 133 |
+
+- **A Linha do Hospital cria redundância nova.** Mais 434 autocarros·km por dia útil passam a correr a par do metro. As linhas que mais ganham extensão a par do metro são a 6, a 19T, a 36F, a 29 e a 16G.
+- **Com metade das viagens, a redundância espacial é a mesma** (a regra só olha para a distância às estações). Só desce o overlap temporal: em menos passagens há um metro a ≤ 5 min.
+- As esperas da 54, a busca do desvio de fase, a população sem oferta e o tempo médio a partir do estádio não mudam.

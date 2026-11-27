@@ -103,6 +103,8 @@ COMPARISON_PAIRS: tuple[tuple[str, str], ...] = (
     ("antes", "fase2_ep212"),  # efeito do metro da fase 2
     ("fase2_ep212", "fase2"),  # efeito do horário SMTUC (Como Vou + mudanças de março a setembro)
     ("antes", "fase2"),        # os dois juntos (visão geral, só no master)
+    ("fase2", "fase3"),        # N3: a Linha do Hospital (planeada), mesmo SMTUC e mesmo dia
+    ("fase2", "fase3_metade"),  # N3: sensibilidade - metade das viagens prolongadas
 )
 # Diferenças de rede SMTUC linha a linha (N1.3, overlap/network_diff.py): pares de cenários com
 # o mesmo metro e horários SMTUC diferentes -> OUTPUTS_COMPARISON_DIR/rede_<antes>_vs_<depois>.
@@ -156,7 +158,7 @@ DATASET_DIRS: dict[str, str] = {
 # têm nenhum dia em comum (Ep212 + Metro fase 1 até 09/09/2026; Ep225 + Metro fase 2 depois).
 # "label" (opcional; por omissão o nome) é o nome curto das páginas de comparação. Na narrativa
 # da apresentação (visualizations/presentation_content.py, SCENARIO_LADDER) antes = degrau A,
-# antes_sem54 = A′, fase2_ep212 = B e fase2 = C. "exclude_lines" (opcional) retira linhas SMTUC
+# antes_sem54 = A′, fase2_ep212 = B, fase2 = C e fase3 = D (fase3_metade = sensibilidade de D). "exclude_lines" (opcional) retira linhas SMTUC
 # do feed (vista gtfs.dataset_view, sem ficheiros novos).
 SCENARIOS: dict[str, dict[str, object]] = {
     "antes": {
@@ -208,6 +210,29 @@ SCENARIOS: dict[str, dict[str, object]] = {
         "reference_day": "2026-11-09",
         "reference_time": "08:20:00",
         "output_suffix": "_fase2",
+    },
+    # PLANEADOS (N3.3, 2026-11-27): a fase 3 (Linha do Hospital, março de 2027) não tem horário
+    # oficial. É o cenário fase2 (C) com o metro planeado de data/gtfs/metro/fase3_planeado*
+    # (build_feeds.extend_to_hospital) - MESMO SMTUC e MESMO dia de C (o Ep225 só cobre até
+    # 12/11/2026), por isso fase2 -> fase3 muda só o metro. fase3_metade é a sensibilidade do
+    # horário assumido (uma em cada duas viagens prolongadas). Slides: selo "cenário planeado".
+    "fase3": {
+        "description": "PLANEADO: fase 3 (Linha do Hospital assumida, U2/U3/S2 prolongados até ao Pediátrico) com o SMTUC Ep225",
+        "label": "Fase 3 (planeado)",
+        "smtuc": "smtuc_atual",
+        "metro": "metro_fase3_planeado",
+        "reference_day": "2026-11-09",
+        "reference_time": "08:20:00",
+        "output_suffix": "_fase3",
+    },
+    "fase3_metade": {
+        "description": "PLANEADO (sensibilidade): fase 3 com só metade das viagens prolongadas até ao Pediátrico, SMTUC Ep225",
+        "label": "Fase 3, metade das viagens (planeado)",
+        "smtuc": "smtuc_atual",
+        "metro": "metro_fase3_planeado_metade",
+        "reference_day": "2026-11-09",
+        "reference_time": "08:20:00",
+        "output_suffix": "_fase3_metade",
     },
 }
 DEFAULT_SCENARIO = "antes"
@@ -267,7 +292,7 @@ INTEGRATION_SITES: tuple[dict, ...] = (
                 "key": "norte",
                 "label": "metro para norte (Coimbra B ou República)",
                 "towards_refs": ("Coimbra B", "República"),
-                "scenarios": ("fase2", "fase2_ep212"),
+                "scenarios": ("fase2", "fase2_ep212", "fase3", "fase3_metade"),
             },
         ),
     },

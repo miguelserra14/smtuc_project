@@ -197,7 +197,16 @@ def test_comparison_section_writes_page_and_csv(monkeypatch: pytest.MonkeyPatch,
         @staticmethod
         def take_snapshot(phase, scenario=None, sections=()):
             taken.append((scenario, tuple(sections)))
-            return {"antes_sem54": SEM54, "antes": BEFORE, "fase2_ep212": MIDDLE, "fase2": AFTER}[scenario]
+            return {"antes_sem54": SEM54, "antes": BEFORE, "fase2_ep212": MIDDLE, "fase2": AFTER, **planned}[scenario]
+
+    def _planned(name: str):
+        # N3: fase 3 planeada = o snapshot de C com outro metro (mesmo SMTUC, mesmo dia).
+        snap = AFTER.copy()
+        snap.loc[snap["metric"] == "cenario", "value"] = name
+        snap.loc[snap["metric"] == "metro", "value"] = f"metro_{name}"
+        return snap
+
+    planned = {name: _planned(name) for name in ("fase3", "fase3_metade")}
 
     monkeypatch.setattr(regen, "_require_dataset", lambda d: Path("."))
     monkeypatch.setattr(regen, "require_geo_stack", lambda: None)

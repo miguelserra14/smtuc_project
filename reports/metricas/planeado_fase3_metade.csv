@@ -1,0 +1,1797 @@
+section,key,metric,value
+meta,snapshot,fase,planeado_fase3_metade
+meta,snapshot,cenario,fase3_metade
+meta,snapshot,criado_em,2026-11-27
+meta,snapshot,commit,27229a2+alterações
+meta,dados,smtuc,smtuc_atual
+meta,dados,metro,metro_fase3_planeado_metade
+meta,dados,pasta_smtuc,data/gtfs/smtuc/atual_ep225
+meta,dados,impressao_digital_smtuc,12aefeabe5782c22
+meta,dados,pasta_metro,data/gtfs/metro/fase3_planeado_metade_20261111
+meta,dados,impressao_digital_metro,56c649045b4e10e2
+meta,dados,dia_referencia,2026-11-09
+meta,dados,hora_isocrona,08:20:00
+meta,parametros,WALK_SPEED_M_MIN,80
+meta,parametros,CATCHMENT_M,500
+meta,parametros,TRANSFER_BUFFER_MIN,1
+meta,parametros,FREQUENCY_WINDOW_START_H,7
+meta,parametros,FREQUENCY_WINDOW_END_H,20
+meta,parametros,TEMPORAL_OVERLAP_MAX_MIN,5
+meta,parametros,SPATIAL_OVERLAP_WALK_MIN,3
+meta,parametros,STADIUM_RADIUS_M,2000
+meta,parametros,REACHABILITY_MAX_MIN,60
+meta,parametros,REACHABILITY_MAX_TRANSFERS,2
+meta,parametros,LINE_54_OPTIMIZED_PHASE_SHIFT_MIN,-10
+meta,parametros,LINE_54_MELHORADO_PHASE_SHIFT_MIN,0
+linhas,10,avg_freq_min,60
+linhas,10,ref_day_trips,31
+linhas,10,overlap_pct,15.66
+linhas,10,overlap_extension_m,2505.2
+linhas,10,line_extension_m,15995.9
+linhas,10,overlap_stops,19
+linhas,10,total_stops,51
+linhas,10,radius_extension_pct,46.74
+linhas,10,temporal_overlaps_count,264
+linhas,10,temporal_overlaps_pct,77.65
+linhas,10,temporal_spatial_candidates_count,340
+linhas,10A,avg_freq_min,nan
+linhas,10A,ref_day_trips,7
+linhas,10A,overlap_pct,9.06
+linhas,10A,overlap_extension_m,2922.9
+linhas,10A,line_extension_m,32245.9
+linhas,10A,overlap_stops,14
+linhas,10A,total_stops,53
+linhas,10A,radius_extension_pct,11.54
+linhas,10A,temporal_overlaps_count,34
+linhas,10A,temporal_overlaps_pct,85
+linhas,10A,temporal_spatial_candidates_count,40
+linhas,11,avg_freq_min,44.3
+linhas,11,ref_day_trips,25
+linhas,11,overlap_pct,33.96
+linhas,11,overlap_extension_m,2265.9
+linhas,11,line_extension_m,6671.3
+linhas,11,overlap_stops,9
+linhas,11,total_stops,24
+linhas,11,radius_extension_pct,89.7
+linhas,11,temporal_overlaps_count,111
+linhas,11,temporal_overlaps_pct,98.23
+linhas,11,temporal_spatial_candidates_count,113
+linhas,12,avg_freq_min,60
+linhas,12,ref_day_trips,34
+linhas,12,overlap_pct,3.9
+linhas,12,overlap_extension_m,807.6
+linhas,12,line_extension_m,20733.1
+linhas,12,overlap_stops,5
+linhas,12,total_stops,54
+linhas,12,radius_extension_pct,0
+linhas,12,temporal_overlaps_count,101
+linhas,12,temporal_overlaps_pct,95.28
+linhas,12,temporal_spatial_candidates_count,106
+linhas,12A,avg_freq_min,nan
+linhas,12A,ref_day_trips,1
+linhas,12A,overlap_pct,0
+linhas,12A,overlap_extension_m,0
+linhas,12A,line_extension_m,10311.7
+linhas,12A,overlap_stops,1
+linhas,12A,total_stops,33
+linhas,12A,radius_extension_pct,0
+linhas,12A,temporal_overlaps_count,1
+linhas,12A,temporal_overlaps_pct,100
+linhas,12A,temporal_spatial_candidates_count,1
+linhas,13,avg_freq_min,60
+linhas,13,ref_day_trips,21
+linhas,13,overlap_pct,3.73
+linhas,13,overlap_extension_m,1615.2
+linhas,13,line_extension_m,43269.2
+linhas,13,overlap_stops,5
+linhas,13,total_stops,59
+linhas,13,radius_extension_pct,0
+linhas,13,temporal_overlaps_count,63
+linhas,13,temporal_overlaps_pct,98.44
+linhas,13,temporal_spatial_candidates_count,64
+linhas,13P,avg_freq_min,160
+linhas,13P,ref_day_trips,8
+linhas,13P,overlap_pct,0
+linhas,13P,overlap_extension_m,0
+linhas,13P,line_extension_m,13865.5
+linhas,13P,overlap_stops,2
+linhas,13P,total_stops,43
+linhas,13P,radius_extension_pct,0
+linhas,13P,temporal_overlaps_count,8
+linhas,13P,temporal_overlaps_pct,100
+linhas,13P,temporal_spatial_candidates_count,8
+linhas,13T,avg_freq_min,nan
+linhas,13T,ref_day_trips,3
+linhas,13T,overlap_pct,2.58
+linhas,13T,overlap_extension_m,807.6
+linhas,13T,line_extension_m,31272.5
+linhas,13T,overlap_stops,6
+linhas,13T,total_stops,74
+linhas,13T,radius_extension_pct,0
+linhas,13T,temporal_overlaps_count,7
+linhas,13T,temporal_overlaps_pct,100
+linhas,13T,temporal_spatial_candidates_count,7
+linhas,14,avg_freq_min,30
+linhas,14,ref_day_trips,58
+linhas,14,overlap_pct,12.78
+linhas,14,overlap_extension_m,1777.7
+linhas,14,line_extension_m,13913.8
+linhas,14,overlap_stops,6
+linhas,14,total_stops,41
+linhas,14,radius_extension_pct,0
+linhas,14,temporal_overlaps_count,198
+linhas,14,temporal_overlaps_pct,97.54
+linhas,14,temporal_spatial_candidates_count,203
+linhas,14T,avg_freq_min,25
+linhas,14T,ref_day_trips,80
+linhas,14T,overlap_pct,11.19
+linhas,14T,overlap_extension_m,1672.7
+linhas,14T,line_extension_m,14951.9
+linhas,14T,overlap_stops,5
+linhas,14T,total_stops,38
+linhas,14T,radius_extension_pct,0
+linhas,14T,temporal_overlaps_count,229
+linhas,14T,temporal_overlaps_pct,93.85
+linhas,14T,temporal_spatial_candidates_count,244
+linhas,16,avg_freq_min,42.1
+linhas,16,ref_day_trips,14
+linhas,16,overlap_pct,10.54
+linhas,16,overlap_extension_m,6671.3
+linhas,16,line_extension_m,63322.8
+linhas,16,overlap_stops,23
+linhas,16,total_stops,111
+linhas,16,radius_extension_pct,43.01
+linhas,16,temporal_overlaps_count,93
+linhas,16,temporal_overlaps_pct,100
+linhas,16,temporal_spatial_candidates_count,93
+linhas,16F,avg_freq_min,nan
+linhas,16F,ref_day_trips,2
+linhas,16F,overlap_pct,6.5
+linhas,16F,overlap_extension_m,1248.4
+linhas,16F,line_extension_m,19210.2
+linhas,16F,overlap_stops,10
+linhas,16F,total_stops,75
+linhas,16F,radius_extension_pct,41.96
+linhas,16F,temporal_overlaps_count,7
+linhas,16F,temporal_overlaps_pct,70
+linhas,16F,temporal_spatial_candidates_count,10
+linhas,16G,avg_freq_min,82.5
+linhas,16G,ref_day_trips,21
+linhas,16G,overlap_pct,11.02
+linhas,16G,overlap_extension_m,8269.7
+linhas,16G,line_extension_m,75065.3
+linhas,16G,overlap_stops,28
+linhas,16G,total_stops,127
+linhas,16G,radius_extension_pct,37.1
+linhas,16G,temporal_overlaps_count,148
+linhas,16G,temporal_overlaps_pct,93.67
+linhas,16G,temporal_spatial_candidates_count,158
+linhas,17,avg_freq_min,65
+linhas,17,ref_day_trips,16
+linhas,17,overlap_pct,3.74
+linhas,17,overlap_extension_m,807.6
+linhas,17,line_extension_m,21596.6
+linhas,17,overlap_stops,6
+linhas,17,total_stops,57
+linhas,17,radius_extension_pct,0
+linhas,17,temporal_overlaps_count,47
+linhas,17,temporal_overlaps_pct,100
+linhas,17,temporal_spatial_candidates_count,47
+linhas,18,avg_freq_min,54.1
+linhas,18,ref_day_trips,32
+linhas,18,overlap_pct,0.28
+linhas,18,overlap_extension_m,119.1
+linhas,18,line_extension_m,42510.8
+linhas,18,overlap_stops,2
+linhas,18,total_stops,60
+linhas,18,radius_extension_pct,0
+linhas,18,temporal_overlaps_count,48
+linhas,18,temporal_overlaps_pct,100
+linhas,18,temporal_spatial_candidates_count,48
+linhas,18E,avg_freq_min,556.6
+linhas,18E,ref_day_trips,4
+linhas,18E,overlap_pct,4.69
+linhas,18E,overlap_extension_m,1207.6
+linhas,18E,line_extension_m,25762.8
+linhas,18E,overlap_stops,11
+linhas,18E,total_stops,70
+linhas,18E,radius_extension_pct,0
+linhas,18E,temporal_overlaps_count,24
+linhas,18E,temporal_overlaps_pct,100
+linhas,18E,temporal_spatial_candidates_count,24
+linhas,18F,avg_freq_min,nan
+linhas,18F,ref_day_trips,0
+linhas,18F,overlap_pct,0.38
+linhas,18F,overlap_extension_m,59.5
+linhas,18F,line_extension_m,15703.1
+linhas,18F,overlap_stops,2
+linhas,18F,total_stops,42
+linhas,18F,radius_extension_pct,0
+linhas,18F,temporal_overlaps_count,0
+linhas,18F,temporal_overlaps_pct,0
+linhas,18F,temporal_spatial_candidates_count,0
+linhas,19,avg_freq_min,586.3
+linhas,19,ref_day_trips,5
+linhas,19,overlap_pct,28.19
+linhas,19,overlap_extension_m,9076.7
+linhas,19,line_extension_m,32195.7
+linhas,19,overlap_stops,21
+linhas,19,total_stops,56
+linhas,19,radius_extension_pct,16.41
+linhas,19,temporal_overlaps_count,46
+linhas,19,temporal_overlaps_pct,88.46
+linhas,19,temporal_spatial_candidates_count,52
+linhas,19A,avg_freq_min,nan
+linhas,19A,ref_day_trips,2
+linhas,19A,overlap_pct,19.01
+linhas,19A,overlap_extension_m,5445.6
+linhas,19A,line_extension_m,28647.2
+linhas,19A,overlap_stops,18
+linhas,19A,total_stops,87
+linhas,19A,radius_extension_pct,15.61
+linhas,19A,temporal_overlaps_count,20
+linhas,19A,temporal_overlaps_pct,83.33
+linhas,19A,temporal_spatial_candidates_count,24
+linhas,19R,avg_freq_min,423
+linhas,19R,ref_day_trips,7
+linhas,19R,overlap_pct,24.3
+linhas,19R,overlap_extension_m,7949.5
+linhas,19R,line_extension_m,32713
+linhas,19R,overlap_stops,23
+linhas,19R,total_stops,70
+linhas,19R,radius_extension_pct,15.51
+linhas,19R,temporal_overlaps_count,58
+linhas,19R,temporal_overlaps_pct,96.67
+linhas,19R,temporal_spatial_candidates_count,60
+linhas,19T,avg_freq_min,39.9
+linhas,19T,ref_day_trips,47
+linhas,19T,overlap_pct,18.95
+linhas,19T,overlap_extension_m,26330.6
+linhas,19T,line_extension_m,138926.8
+linhas,19T,overlap_stops,26
+linhas,19T,total_stops,91
+linhas,19T,radius_extension_pct,11.05
+linhas,19T,temporal_overlaps_count,418
+linhas,19T,temporal_overlaps_pct,90.09
+linhas,19T,temporal_spatial_candidates_count,464
+linhas,20,avg_freq_min,60
+linhas,20,ref_day_trips,24
+linhas,20,overlap_pct,9.58
+linhas,20,overlap_extension_m,3555.4
+linhas,20,line_extension_m,37102.9
+linhas,20,overlap_stops,6
+linhas,20,total_stops,56
+linhas,20,radius_extension_pct,0
+linhas,20,temporal_overlaps_count,76
+linhas,20,temporal_overlaps_pct,97.44
+linhas,20,temporal_spatial_candidates_count,78
+linhas,20T,avg_freq_min,380
+linhas,20T,ref_day_trips,4
+linhas,20T,overlap_pct,7.31
+linhas,20T,overlap_extension_m,1777.7
+linhas,20T,line_extension_m,24331.5
+linhas,20T,overlap_stops,6
+linhas,20T,total_stops,66
+linhas,20T,radius_extension_pct,0
+linhas,20T,temporal_overlaps_count,13
+linhas,20T,temporal_overlaps_pct,100
+linhas,20T,temporal_spatial_candidates_count,13
+linhas,21,avg_freq_min,122.1
+linhas,21,ref_day_trips,14
+linhas,21,overlap_pct,2.3
+linhas,21,overlap_extension_m,2422.8
+linhas,21,line_extension_m,105118.9
+linhas,21,overlap_stops,5
+linhas,21,total_stops,77
+linhas,21,radius_extension_pct,0
+linhas,21,temporal_overlaps_count,47
+linhas,21,temporal_overlaps_pct,94
+linhas,21,temporal_spatial_candidates_count,50
+linhas,21A,avg_freq_min,177.5
+linhas,21A,ref_day_trips,7
+linhas,21A,overlap_pct,4.04
+linhas,21A,overlap_extension_m,3608.9
+linhas,21A,line_extension_m,89410.1
+linhas,21A,overlap_stops,9
+linhas,21A,total_stops,88
+linhas,21A,radius_extension_pct,0
+linhas,21A,temporal_overlaps_count,26
+linhas,21A,temporal_overlaps_pct,96.3
+linhas,21A,temporal_spatial_candidates_count,27
+linhas,21R,avg_freq_min,61.4
+linhas,21R,ref_day_trips,21
+linhas,21R,overlap_pct,1.6
+linhas,21R,overlap_extension_m,1615.2
+linhas,21R,line_extension_m,100930.5
+linhas,21R,overlap_stops,5
+linhas,21R,total_stops,73
+linhas,21R,radius_extension_pct,0
+linhas,21R,temporal_overlaps_count,58
+linhas,21R,temporal_overlaps_pct,89.23
+linhas,21R,temporal_spatial_candidates_count,65
+linhas,21T,avg_freq_min,90.4
+linhas,21T,ref_day_trips,14
+linhas,21T,overlap_pct,2.95
+linhas,21T,overlap_extension_m,4017.7
+linhas,21T,line_extension_m,136184
+linhas,21T,overlap_stops,6
+linhas,21T,total_stops,90
+linhas,21T,radius_extension_pct,0
+linhas,21T,temporal_overlaps_count,45
+linhas,21T,temporal_overlaps_pct,97.83
+linhas,21T,temporal_spatial_candidates_count,46
+linhas,22,avg_freq_min,61.5
+linhas,22,ref_day_trips,32
+linhas,22,overlap_pct,12.13
+linhas,22,overlap_extension_m,2565
+linhas,22,line_extension_m,21154.2
+linhas,22,overlap_stops,10
+linhas,22,total_stops,55
+linhas,22,radius_extension_pct,0
+linhas,22,temporal_overlaps_count,171
+linhas,22,temporal_overlaps_pct,99.42
+linhas,22,temporal_spatial_candidates_count,172
+linhas,22F,avg_freq_min,nan
+linhas,22F,ref_day_trips,0
+linhas,22F,overlap_pct,12.4
+linhas,22F,overlap_extension_m,1777.7
+linhas,22F,line_extension_m,14340.7
+linhas,22F,overlap_stops,6
+linhas,22F,total_stops,44
+linhas,22F,radius_extension_pct,0
+linhas,22F,temporal_overlaps_count,0
+linhas,22F,temporal_overlaps_pct,0
+linhas,22F,temporal_spatial_candidates_count,0
+linhas,23,avg_freq_min,55
+linhas,23,ref_day_trips,23
+linhas,23,overlap_pct,7.54
+linhas,23,overlap_extension_m,2415.3
+linhas,23,line_extension_m,32039.5
+linhas,23,overlap_stops,11
+linhas,23,total_stops,46
+linhas,23,radius_extension_pct,0
+linhas,23,temporal_overlaps_count,102
+linhas,23,temporal_overlaps_pct,76.69
+linhas,23,temporal_spatial_candidates_count,133
+linhas,23C,avg_freq_min,51.2
+linhas,23C,ref_day_trips,6
+linhas,23C,overlap_pct,8.59
+linhas,23C,overlap_extension_m,1751.3
+linhas,23C,line_extension_m,20385.1
+linhas,23C,overlap_stops,9
+linhas,23C,total_stops,39
+linhas,23C,radius_extension_pct,0
+linhas,23C,temporal_overlaps_count,25
+linhas,23C,temporal_overlaps_pct,75.76
+linhas,23C,temporal_spatial_candidates_count,33
+linhas,23F,avg_freq_min,nan
+linhas,23F,ref_day_trips,0
+linhas,23F,overlap_pct,0.38
+linhas,23F,overlap_extension_m,59.5
+linhas,23F,line_extension_m,15635.9
+linhas,23F,overlap_stops,2
+linhas,23F,total_stops,41
+linhas,23F,radius_extension_pct,0
+linhas,23F,temporal_overlaps_count,0
+linhas,23F,temporal_overlaps_pct,0
+linhas,23F,temporal_spatial_candidates_count,0
+linhas,24,avg_freq_min,40
+linhas,24,ref_day_trips,41
+linhas,24,overlap_pct,31.49
+linhas,24,overlap_extension_m,2265.9
+linhas,24,line_extension_m,7196.5
+linhas,24,overlap_stops,9
+linhas,24,total_stops,24
+linhas,24,radius_extension_pct,90.45
+linhas,24,temporal_overlaps_count,199
+linhas,24,temporal_overlaps_pct,99
+linhas,24,temporal_spatial_candidates_count,201
+linhas,24T,avg_freq_min,30
+linhas,24T,ref_day_trips,74
+linhas,24T,overlap_pct,27.8
+linhas,24T,overlap_extension_m,6644.1
+linhas,24T,line_extension_m,23903.8
+linhas,24T,overlap_stops,15
+linhas,24T,total_stops,45
+linhas,24T,radius_extension_pct,73.94
+linhas,24T,temporal_overlaps_count,539
+linhas,24T,temporal_overlaps_pct,96.08
+linhas,24T,temporal_spatial_candidates_count,561
+linhas,25,avg_freq_min,67.2
+linhas,25,ref_day_trips,26
+linhas,25,overlap_pct,12.2
+linhas,25,overlap_extension_m,6093.1
+linhas,25,line_extension_m,49927.5
+linhas,25,overlap_stops,14
+linhas,25,total_stops,77
+linhas,25,radius_extension_pct,0
+linhas,25,temporal_overlaps_count,97
+linhas,25,temporal_overlaps_pct,98.98
+linhas,25,temporal_spatial_candidates_count,98
+linhas,25T,avg_freq_min,121.7
+linhas,25T,ref_day_trips,14
+linhas,25T,overlap_pct,16.7
+linhas,25T,overlap_extension_m,4323.2
+linhas,25T,line_extension_m,25889.4
+linhas,25T,overlap_stops,12
+linhas,25T,total_stops,60
+linhas,25T,radius_extension_pct,0
+linhas,25T,temporal_overlaps_count,52
+linhas,25T,temporal_overlaps_pct,98.11
+linhas,25T,temporal_spatial_candidates_count,53
+linhas,26,avg_freq_min,47.2
+linhas,26,ref_day_trips,24
+linhas,26,overlap_pct,21.52
+linhas,26,overlap_extension_m,6467.6
+linhas,26,line_extension_m,30060.6
+linhas,26,overlap_stops,24
+linhas,26,total_stops,55
+linhas,26,radius_extension_pct,100
+linhas,26,temporal_overlaps_count,123
+linhas,26,temporal_overlaps_pct,95.35
+linhas,26,temporal_spatial_candidates_count,129
+linhas,27,avg_freq_min,28.8
+linhas,27,ref_day_trips,53
+linhas,27,overlap_pct,28.91
+linhas,27,overlap_extension_m,18014.8
+linhas,27,line_extension_m,62321.2
+linhas,27,overlap_stops,27
+linhas,27,total_stops,66
+linhas,27,radius_extension_pct,17.31
+linhas,27,temporal_overlaps_count,543
+linhas,27,temporal_overlaps_pct,95.6
+linhas,27,temporal_spatial_candidates_count,568
+linhas,27F,avg_freq_min,48.1
+linhas,27F,ref_day_trips,9
+linhas,27F,overlap_pct,39.85
+linhas,27F,overlap_extension_m,7820.9
+linhas,27F,line_extension_m,19624.6
+linhas,27F,overlap_stops,22
+linhas,27F,total_stops,41
+linhas,27F,radius_extension_pct,18.06
+linhas,27F,temporal_overlaps_count,77
+linhas,27F,temporal_overlaps_pct,86.52
+linhas,27F,temporal_spatial_candidates_count,89
+linhas,28,avg_freq_min,30
+linhas,28,ref_day_trips,54
+linhas,28,overlap_pct,39.88
+linhas,28,overlap_extension_m,16350.5
+linhas,28,line_extension_m,40999.2
+linhas,28,overlap_stops,23
+linhas,28,total_stops,57
+linhas,28,radius_extension_pct,14.28
+linhas,28,temporal_overlaps_count,500
+linhas,28,temporal_overlaps_pct,99.8
+linhas,28,temporal_spatial_candidates_count,501
+linhas,28F,avg_freq_min,nan
+linhas,28F,ref_day_trips,0
+linhas,28F,overlap_pct,49.05
+linhas,28F,overlap_extension_m,6041.6
+linhas,28F,line_extension_m,12316.3
+linhas,28F,overlap_stops,21
+linhas,28F,total_stops,35
+linhas,28F,radius_extension_pct,9.37
+linhas,28F,temporal_overlaps_count,0
+linhas,28F,temporal_overlaps_pct,0
+linhas,28F,temporal_spatial_candidates_count,0
+linhas,29,avg_freq_min,25
+linhas,29,ref_day_trips,68
+linhas,29,overlap_pct,62.37
+linhas,29,overlap_extension_m,11299
+linhas,29,line_extension_m,18116.4
+linhas,29,overlap_stops,22
+linhas,29,total_stops,29
+linhas,29,radius_extension_pct,51.39
+linhas,29,temporal_overlaps_count,742
+linhas,29,temporal_overlaps_pct,89.61
+linhas,29,temporal_spatial_candidates_count,828
+linhas,2T,avg_freq_min,40.4
+linhas,2T,ref_day_trips,40
+linhas,2T,overlap_pct,9.52
+linhas,2T,overlap_extension_m,11691.8
+linhas,2T,line_extension_m,122854.3
+linhas,2T,overlap_stops,13
+linhas,2T,total_stops,102
+linhas,2T,radius_extension_pct,0
+linhas,2T,temporal_overlaps_count,200
+linhas,2T,temporal_overlaps_pct,96.15
+linhas,2T,temporal_spatial_candidates_count,208
+linhas,30,avg_freq_min,201.2
+linhas,30,ref_day_trips,10
+linhas,30,overlap_pct,11.5
+linhas,30,overlap_extension_m,4979.9
+linhas,30,line_extension_m,43300
+linhas,30,overlap_stops,11
+linhas,30,total_stops,104
+linhas,30,radius_extension_pct,0
+linhas,30,temporal_overlaps_count,43
+linhas,30,temporal_overlaps_pct,100
+linhas,30,temporal_spatial_candidates_count,43
+linhas,30T,avg_freq_min,269.4
+linhas,30T,ref_day_trips,6
+linhas,30T,overlap_pct,7.75
+linhas,30T,overlap_extension_m,1696.8
+linhas,30T,line_extension_m,21897.5
+linhas,30T,overlap_stops,7
+linhas,30T,total_stops,71
+linhas,30T,radius_extension_pct,0
+linhas,30T,temporal_overlaps_count,21
+linhas,30T,temporal_overlaps_pct,100
+linhas,30T,temporal_spatial_candidates_count,21
+linhas,31,avg_freq_min,50
+linhas,31,ref_day_trips,24
+linhas,31,overlap_pct,10.71
+linhas,31,overlap_extension_m,2331.3
+linhas,31,line_extension_m,21767
+linhas,31,overlap_stops,8
+linhas,31,total_stops,46
+linhas,31,radius_extension_pct,0
+linhas,31,temporal_overlaps_count,93
+linhas,31,temporal_overlaps_pct,95.88
+linhas,31,temporal_spatial_candidates_count,97
+linhas,32,avg_freq_min,77.5
+linhas,32,ref_day_trips,19
+linhas,32,overlap_pct,2.87
+linhas,32,overlap_extension_m,1615.2
+linhas,32,line_extension_m,56328
+linhas,32,overlap_stops,6
+linhas,32,total_stops,63
+linhas,32,radius_extension_pct,0
+linhas,32,temporal_overlaps_count,59
+linhas,32,temporal_overlaps_pct,100
+linhas,32,temporal_spatial_candidates_count,59
+linhas,32A,avg_freq_min,413.9
+linhas,32A,ref_day_trips,3
+linhas,32A,overlap_pct,7.08
+linhas,32A,overlap_extension_m,1615.2
+linhas,32A,line_extension_m,22821.9
+linhas,32A,overlap_stops,5
+linhas,32A,total_stops,69
+linhas,32A,radius_extension_pct,0
+linhas,32A,temporal_overlaps_count,11
+linhas,32A,temporal_overlaps_pct,100
+linhas,32A,temporal_spatial_candidates_count,11
+linhas,32R,avg_freq_min,63.7
+linhas,32R,ref_day_trips,6
+linhas,32R,overlap_pct,3.64
+linhas,32R,overlap_extension_m,1615.2
+linhas,32R,line_extension_m,44357
+linhas,32R,overlap_stops,5
+linhas,32R,total_stops,47
+linhas,32R,radius_extension_pct,0
+linhas,32R,temporal_overlaps_count,22
+linhas,32R,temporal_overlaps_pct,100
+linhas,32R,temporal_spatial_candidates_count,22
+linhas,34,avg_freq_min,25
+linhas,34,ref_day_trips,57
+linhas,34,overlap_pct,8.86
+linhas,34,overlap_extension_m,1107.8
+linhas,34,line_extension_m,12496.7
+linhas,34,overlap_stops,8
+linhas,34,total_stops,51
+linhas,34,radius_extension_pct,88.32
+linhas,34,temporal_overlaps_count,221
+linhas,34,temporal_overlaps_pct,100
+linhas,34,temporal_spatial_candidates_count,221
+linhas,35,avg_freq_min,60
+linhas,35,ref_day_trips,29
+linhas,35,overlap_pct,15.72
+linhas,35,overlap_extension_m,4158.5
+linhas,35,line_extension_m,26457.1
+linhas,35,overlap_stops,17
+linhas,35,total_stops,55
+linhas,35,radius_extension_pct,4.49
+linhas,35,temporal_overlaps_count,173
+linhas,35,temporal_overlaps_pct,93.01
+linhas,35,temporal_spatial_candidates_count,186
+linhas,36,avg_freq_min,70
+linhas,36,ref_day_trips,17
+linhas,36,overlap_pct,17.99
+linhas,36,overlap_extension_m,5727.7
+linhas,36,line_extension_m,31837.5
+linhas,36,overlap_stops,16
+linhas,36,total_stops,68
+linhas,36,radius_extension_pct,13.69
+linhas,36,temporal_overlaps_count,132
+linhas,36,temporal_overlaps_pct,93.62
+linhas,36,temporal_spatial_candidates_count,141
+linhas,36F,avg_freq_min,nan
+linhas,36F,ref_day_trips,0
+linhas,36F,overlap_pct,27.79
+linhas,36F,overlap_extension_m,12297.9
+linhas,36F,line_extension_m,44257.3
+linhas,36F,overlap_stops,29
+linhas,36F,total_stops,95
+linhas,36F,radius_extension_pct,22.41
+linhas,36F,temporal_overlaps_count,0
+linhas,36F,temporal_overlaps_pct,0
+linhas,36F,temporal_spatial_candidates_count,0
+linhas,36T,avg_freq_min,57.5
+linhas,36T,ref_day_trips,18
+linhas,36T,overlap_pct,20.55
+linhas,36T,overlap_extension_m,5514.6
+linhas,36T,line_extension_m,26839.9
+linhas,36T,overlap_stops,18
+linhas,36T,total_stops,65
+linhas,36T,radius_extension_pct,8.91
+linhas,36T,temporal_overlaps_count,123
+linhas,36T,temporal_overlaps_pct,89.78
+linhas,36T,temporal_spatial_candidates_count,137
+linhas,37,avg_freq_min,25.1
+linhas,37,ref_day_trips,62
+linhas,37,overlap_pct,24.16
+linhas,37,overlap_extension_m,4199.3
+linhas,37,line_extension_m,17381.4
+linhas,37,overlap_stops,16
+linhas,37,total_stops,45
+linhas,37,radius_extension_pct,95.44
+linhas,37,temporal_overlaps_count,453
+linhas,37,temporal_overlaps_pct,87.79
+linhas,37,temporal_spatial_candidates_count,516
+linhas,38,avg_freq_min,59.7
+linhas,38,ref_day_trips,29
+linhas,38,overlap_pct,11.88
+linhas,38,overlap_extension_m,3107.2
+linhas,38,line_extension_m,26156.6
+linhas,38,overlap_stops,9
+linhas,38,total_stops,52
+linhas,38,radius_extension_pct,56.81
+linhas,38,temporal_overlaps_count,127
+linhas,38,temporal_overlaps_pct,99.22
+linhas,38,temporal_spatial_candidates_count,128
+linhas,38F,avg_freq_min,nan
+linhas,38F,ref_day_trips,7
+linhas,38F,overlap_pct,18.2
+linhas,38F,overlap_extension_m,3693.6
+linhas,38F,line_extension_m,20297.7
+linhas,38F,overlap_stops,14
+linhas,38F,total_stops,56
+linhas,38F,radius_extension_pct,43.91
+linhas,38F,temporal_overlaps_count,38
+linhas,38F,temporal_overlaps_pct,88.37
+linhas,38F,temporal_spatial_candidates_count,43
+linhas,38T,avg_freq_min,525
+linhas,38T,ref_day_trips,4
+linhas,38T,overlap_pct,18.74
+linhas,38T,overlap_extension_m,1249.2
+linhas,38T,line_extension_m,6667.2
+linhas,38T,overlap_stops,5
+linhas,38T,total_stops,20
+linhas,38T,radius_extension_pct,90.88
+linhas,38T,temporal_overlaps_count,6
+linhas,38T,temporal_overlaps_pct,66.67
+linhas,38T,temporal_spatial_candidates_count,9
+linhas,39,avg_freq_min,67.8
+linhas,39,ref_day_trips,20
+linhas,39,overlap_pct,13.19
+linhas,39,overlap_extension_m,6057
+linhas,39,line_extension_m,45927
+linhas,39,overlap_stops,13
+linhas,39,total_stops,82
+linhas,39,radius_extension_pct,0
+linhas,39,temporal_overlaps_count,102
+linhas,39,temporal_overlaps_pct,99.03
+linhas,39,temporal_spatial_candidates_count,103
+linhas,4,avg_freq_min,30
+linhas,4,ref_day_trips,66
+linhas,4,overlap_pct,24.51
+linhas,4,overlap_extension_m,1143.9
+linhas,4,line_extension_m,4666.3
+linhas,4,overlap_stops,7
+linhas,4,total_stops,18
+linhas,4,radius_extension_pct,89.65
+linhas,4,temporal_overlaps_count,247
+linhas,4,temporal_overlaps_pct,93.56
+linhas,4,temporal_spatial_candidates_count,264
+linhas,41,avg_freq_min,55.9
+linhas,41,ref_day_trips,22
+linhas,41,overlap_pct,12.34
+linhas,41,overlap_extension_m,2232.9
+linhas,41,line_extension_m,18101.6
+linhas,41,overlap_stops,9
+linhas,41,total_stops,50
+linhas,41,radius_extension_pct,25.16
+linhas,41,temporal_overlaps_count,75
+linhas,41,temporal_overlaps_pct,100
+linhas,41,temporal_spatial_candidates_count,75
+linhas,42M,avg_freq_min,nan
+linhas,42M,ref_day_trips,1
+linhas,42M,overlap_pct,0
+linhas,42M,overlap_extension_m,0
+linhas,42M,line_extension_m,4937.3
+linhas,42M,overlap_stops,0
+linhas,42M,total_stops,17
+linhas,42M,radius_extension_pct,33.88
+linhas,42M,temporal_overlaps_count,0
+linhas,42M,temporal_overlaps_pct,0
+linhas,42M,temporal_spatial_candidates_count,0
+linhas,42T,avg_freq_min,nan
+linhas,42T,ref_day_trips,2
+linhas,42T,overlap_pct,6.66
+linhas,42T,overlap_extension_m,1069.6
+linhas,42T,line_extension_m,16068.6
+linhas,42T,overlap_stops,5
+linhas,42T,total_stops,46
+linhas,42T,radius_extension_pct,56.41
+linhas,42T,temporal_overlaps_count,7
+linhas,42T,temporal_overlaps_pct,100
+linhas,42T,temporal_spatial_candidates_count,7
+linhas,42V,avg_freq_min,345
+linhas,42V,ref_day_trips,6
+linhas,42V,overlap_pct,10.19
+linhas,42V,overlap_extension_m,2591
+linhas,42V,line_extension_m,25418.3
+linhas,42V,overlap_stops,11
+linhas,42V,total_stops,71
+linhas,42V,radius_extension_pct,58.18
+linhas,42V,temporal_overlaps_count,39
+linhas,42V,temporal_overlaps_pct,92.86
+linhas,42V,temporal_spatial_candidates_count,42
+linhas,43,avg_freq_min,56.2
+linhas,43,ref_day_trips,5
+linhas,43,overlap_pct,0.24
+linhas,43,overlap_extension_m,59.5
+linhas,43,line_extension_m,24856
+linhas,43,overlap_stops,2
+linhas,43,total_stops,68
+linhas,43,radius_extension_pct,0
+linhas,43,temporal_overlaps_count,4
+linhas,43,temporal_overlaps_pct,80
+linhas,43,temporal_spatial_candidates_count,5
+linhas,43T,avg_freq_min,156.9
+linhas,43T,ref_day_trips,10
+linhas,43T,overlap_pct,5.36
+linhas,43T,overlap_extension_m,1544.5
+linhas,43T,line_extension_m,28800.7
+linhas,43T,overlap_stops,6
+linhas,43T,total_stops,69
+linhas,43T,radius_extension_pct,18.35
+linhas,43T,temporal_overlaps_count,34
+linhas,43T,temporal_overlaps_pct,100
+linhas,43T,temporal_spatial_candidates_count,34
+linhas,43V,avg_freq_min,67.2
+linhas,43V,ref_day_trips,4
+linhas,43V,overlap_pct,0.2
+linhas,43V,overlap_extension_m,59.5
+linhas,43V,line_extension_m,29839.5
+linhas,43V,overlap_stops,2
+linhas,43V,total_stops,67
+linhas,43V,radius_extension_pct,3.45
+linhas,43V,temporal_overlaps_count,5
+linhas,43V,temporal_overlaps_pct,100
+linhas,43V,temporal_spatial_candidates_count,5
+linhas,44,avg_freq_min,180.7
+linhas,44,ref_day_trips,14
+linhas,44,overlap_pct,14.6
+linhas,44,overlap_extension_m,10325.5
+linhas,44,line_extension_m,70716.4
+linhas,44,overlap_stops,27
+linhas,44,total_stops,91
+linhas,44,radius_extension_pct,24.15
+linhas,44,temporal_overlaps_count,153
+linhas,44,temporal_overlaps_pct,94.44
+linhas,44,temporal_spatial_candidates_count,162
+linhas,45,avg_freq_min,95.9
+linhas,45,ref_day_trips,14
+linhas,45,overlap_pct,24.01
+linhas,45,overlap_extension_m,4742.1
+linhas,45,line_extension_m,19747.6
+linhas,45,overlap_stops,20
+linhas,45,total_stops,57
+linhas,45,radius_extension_pct,38.32
+linhas,45,temporal_overlaps_count,135
+linhas,45,temporal_overlaps_pct,91.22
+linhas,45,temporal_spatial_candidates_count,148
+linhas,47,avg_freq_min,65
+linhas,47,ref_day_trips,20
+linhas,47,overlap_pct,0.11
+linhas,47,overlap_extension_m,119.1
+linhas,47,line_extension_m,104302.2
+linhas,47,overlap_stops,2
+linhas,47,total_stops,93
+linhas,47,radius_extension_pct,0
+linhas,47,temporal_overlaps_count,28
+linhas,47,temporal_overlaps_pct,96.55
+linhas,47,temporal_spatial_candidates_count,29
+linhas,47F,avg_freq_min,nan
+linhas,47F,ref_day_trips,0
+linhas,47F,overlap_pct,0.17
+linhas,47F,overlap_extension_m,119.1
+linhas,47F,line_extension_m,69049.3
+linhas,47F,overlap_stops,2
+linhas,47F,total_stops,143
+linhas,47F,radius_extension_pct,0
+linhas,47F,temporal_overlaps_count,0
+linhas,47F,temporal_overlaps_pct,0
+linhas,47F,temporal_spatial_candidates_count,0
+linhas,48,avg_freq_min,100
+linhas,48,ref_day_trips,18
+linhas,48,overlap_pct,0.2
+linhas,48,overlap_extension_m,119.1
+linhas,48,line_extension_m,60644.8
+linhas,48,overlap_stops,2
+linhas,48,total_stops,95
+linhas,48,radius_extension_pct,0
+linhas,48,temporal_overlaps_count,27
+linhas,48,temporal_overlaps_pct,100
+linhas,48,temporal_spatial_candidates_count,27
+linhas,48T,avg_freq_min,562.2
+linhas,48T,ref_day_trips,4
+linhas,48T,overlap_pct,0.38
+linhas,48T,overlap_extension_m,59.5
+linhas,48T,line_extension_m,15558.2
+linhas,48T,overlap_stops,2
+linhas,48T,total_stops,51
+linhas,48T,radius_extension_pct,0
+linhas,48T,temporal_overlaps_count,5
+linhas,48T,temporal_overlaps_pct,83.33
+linhas,48T,temporal_spatial_candidates_count,6
+linhas,49,avg_freq_min,60
+linhas,49,ref_day_trips,14
+linhas,49,overlap_pct,0.3
+linhas,49,overlap_extension_m,59.5
+linhas,49,line_extension_m,19753.2
+linhas,49,overlap_stops,2
+linhas,49,total_stops,59
+linhas,49,radius_extension_pct,0
+linhas,49,temporal_overlaps_count,21
+linhas,49,temporal_overlaps_pct,100
+linhas,49,temporal_spatial_candidates_count,21
+linhas,49T,avg_freq_min,31.1
+linhas,49T,ref_day_trips,44
+linhas,49T,overlap_pct,0.22
+linhas,49T,overlap_extension_m,119.1
+linhas,49T,line_extension_m,53850
+linhas,49T,overlap_stops,3
+linhas,49T,total_stops,69
+linhas,49T,radius_extension_pct,0
+linhas,49T,temporal_overlaps_count,63
+linhas,49T,temporal_overlaps_pct,95.45
+linhas,49T,temporal_spatial_candidates_count,66
+linhas,5,avg_freq_min,30
+linhas,5,ref_day_trips,58
+linhas,5,overlap_pct,25.89
+linhas,5,overlap_extension_m,14608.7
+linhas,5,line_extension_m,56430.8
+linhas,5,overlap_stops,32
+linhas,5,total_stops,81
+linhas,5,radius_extension_pct,65.69
+linhas,5,temporal_overlaps_count,819
+linhas,5,temporal_overlaps_pct,99.15
+linhas,5,temporal_spatial_candidates_count,826
+linhas,50,avg_freq_min,77.4
+linhas,50,ref_day_trips,22
+linhas,50,overlap_pct,10.12
+linhas,50,overlap_extension_m,3383.5
+linhas,50,line_extension_m,33442.2
+linhas,50,overlap_stops,9
+linhas,50,total_stops,72
+linhas,50,radius_extension_pct,0
+linhas,50,temporal_overlaps_count,104
+linhas,50,temporal_overlaps_pct,94.55
+linhas,50,temporal_spatial_candidates_count,110
+linhas,50M,avg_freq_min,208.5
+linhas,50M,ref_day_trips,6
+linhas,50M,overlap_pct,9.88
+linhas,50M,overlap_extension_m,5461.9
+linhas,50M,line_extension_m,55268.6
+linhas,50M,overlap_stops,11
+linhas,50M,total_stops,85
+linhas,50M,radius_extension_pct,0
+linhas,50M,temporal_overlaps_count,32
+linhas,50M,temporal_overlaps_pct,100
+linhas,50M,temporal_spatial_candidates_count,32
+linhas,50S,avg_freq_min,480
+linhas,50S,ref_day_trips,8
+linhas,50S,overlap_pct,6.68
+linhas,50S,overlap_extension_m,4422.8
+linhas,50S,line_extension_m,66202.3
+linhas,50S,overlap_stops,9
+linhas,50S,total_stops,99
+linhas,50S,radius_extension_pct,0
+linhas,50S,temporal_overlaps_count,34
+linhas,50S,temporal_overlaps_pct,89.47
+linhas,50S,temporal_spatial_candidates_count,38
+linhas,50T,avg_freq_min,40
+linhas,50T,ref_day_trips,48
+linhas,50T,overlap_pct,8.59
+linhas,50T,overlap_extension_m,14252.6
+linhas,50T,line_extension_m,165908.3
+linhas,50T,overlap_stops,16
+linhas,50T,total_stops,123
+linhas,50T,radius_extension_pct,0
+linhas,50T,temporal_overlaps_count,225
+linhas,50T,temporal_overlaps_pct,89.64
+linhas,50T,temporal_spatial_candidates_count,251
+linhas,51,avg_freq_min,196.9
+linhas,51,ref_day_trips,8
+linhas,51,overlap_pct,5.89
+linhas,51,overlap_extension_m,3383.5
+linhas,51,line_extension_m,57429.8
+linhas,51,overlap_stops,9
+linhas,51,total_stops,92
+linhas,51,radius_extension_pct,0
+linhas,51,temporal_overlaps_count,30
+linhas,51,temporal_overlaps_pct,100
+linhas,51,temporal_spatial_candidates_count,30
+linhas,52,avg_freq_min,100
+linhas,52,ref_day_trips,11
+linhas,52,overlap_pct,0
+linhas,52,overlap_extension_m,0
+linhas,52,line_extension_m,44398.5
+linhas,52,overlap_stops,0
+linhas,52,total_stops,74
+linhas,52,radius_extension_pct,0
+linhas,52,temporal_overlaps_count,0
+linhas,52,temporal_overlaps_pct,0
+linhas,52,temporal_spatial_candidates_count,0
+linhas,52M,avg_freq_min,nan
+linhas,52M,ref_day_trips,0
+linhas,52M,overlap_pct,0
+linhas,52M,overlap_extension_m,0
+linhas,52M,line_extension_m,12944.6
+linhas,52M,overlap_stops,0
+linhas,52M,total_stops,21
+linhas,52M,radius_extension_pct,0
+linhas,52M,temporal_overlaps_count,0
+linhas,52M,temporal_overlaps_pct,0
+linhas,52M,temporal_spatial_candidates_count,0
+linhas,52P,avg_freq_min,90.2
+linhas,52P,ref_day_trips,9
+linhas,52P,overlap_pct,0
+linhas,52P,overlap_extension_m,0
+linhas,52P,line_extension_m,50242.2
+linhas,52P,overlap_stops,0
+linhas,52P,total_stops,62
+linhas,52P,radius_extension_pct,0
+linhas,52P,temporal_overlaps_count,0
+linhas,52P,temporal_overlaps_pct,0
+linhas,52P,temporal_spatial_candidates_count,0
+linhas,52T,avg_freq_min,nan
+linhas,52T,ref_day_trips,0
+linhas,52T,overlap_pct,0
+linhas,52T,overlap_extension_m,0
+linhas,52T,line_extension_m,16818.6
+linhas,52T,overlap_stops,0
+linhas,52T,total_stops,36
+linhas,52T,radius_extension_pct,0
+linhas,52T,temporal_overlaps_count,0
+linhas,52T,temporal_overlaps_pct,0
+linhas,52T,temporal_spatial_candidates_count,0
+linhas,53,avg_freq_min,67.5
+linhas,53,ref_day_trips,16
+linhas,53,overlap_pct,11.55
+linhas,53,overlap_extension_m,4532.9
+linhas,53,line_extension_m,39250.9
+linhas,53,overlap_stops,10
+linhas,53,total_stops,65
+linhas,53,radius_extension_pct,0
+linhas,53,temporal_overlaps_count,20
+linhas,53,temporal_overlaps_pct,100
+linhas,53,temporal_spatial_candidates_count,20
+linhas,53T,avg_freq_min,206.5
+linhas,53T,ref_day_trips,10
+linhas,53T,overlap_pct,6.37
+linhas,53T,overlap_extension_m,2266.5
+linhas,53T,line_extension_m,35603
+linhas,53T,overlap_stops,10
+linhas,53T,total_stops,70
+linhas,53T,radius_extension_pct,0
+linhas,53T,temporal_overlaps_count,10
+linhas,53T,temporal_overlaps_pct,100
+linhas,53T,temporal_spatial_candidates_count,10
+linhas,54,avg_freq_min,40
+linhas,54,ref_day_trips,42
+linhas,54,overlap_pct,18.26
+linhas,54,overlap_extension_m,1656.2
+linhas,54,line_extension_m,9070.5
+linhas,54,overlap_stops,8
+linhas,54,total_stops,26
+linhas,54,radius_extension_pct,66.8
+linhas,54,temporal_overlaps_count,183
+linhas,54,temporal_overlaps_pct,87.98
+linhas,54,temporal_spatial_candidates_count,208
+linhas,5T,avg_freq_min,nan
+linhas,5T,ref_day_trips,15
+linhas,5T,overlap_pct,25.14
+linhas,5T,overlap_extension_m,6468.7
+linhas,5T,line_extension_m,25729.4
+linhas,5T,overlap_stops,28
+linhas,5T,total_stops,73
+linhas,5T,radius_extension_pct,62.34
+linhas,5T,temporal_overlaps_count,169
+linhas,5T,temporal_overlaps_pct,83.25
+linhas,5T,temporal_spatial_candidates_count,203
+linhas,6,avg_freq_min,27.5
+linhas,6,ref_day_trips,61
+linhas,6,overlap_pct,33.73
+linhas,6,overlap_extension_m,15819.4
+linhas,6,line_extension_m,46894
+linhas,6,overlap_stops,26
+linhas,6,total_stops,73
+linhas,6,radius_extension_pct,30.02
+linhas,6,temporal_overlaps_count,704
+linhas,6,temporal_overlaps_pct,92.39
+linhas,6,temporal_spatial_candidates_count,762
+linhas,6F,avg_freq_min,nan
+linhas,6F,ref_day_trips,14
+linhas,6F,overlap_pct,29.51
+linhas,6F,overlap_extension_m,5716.2
+linhas,6F,line_extension_m,19373.2
+linhas,6F,overlap_stops,25
+linhas,6F,total_stops,71
+linhas,6F,radius_extension_pct,30.34
+linhas,6F,temporal_overlaps_count,105
+linhas,6F,temporal_overlaps_pct,67.31
+linhas,6F,temporal_spatial_candidates_count,156
+linhas,7,avg_freq_min,20
+linhas,7,ref_day_trips,101
+linhas,7,overlap_pct,22.31
+linhas,7,overlap_extension_m,3284.6
+linhas,7,line_extension_m,14722.3
+linhas,7,overlap_stops,19
+linhas,7,total_stops,51
+linhas,7,radius_extension_pct,82.41
+linhas,7,temporal_overlaps_count,940
+linhas,7,temporal_overlaps_pct,84.61
+linhas,7,temporal_spatial_candidates_count,1111
+linhas,9,avg_freq_min,75.6
+linhas,9,ref_day_trips,20
+linhas,9,overlap_pct,19.5
+linhas,9,overlap_extension_m,8099.5
+linhas,9,line_extension_m,41535.7
+linhas,9,overlap_stops,22
+linhas,9,total_stops,55
+linhas,9,radius_extension_pct,42.12
+linhas,9,temporal_overlaps_count,196
+linhas,9,temporal_overlaps_pct,92.45
+linhas,9,temporal_spatial_candidates_count,212
+overlap_resumo,total,TEMPORAL_OVERLAP_MAX_MIN,5
+overlap_resumo,total,overlap_lines,86
+overlap_resumo,total,overlap_stations,115
+overlap_resumo,total,temporal_overlap_lines,82
+overlap_resumo,total,temporal_overlap_pct,92.37
+overlap_resumo,total,temporal_overlap_stations,115
+overlap_resumo,total,temporal_overlap_times,11598
+overlap_resumo,total,total_overlap_extension_m,382826.7
+overlap_resumo,total,total_spatial_candidates,12556
+overlap_resumo,total,walk_distance_threshold,240
+overlap_resumo,top5_01,line,29
+overlap_resumo,top5_02,line,28F
+overlap_resumo,top5_03,line,28
+overlap_resumo,top5_04,line,27F
+overlap_resumo,top5_05,line,11
+overlap_resumo,bottom5_01,line,52T
+overlap_resumo,bottom5_02,line,52P
+overlap_resumo,bottom5_03,line,52M
+overlap_resumo,bottom5_04,line,52
+overlap_resumo,bottom5_05,line,42M
+overlap_resumo,bottom5_stadium_01,line,42T
+overlap_resumo,bottom5_stadium_02,line,34
+overlap_resumo,bottom5_stadium_03,line,42V
+overlap_resumo,bottom5_stadium_04,line,38
+overlap_resumo,bottom5_stadium_05,line,54
+esperas_54,Portagem metro→bus | atual,median,18.965
+esperas_54,Portagem metro→bus | atual,cov10,24.1935
+esperas_54,Portagem metro→bus | atual,lost15,70.9677
+esperas_54,Portagem metro→bus | atual,shift_min,0
+esperas_54,Portagem metro→bus | otimizado,median,18.535
+esperas_54,Portagem metro→bus | otimizado,cov10,24.1935
+esperas_54,Portagem metro→bus | otimizado,lost15,69.3548
+esperas_54,Portagem metro→bus | otimizado,shift_min,-10
+esperas_54,Portagem metro→bus | melhorado,median,9.08
+esperas_54,Portagem metro→bus | melhorado,cov10,45.1613
+esperas_54,Portagem metro→bus | melhorado,lost15,51.6129
+esperas_54,Portagem metro→bus | melhorado,shift_min,0
+esperas_54,Portagem bus→metro | atual,median,4.5
+esperas_54,Portagem bus→metro | atual,cov10,97.1429
+esperas_54,Portagem bus→metro | atual,lost15,0
+esperas_54,Portagem bus→metro | atual,shift_min,0
+esperas_54,Portagem bus→metro | otimizado,median,4.02
+esperas_54,Portagem bus→metro | otimizado,cov10,97.1429
+esperas_54,Portagem bus→metro | otimizado,lost15,0
+esperas_54,Portagem bus→metro | otimizado,shift_min,-10
+esperas_54,Portagem bus→metro | melhorado,median,4.5
+esperas_54,Portagem bus→metro | melhorado,cov10,95.7143
+esperas_54,Portagem bus→metro | melhorado,lost15,0
+esperas_54,Portagem bus→metro | melhorado,shift_min,0
+esperas_54,Portela metro→bus | atual,median,19.75
+esperas_54,Portela metro→bus | atual,cov10,20.6897
+esperas_54,Portela metro→bus | atual,lost15,79.3103
+esperas_54,Portela metro→bus | atual,shift_min,0
+esperas_54,Portela metro→bus | otimizado,median,19.75
+esperas_54,Portela metro→bus | otimizado,cov10,22.4138
+esperas_54,Portela metro→bus | otimizado,lost15,77.5862
+esperas_54,Portela metro→bus | otimizado,shift_min,-10
+esperas_54,Portela metro→bus | melhorado,median,17.68
+esperas_54,Portela metro→bus | melhorado,cov10,41.3793
+esperas_54,Portela metro→bus | melhorado,lost15,58.6207
+esperas_54,Portela metro→bus | melhorado,shift_min,0
+esperas_54,Portela bus→metro | atual,median,6.32
+esperas_54,Portela bus→metro | atual,cov10,66.6667
+esperas_54,Portela bus→metro | atual,lost15,33.3333
+esperas_54,Portela bus→metro | atual,shift_min,0
+esperas_54,Portela bus→metro | otimizado,median,6.28
+esperas_54,Portela bus→metro | otimizado,cov10,61.9048
+esperas_54,Portela bus→metro | otimizado,lost15,33.3333
+esperas_54,Portela bus→metro | otimizado,shift_min,-10
+esperas_54,Portela bus→metro | melhorado,median,6.77
+esperas_54,Portela bus→metro | melhorado,cov10,64.2857
+esperas_54,Portela bus→metro | melhorado,lost15,26.1905
+esperas_54,Portela bus→metro | melhorado,shift_min,0
+esperas_54,Portagem bus→metro (norte) | atual,median,5.73
+esperas_54,Portagem bus→metro (norte) | atual,cov10,94.2857
+esperas_54,Portagem bus→metro (norte) | atual,lost15,2.8571
+esperas_54,Portagem bus→metro (norte) | atual,shift_min,0
+esperas_54,Portagem bus→metro (norte) | otimizado,median,5.83
+esperas_54,Portagem bus→metro (norte) | otimizado,cov10,97.1429
+esperas_54,Portagem bus→metro (norte) | otimizado,lost15,0
+esperas_54,Portagem bus→metro (norte) | otimizado,shift_min,-10
+esperas_54,Portagem bus→metro (norte) | melhorado,median,5.83
+esperas_54,Portagem bus→metro (norte) | melhorado,cov10,95.7143
+esperas_54,Portagem bus→metro (norte) | melhorado,lost15,1.4286
+esperas_54,Portagem bus→metro (norte) | melhorado,shift_min,0
+busca_fase_54,otimizado,shift_min,-10
+busca_fase_54,otimizado,melhorados,3
+busca_fase_54,otimizado,regressoes,0
+busca_fase_54,otimizado,soma_medianas,48.59
+busca_fase_54,melhorado,shift_min,0
+busca_fase_54,melhorado,melhorados,2
+busca_fase_54,melhorado,regressoes,1
+busca_fase_54,melhorado,soma_medianas,38.03
+populacao,total,populacao,140816
+populacao,total,zonas,1848
+populacao,total,partidas,1254159
+populacao,sem_oferta,populacao,13534
+populacao,sem_oferta,zonas,375
+populacao,raio_estadio_3000m,populacao,62287
+populacao,raio_estadio_3000m,populacao_sem_oferta,119
+populacao,raio_estadio_3000m,zonas_sem_oferta,7
+populacao,top_subservico_01,bgri,06032400104
+populacao,top_subservico_01,score,253
+populacao,top_subservico_02,bgri,06032400109
+populacao,top_subservico_02,score,145
+populacao,top_subservico_03,bgri,06032000107
+populacao,top_subservico_03,score,140
+populacao,top_subservico_04,bgri,06031100205
+populacao,top_subservico_04,score,139
+populacao,top_subservico_05,bgri,06033200204
+populacao,top_subservico_05,score,139
+populacao,top_subservico_06,bgri,06032400218
+populacao,top_subservico_06,score,138
+populacao,top_subservico_07,bgri,06032400103
+populacao,top_subservico_07,score,134
+populacao,top_subservico_08,bgri,06032000211
+populacao,top_subservico_08,score,130
+populacao,top_subservico_09,bgri,06032000105
+populacao,top_subservico_09,score,127
+populacao,top_subservico_10,bgri,06033700107
+populacao,top_subservico_10,score,123
+isocrona,origem,hora_partida,08:20:00
+isocrona,faixa 0-10,populacao,16633
+isocrona,faixa 0-10,zonas,128
+isocrona,faixa 10-15,populacao,14362
+isocrona,faixa 10-15,zonas,134
+isocrona,faixa 15-30,populacao,41614
+isocrona,faixa 15-30,zonas,368
+isocrona,faixa 30-60,populacao,46875
+isocrona,faixa 30-60,zonas,715
+isocrona,faixa >60,populacao,21332
+isocrona,faixa >60,zonas,503
+isocrona,modo a pé,populacao,27691
+isocrona,modo transporte público,populacao,113125
+isocrona,total,tempo_medio_ponderado_min,35.6857
+isocrona_nos,Portagem | origem,partidas,07:30:00-09:20:00/12
+isocrona_nos,Portagem | faixa 0-10,populacao_media,11111.4167
+isocrona_nos,Portagem | faixa 10-15,populacao_media,23896.9167
+isocrona_nos,Portagem | faixa 15-30,populacao_media,47124.25
+isocrona_nos,Portagem | faixa 30-60,populacao_media,39964.6667
+isocrona_nos,Portagem | faixa >60,populacao_media,18718.75
+isocrona_nos,Portagem | total,populacao_30min_media,82132.5833
+isocrona_nos,Portagem | total,tempo_medio_ponderado_min,33.424
+isocrona_nos,Portagem | total,melhor_partida_min,30.4414
+isocrona_nos,Portagem | total,pior_partida_min,37.6167
+isocrona_nos,Portela | origem,partidas,07:30:00-09:20:00/12
+isocrona_nos,Portela | faixa 0-10,populacao_media,6497.9167
+isocrona_nos,Portela | faixa 10-15,populacao_media,10777.0833
+isocrona_nos,Portela | faixa 15-30,populacao_media,40106.9167
+isocrona_nos,Portela | faixa 30-60,populacao_media,53532.0833
+isocrona_nos,Portela | faixa >60,populacao_media,29902
+isocrona_nos,Portela | total,populacao_30min_media,57381.9167
+isocrona_nos,Portela | total,tempo_medio_ponderado_min,43.8724
+isocrona_nos,Portela | total,melhor_partida_min,38.4024
+isocrona_nos,Portela | total,pior_partida_min,48.5958
+redundancia,desperdicio,dia_km_metro,2403.8549
+redundancia,desperdicio,dia_horas_metro,185.7225
+redundancia,desperdicio,dia_t_co2,1.828
+redundancia,desperdicio,semana_km_metro,14242.3238
+redundancia,desperdicio,semana_horas_metro,1081.89
+redundancia,desperdicio,ano_km_metro,740600.8399
+redundancia,desperdicio,ano_horas_metro,56258.28
+redundancia,desperdicio,ano_t_co2,563.1849
+redundancia,desperdicio,kg_co2_por_km,0.7604
+redundancia,semana-tipo dia útil,dia,2026-11-09
+redundancia,semana-tipo dia útil,peso,5
+redundancia,semana-tipo dia útil,viagens,1970
+redundancia,semana-tipo dia útil,km_metro,2403.8549
+redundancia,semana-tipo dia útil,horas_metro,185.7225
+redundancia,semana-tipo sábado,dia,2026-11-07
+redundancia,semana-tipo sábado,peso,1
+redundancia,semana-tipo sábado,viagens,1028
+redundancia,semana-tipo sábado,km_metro,1382.495
+redundancia,semana-tipo sábado,horas_metro,95.2086
+redundancia,semana-tipo domingo,dia,2026-11-08
+redundancia,semana-tipo domingo,peso,1
+redundancia,semana-tipo domingo,viagens,581
+redundancia,semana-tipo domingo,km_metro,840.5545
+redundancia,semana-tipo domingo,horas_metro,58.0689
+redundancia,total,linhas,85
+redundancia,total,linhas_com_troco_metro,80
+redundancia,total,viagens,1970
+redundancia,total,km,16055.3907
+redundancia,total,km_metro,2403.8549
+redundancia,total,pct_km_metro,14.9723
+redundancia,total,horas,1017
+redundancia,total,horas_metro,185.7225
+redundancia,linha 10,viagens,31
+redundancia,linha 10,km,247.7134
+redundancia,linha 10,km_metro,39.1472
+redundancia,linha 10,pct_km_metro,15.8034
+redundancia,linha 10,horas_metro,3.3375
+redundancia,linha 10A,viagens,7
+redundancia,linha 10A,km,56.7174
+redundancia,linha 10A,km_metro,8.6495
+redundancia,linha 10A,pct_km_metro,15.2502
+redundancia,linha 10A,horas_metro,0.5889
+redundancia,linha 11,viagens,25
+redundancia,linha 11,km,73.3841
+redundancia,linha 11,km_metro,24.9246
+redundancia,linha 11,pct_km_metro,33.9645
+redundancia,linha 11,horas_metro,2.2128
+redundancia,linha 12,viagens,34
+redundancia,linha 12,km,342.9945
+redundancia,linha 12,km_metro,14.5369
+redundancia,linha 12,pct_km_metro,4.2382
+redundancia,linha 12,horas_metro,0.7114
+redundancia,linha 12A,viagens,1
+redundancia,linha 12A,km,10.3117
+redundancia,linha 12A,km_metro,0
+redundancia,linha 12A,pct_km_metro,0
+redundancia,linha 12A,horas_metro,0
+redundancia,linha 13,viagens,21
+redundancia,linha 13,km,167.068
+redundancia,linha 13,km_metro,8.8837
+redundancia,linha 13,pct_km_metro,5.3174
+redundancia,linha 13,horas_metro,0.5933
+redundancia,linha 13P,viagens,8
+redundancia,linha 13P,km,55.4621
+redundancia,linha 13P,km_metro,0
+redundancia,linha 13P,pct_km_metro,0
+redundancia,linha 13P,horas_metro,0
+redundancia,linha 13T,viagens,3
+redundancia,linha 13T,km,20.6629
+redundancia,linha 13T,km_metro,0.8076
+redundancia,linha 13T,pct_km_metro,3.9085
+redundancia,linha 13T,horas_metro,0.1353
+redundancia,linha 14,viagens,58
+redundancia,linha 14,km,403.4999
+redundancia,linha 14,km_metro,51.5529
+redundancia,linha 14,pct_km_metro,12.7764
+redundancia,linha 14,horas_metro,3.8656
+redundancia,linha 14T,viagens,80
+redundancia,linha 14T,km,434.0418
+redundancia,linha 14T,km_metro,34.291
+redundancia,linha 14T,pct_km_metro,7.9004
+redundancia,linha 14T,horas_metro,3.6194
+redundancia,linha 16,viagens,14
+redundancia,linha 16,km,145.2878
+redundancia,linha 16,km_metro,15.1427
+redundancia,linha 16,pct_km_metro,10.4226
+redundancia,linha 16,horas_metro,0.7614
+redundancia,linha 16F,viagens,2
+redundancia,linha 16F,km,19.2102
+redundancia,linha 16F,km_metro,1.2484
+redundancia,linha 16F,pct_km_metro,6.4985
+redundancia,linha 16F,horas_metro,0.0569
+redundancia,linha 16G,viagens,21
+redundancia,linha 16G,km,259.4641
+redundancia,linha 16G,km_metro,25.7687
+redundancia,linha 16G,pct_km_metro,9.9315
+redundancia,linha 16G,horas_metro,1.1986
+redundancia,linha 17,viagens,16
+redundancia,linha 17,km,103.6535
+redundancia,linha 17,km_metro,6.4608
+redundancia,linha 17,pct_km_metro,6.2331
+redundancia,linha 17,horas_metro,0.6286
+redundancia,linha 18,viagens,32
+redundancia,linha 18,km,334.8342
+redundancia,linha 18,km_metro,0.9527
+redundancia,linha 18,pct_km_metro,0.2845
+redundancia,linha 18,horas_metro,0.1794
+redundancia,linha 18E,viagens,4
+redundancia,linha 18E,km,51.5257
+redundancia,linha 18E,km_metro,2.4153
+redundancia,linha 18E,pct_km_metro,4.6875
+redundancia,linha 18E,horas_metro,0.2003
+redundancia,linha 19,viagens,5
+redundancia,linha 19,km,34.7923
+redundancia,linha 19,km_metro,11.6733
+redundancia,linha 19,pct_km_metro,33.5513
+redundancia,linha 19,horas_metro,1.0008
+redundancia,linha 19A,viagens,2
+redundancia,linha 19A,km,28.6472
+redundancia,linha 19A,km_metro,5.4456
+redundancia,linha 19A,pct_km_metro,19.0092
+redundancia,linha 19A,horas_metro,0.2278
+redundancia,linha 19R,viagens,7
+redundancia,linha 19R,km,56.2034
+redundancia,linha 19R,km_metro,12.9132
+redundancia,linha 19R,pct_km_metro,22.9758
+redundancia,linha 19R,horas_metro,0.8006
+redundancia,linha 19T,viagens,47
+redundancia,linha 19T,km,446.428
+redundancia,linha 19T,km_metro,102.8724
+redundancia,linha 19T,pct_km_metro,23.0435
+redundancia,linha 19T,horas_metro,6.6892
+redundancia,linha 20,viagens,24
+redundancia,linha 20,km,206.4894
+redundancia,linha 20,km_metro,19.5545
+redundancia,linha 20,pct_km_metro,9.47
+redundancia,linha 20,horas_metro,1.0653
+redundancia,linha 20T,viagens,4
+redundancia,linha 20T,km,36.2698
+redundancia,linha 20T,km_metro,3.5554
+redundancia,linha 20T,pct_km_metro,9.8026
+redundancia,linha 20T,horas_metro,0.1861
+redundancia,linha 21,viagens,14
+redundancia,linha 21,km,204.2284
+redundancia,linha 21,km_metro,7.2684
+redundancia,linha 21,pct_km_metro,3.559
+redundancia,linha 21,horas_metro,0.2956
+redundancia,linha 21A,viagens,7
+redundancia,linha 21A,km,47.7548
+redundancia,linha 21A,km_metro,4.038
+redundancia,linha 21A,pct_km_metro,8.4558
+redundancia,linha 21A,horas_metro,0.3064
+redundancia,linha 21R,viagens,21
+redundancia,linha 21R,km,223.1003
+redundancia,linha 21R,km_metro,8.8837
+redundancia,linha 21R,pct_km_metro,3.9819
+redundancia,linha 21R,horas_metro,0.4936
+redundancia,linha 21T,viagens,14
+redundancia,linha 21T,km,179.6339
+redundancia,linha 21T,km_metro,6.4405
+redundancia,linha 21T,pct_km_metro,3.5854
+redundancia,linha 21T,horas_metro,0.3567
+redundancia,linha 22,viagens,32
+redundancia,linha 22,km,228.0267
+redundancia,linha 22,km_metro,40.2524
+redundancia,linha 22,pct_km_metro,17.6525
+redundancia,linha 22,horas_metro,3.09
+redundancia,linha 23,viagens,23
+redundancia,linha 23,km,177.7054
+redundancia,linha 23,km_metro,13.3436
+redundancia,linha 23,pct_km_metro,7.5088
+redundancia,linha 23,horas_metro,1.3233
+redundancia,linha 23C,viagens,6
+redundancia,linha 23C,km,40.792
+redundancia,linha 23C,km_metro,3.9888
+redundancia,linha 23C,pct_km_metro,9.7785
+redundancia,linha 23C,horas_metro,0.3831
+redundancia,linha 24,viagens,41
+redundancia,linha 24,km,143.9307
+redundancia,linha 24,km_metro,45.3174
+redundancia,linha 24,pct_km_metro,31.4856
+redundancia,linha 24,horas_metro,3.7864
+redundancia,linha 24T,viagens,74
+redundancia,linha 24T,km,400.9676
+redundancia,linha 24T,km_metro,117.007
+redundancia,linha 24T,pct_km_metro,29.1811
+redundancia,linha 24T,horas_metro,10.2969
+redundancia,linha 25,viagens,26
+redundancia,linha 25,km,253.3628
+redundancia,linha 25,km_metro,24.0803
+redundancia,linha 25,pct_km_metro,9.5043
+redundancia,linha 25,horas_metro,1.2819
+redundancia,linha 25T,viagens,14
+redundancia,linha 25T,km,86.8143
+redundancia,linha 25T,km_metro,12.4645
+redundancia,linha 25T,pct_km_metro,14.3577
+redundancia,linha 25T,horas_metro,0.8358
+redundancia,linha 26,viagens,24
+redundancia,linha 26,km,114.7365
+redundancia,linha 26,km_metro,16.9796
+redundancia,linha 26,pct_km_metro,14.7988
+redundancia,linha 26,horas_metro,1.8678
+redundancia,linha 27,viagens,53
+redundancia,linha 27,km,340.9238
+redundancia,linha 27,km_metro,108.1779
+redundancia,linha 27,pct_km_metro,31.7308
+redundancia,linha 27,horas_metro,9.0433
+redundancia,linha 27F,viagens,9
+redundancia,linha 27F,km,41.0232
+redundancia,linha 27F,km_metro,19.6346
+redundancia,linha 27F,pct_km_metro,47.8622
+redundancia,linha 27F,horas_metro,1.7683
+redundancia,linha 28,viagens,54
+redundancia,linha 28,km,310.1857
+redundancia,linha 28,km_metro,123.0332
+redundancia,linha 28,pct_km_metro,39.6644
+redundancia,linha 28,horas_metro,9.6403
+redundancia,linha 29,viagens,68
+redundancia,linha 29,km,284.5562
+redundancia,linha 29,km_metro,168.6613
+redundancia,linha 29,pct_km_metro,59.2717
+redundancia,linha 29,horas_metro,17.6669
+redundancia,linha 2T,viagens,40
+redundancia,linha 2T,km,499.8004
+redundancia,linha 2T,km_metro,49.8038
+redundancia,linha 2T,pct_km_metro,9.9647
+redundancia,linha 2T,horas_metro,2.4622
+redundancia,linha 30,viagens,10
+redundancia,linha 30,km,116.4511
+redundancia,linha 30,km_metro,10.0702
+redundancia,linha 30,pct_km_metro,8.6476
+redundancia,linha 30,horas_metro,0.635
+redundancia,linha 30T,viagens,6
+redundancia,linha 30T,km,65.6925
+redundancia,linha 30T,km_metro,5.0903
+redundancia,linha 30T,pct_km_metro,7.7486
+redundancia,linha 30T,horas_metro,0.3275
+redundancia,linha 31,viagens,24
+redundancia,linha 31,km,125.2817
+redundancia,linha 31,km_metro,16.4229
+redundancia,linha 31,pct_km_metro,13.1088
+redundancia,linha 31,horas_metro,1.3817
+redundancia,linha 32,viagens,19
+redundancia,linha 32,km,170.548
+redundancia,linha 32,km_metro,8.0761
+redundancia,linha 32,pct_km_metro,4.7354
+redundancia,linha 32,horas_metro,0.6994
+redundancia,linha 32A,viagens,3
+redundancia,linha 32A,km,22.8219
+redundancia,linha 32A,km_metro,1.6152
+redundancia,linha 32A,pct_km_metro,7.0774
+redundancia,linha 32A,horas_metro,0.1822
+redundancia,linha 32R,viagens,6
+redundancia,linha 32R,km,55.1999
+redundancia,linha 32R,km_metro,3.2304
+redundancia,linha 32R,pct_km_metro,5.8522
+redundancia,linha 32R,horas_metro,0.1753
+redundancia,linha 34,viagens,57
+redundancia,linha 34,km,338.3943
+redundancia,linha 34,km_metro,30.6238
+redundancia,linha 34,pct_km_metro,9.0498
+redundancia,linha 34,horas_metro,3.0372
+redundancia,linha 35,viagens,29
+redundancia,linha 35,km,194.4008
+redundancia,linha 35,km_metro,31.0941
+redundancia,linha 35,pct_km_metro,15.9948
+redundancia,linha 35,horas_metro,2.4572
+redundancia,linha 36,viagens,17
+redundancia,linha 36,km,168.7019
+redundancia,linha 36,km_metro,29.9098
+redundancia,linha 36,pct_km_metro,17.7294
+redundancia,linha 36,horas_metro,1.5478
+redundancia,linha 36T,viagens,18
+redundancia,linha 36T,km,141.302
+redundancia,linha 36T,km_metro,29.0849
+redundancia,linha 36T,pct_km_metro,20.5835
+redundancia,linha 36T,horas_metro,1.7658
+redundancia,linha 37,viagens,62
+redundancia,linha 37,km,358.8173
+redundancia,linha 37,km_metro,85.361
+redundancia,linha 37,pct_km_metro,23.7895
+redundancia,linha 37,horas_metro,6.6656
+redundancia,linha 38,viagens,29
+redundancia,linha 38,km,227.4148
+redundancia,linha 38,km_metro,26.556
+redundancia,linha 38,pct_km_metro,11.6773
+redundancia,linha 38,horas_metro,1.8283
+redundancia,linha 38F,viagens,7
+redundancia,linha 38F,km,44.3349
+redundancia,linha 38F,km_metro,8.5578
+redundancia,linha 38F,pct_km_metro,19.3026
+redundancia,linha 38F,horas_metro,0.5317
+redundancia,linha 38T,viagens,4
+redundancia,linha 38T,km,13.556
+redundancia,linha 38T,km_metro,2.3869
+redundancia,linha 38T,pct_km_metro,17.6074
+redundancia,linha 38T,horas_metro,0.1444
+redundancia,linha 39,viagens,20
+redundancia,linha 39,km,222.9133
+redundancia,linha 39,km_metro,25.5408
+redundancia,linha 39,pct_km_metro,11.4577
+redundancia,linha 39,horas_metro,1.1653
+redundancia,linha 4,viagens,66
+redundancia,linha 4,km,153.9895
+redundancia,linha 4,km_metro,37.7482
+redundancia,linha 4,pct_km_metro,24.5135
+redundancia,linha 4,horas_metro,3.3092
+redundancia,linha 41,viagens,22
+redundancia,linha 41,km,140.081
+redundancia,linha 41,km_metro,20.0964
+redundancia,linha 41,pct_km_metro,14.3463
+redundancia,linha 41,horas_metro,1.6314
+redundancia,linha 42M,viagens,1
+redundancia,linha 42M,km,4.9373
+redundancia,linha 42M,km_metro,0
+redundancia,linha 42M,pct_km_metro,0
+redundancia,linha 42M,horas_metro,0
+redundancia,linha 42T,viagens,2
+redundancia,linha 42T,km,16.0686
+redundancia,linha 42T,km_metro,1.0696
+redundancia,linha 42T,pct_km_metro,6.6568
+redundancia,linha 42T,horas_metro,0.0622
+redundancia,linha 42V,viagens,6
+redundancia,linha 42V,km,76.255
+redundancia,linha 42V,km_metro,7.7731
+redundancia,linha 42V,pct_km_metro,10.1936
+redundancia,linha 42V,horas_metro,0.4397
+redundancia,linha 43,viagens,5
+redundancia,linha 43,km,61.6778
+redundancia,linha 43,km_metro,0.0595
+redundancia,linha 43,pct_km_metro,0.0965
+redundancia,linha 43,horas_metro,0.0103
+redundancia,linha 43T,viagens,10
+redundancia,linha 43T,km,143.8481
+redundancia,linha 43T,km_metro,7.467
+redundancia,linha 43T,pct_km_metro,5.1909
+redundancia,linha 43T,horas_metro,0.3458
+redundancia,linha 43V,viagens,4
+redundancia,linha 43V,km,59.9052
+redundancia,linha 43V,km_metro,0.0595
+redundancia,linha 43V,pct_km_metro,0.0994
+redundancia,linha 43V,horas_metro,0.0097
+redundancia,linha 44,viagens,14
+redundancia,linha 44,km,204.3564
+redundancia,linha 44,km_metro,30.0604
+redundancia,linha 44,pct_km_metro,14.7098
+redundancia,linha 44,horas_metro,1.8717
+redundancia,linha 45,viagens,14
+redundancia,linha 45,km,137.3172
+redundancia,linha 45,km_metro,32.2787
+redundancia,linha 45,pct_km_metro,23.5067
+redundancia,linha 45,horas_metro,2.2364
+redundancia,linha 47,viagens,20
+redundancia,linha 47,km,354.1624
+redundancia,linha 47,km_metro,0.5359
+redundancia,linha 47,pct_km_metro,0.1513
+redundancia,linha 47,horas_metro,0.0989
+redundancia,linha 48,viagens,18
+redundancia,linha 48,km,269.1667
+redundancia,linha 48,km_metro,0.5359
+redundancia,linha 48,pct_km_metro,0.1991
+redundancia,linha 48,horas_metro,0.1094
+redundancia,linha 48T,viagens,4
+redundancia,linha 48T,km,31.1164
+redundancia,linha 48T,km_metro,0.1191
+redundancia,linha 48T,pct_km_metro,0.3827
+redundancia,linha 48T,horas_metro,0.02
+redundancia,linha 49,viagens,14
+redundancia,linha 49,km,138.2725
+redundancia,linha 49,km_metro,0.4168
+redundancia,linha 49,pct_km_metro,0.3014
+redundancia,linha 49,horas_metro,0.0917
+redundancia,linha 49T,viagens,44
+redundancia,linha 49T,km,463.126
+redundancia,linha 49T,km_metro,1.31
+redundancia,linha 49T,pct_km_metro,0.2829
+redundancia,linha 49T,horas_metro,0.255
+redundancia,linha 5,viagens,58
+redundancia,linha 5,km,731.3619
+redundancia,linha 5,km_metro,184.1491
+redundancia,linha 5,pct_km_metro,25.1789
+redundancia,linha 5,horas_metro,13.1439
+redundancia,linha 50,viagens,22
+redundancia,linha 50,km,250.6517
+redundancia,linha 50,km_metro,25.7857
+redundancia,linha 50,pct_km_metro,10.2874
+redundancia,linha 50,horas_metro,1.3589
+redundancia,linha 50M,viagens,6
+redundancia,linha 50M,km,81.2916
+redundancia,linha 50M,km_metro,7.806
+redundancia,linha 50M,pct_km_metro,9.6025
+redundancia,linha 50M,horas_metro,0.4156
+redundancia,linha 50S,viagens,8
+redundancia,linha 50S,km,120.2048
+redundancia,linha 50S,km_metro,9.1111
+redundancia,linha 50S,pct_km_metro,7.5796
+redundancia,linha 50S,horas_metro,0.4983
+redundancia,linha 50T,viagens,48
+redundancia,linha 50T,km,567.6307
+redundancia,linha 50T,km_metro,59.5647
+redundancia,linha 50T,pct_km_metro,10.4936
+redundancia,linha 50T,horas_metro,3.1631
+redundancia,linha 51,viagens,8
+redundancia,linha 51,km,108.1324
+redundancia,linha 51,km_metro,7.0325
+redundancia,linha 51,pct_km_metro,6.5036
+redundancia,linha 51,horas_metro,0.3147
+redundancia,linha 52,viagens,11
+redundancia,linha 52,km,240.2388
+redundancia,linha 52,km_metro,0
+redundancia,linha 52,pct_km_metro,0
+redundancia,linha 52,horas_metro,0
+redundancia,linha 52P,viagens,9
+redundancia,linha 52P,km,149.2707
+redundancia,linha 52P,km_metro,0
+redundancia,linha 52P,pct_km_metro,0
+redundancia,linha 52P,horas_metro,0
+redundancia,linha 53,viagens,16
+redundancia,linha 53,km,121.9586
+redundancia,linha 53,km_metro,4.5329
+redundancia,linha 53,pct_km_metro,3.7168
+redundancia,linha 53,horas_metro,0.2325
+redundancia,linha 53T,viagens,10
+redundancia,linha 53T,km,101.2939
+redundancia,linha 53T,km_metro,2.2665
+redundancia,linha 53T,pct_km_metro,2.2375
+redundancia,linha 53T,horas_metro,0.0903
+redundancia,linha 54,viagens,42
+redundancia,linha 54,km,190.1753
+redundancia,linha 54,km_metro,34.4743
+redundancia,linha 54,pct_km_metro,18.1276
+redundancia,linha 54,horas_metro,3.2367
+redundancia,linha 5T,viagens,15
+redundancia,linha 5T,km,182.2877
+redundancia,linha 5T,km_metro,45.3913
+redundancia,linha 5T,pct_km_metro,24.9009
+redundancia,linha 5T,horas_metro,3.0631
+redundancia,linha 6,viagens,61
+redundancia,linha 6,km,514.4242
+redundancia,linha 6,km_metro,173.9796
+redundancia,linha 6,pct_km_metro,33.8203
+redundancia,linha 6,horas_metro,15.6731
+redundancia,linha 6F,viagens,14
+redundancia,linha 6F,km,125.8767
+redundancia,linha 6F,km_metro,33.0258
+redundancia,linha 6F,pct_km_metro,26.2367
+redundancia,linha 6F,horas_metro,2.6519
+redundancia,linha 7,viagens,101
+redundancia,linha 7,km,743.1591
+redundancia,linha 7,km_metro,165.9198
+redundancia,linha 7,pct_km_metro,22.3263
+redundancia,linha 7,horas_metro,13.2567
+redundancia,linha 9,viagens,20
+redundancia,linha 9,km,195.1179
+redundancia,linha 9,km_metro,37.4937
+redundancia,linha 9,pct_km_metro,19.2159
+redundancia,linha 9,horas_metro,2.6303
+redundancia,corredor Açude - Casa do Sal,km_metro,230.5448
+redundancia,corredor Açude - Casa do Sal,horas_metro,14.6283
+redundancia,corredor Açude - Casa do Sal,passagens,632
+redundancia,corredor Mercado - República,km_metro,191.1532
+redundancia,corredor Mercado - República,horas_metro,14.0108
+redundancia,corredor Mercado - República,passagens,521
+redundancia,corredor Loja do Cidadão - Loja do Cidadão,km_metro,163.937
+redundancia,corredor Loja do Cidadão - Loja do Cidadão,horas_metro,14.7889
+redundancia,corredor Loja do Cidadão - Loja do Cidadão,passagens,969
+redundancia,corredor Parque - Portagem,km_metro,146.2454
+redundancia,corredor Parque - Portagem,horas_metro,8.4758
+redundancia,corredor Parque - Portagem,passagens,292
+redundancia,corredor Câmara - Mercado,km_metro,127.4293
+redundancia,corredor Câmara - Mercado,horas_metro,9.2667
+redundancia,corredor Câmara - Mercado,passagens,384
+redundancia,corredor Arnado - Açude,km_metro,119.8036
+redundancia,corredor Arnado - Açude,horas_metro,7.0972
+redundancia,corredor Arnado - Açude,passagens,397
+redundancia,corredor Loja do Cidadão - Portagem,km_metro,112.769
+redundancia,corredor Loja do Cidadão - Portagem,horas_metro,9.1069
+redundancia,corredor Loja do Cidadão - Portagem,passagens,397
+redundancia,corredor Arnado - Loja do Cidadão,km_metro,103.594
+redundancia,corredor Arnado - Loja do Cidadão,horas_metro,6.8483
+redundancia,corredor Arnado - Loja do Cidadão,passagens,409
+redundancia,corredor Açude - Açude,km_metro,100.3739
+redundancia,corredor Açude - Açude,horas_metro,6.4958
+redundancia,corredor Açude - Açude,passagens,323
+redundancia,corredor Celas - Sereia,km_metro,91.9795
+redundancia,corredor Celas - Sereia,horas_metro,6.6781
+redundancia,corredor Celas - Sereia,passagens,343
+redundancia,corredor Hospitais (H.U.C.) - Pediátrico,km_metro,78.5256
+redundancia,corredor Hospitais (H.U.C.) - Pediátrico,horas_metro,7.6814
+redundancia,corredor Hospitais (H.U.C.) - Pediátrico,passagens,183
+redundancia,corredor Câmara - Loja do Cidadão,km_metro,74.3546
+redundancia,corredor Câmara - Loja do Cidadão,horas_metro,5.3503
+redundancia,corredor Câmara - Loja do Cidadão,passagens,226
+redundancia,corredor República - República,km_metro,73.4107
+redundancia,corredor República - República,horas_metro,7.8733
+redundancia,corredor República - República,passagens,466
+redundancia,corredor Celas - Polo Ciências da Saúde,km_metro,68.5229
+redundancia,corredor Celas - Polo Ciências da Saúde,horas_metro,5.5297
+redundancia,corredor Celas - Polo Ciências da Saúde,passagens,190
+redundancia,corredor Casa do Sal - Coimbra B,km_metro,60.6409
+redundancia,corredor Casa do Sal - Coimbra B,horas_metro,3.3572
+redundancia,corredor Casa do Sal - Coimbra B,passagens,237
+redundancia,corredor Hospitais (H.U.C.) - Hospitais (H.U.C.),km_metro,57.3518
+redundancia,corredor Hospitais (H.U.C.) - Hospitais (H.U.C.),horas_metro,3.765
+redundancia,corredor Hospitais (H.U.C.) - Hospitais (H.U.C.),passagens,240
+redundancia,corredor Solum - Solum,km_metro,56.868
+redundancia,corredor Solum - Solum,horas_metro,5.1894
+redundancia,corredor Solum - Solum,passagens,272
+redundancia,corredor Celas - Celas,km_metro,53.3302
+redundancia,corredor Celas - Celas,horas_metro,5.1328
+redundancia,corredor Celas - Celas,passagens,256
+redundancia,corredor Sereia - Sereia,km_metro,43.7156
+redundancia,corredor Sereia - Sereia,horas_metro,2.9983
+redundancia,corredor Sereia - Sereia,passagens,161
+redundancia,corredor Ceira - Ceira,km_metro,42.115
+redundancia,corredor Ceira - Ceira,horas_metro,3.7342
+redundancia,corredor Ceira - Ceira,passagens,184
+redundancia,corredor Parque - Parque,km_metro,36.7997
+redundancia,corredor Parque - Parque,horas_metro,2.3089
+redundancia,corredor Parque - Parque,passagens,151
+redundancia,corredor Portagem - Portagem,km_metro,36.6361
+redundancia,corredor Portagem - Portagem,horas_metro,4.0542
+redundancia,corredor Portagem - Portagem,passagens,287
+redundancia,corredor Solum - São José,km_metro,36.025
+redundancia,corredor Solum - São José,horas_metro,3.2064
+redundancia,corredor Solum - São José,passagens,106
+redundancia,corredor São José - São José,km_metro,30.0289
+redundancia,corredor São José - São José,horas_metro,3.2578
+redundancia,corredor São José - São José,passagens,153
+redundancia,corredor Casa do Sal - Casa do Sal,km_metro,25.6614
+redundancia,corredor Casa do Sal - Casa do Sal,horas_metro,4.3147
+redundancia,corredor Casa do Sal - Casa do Sal,passagens,116
+redundancia,corredor Arnado - Câmara,km_metro,20.8218
+redundancia,corredor Arnado - Câmara,horas_metro,1.3539
+redundancia,corredor Arnado - Câmara,passagens,73
+redundancia,corredor Polo Ciências da Saúde - Polo Ciências da Saúde,km_metro,20.5389
+redundancia,corredor Polo Ciências da Saúde - Polo Ciências da Saúde,horas_metro,1.6703
+redundancia,corredor Polo Ciências da Saúde - Polo Ciências da Saúde,passagens,91
+redundancia,corredor Hospitais (H.U.C.) - Polo Ciências da Saúde,km_metro,19.6667
+redundancia,corredor Hospitais (H.U.C.) - Polo Ciências da Saúde,horas_metro,2.0758
+redundancia,corredor Hospitais (H.U.C.) - Polo Ciências da Saúde,passagens,91
+redundancia,corredor Norton de Matos - São José,km_metro,17.9726
+redundancia,corredor Norton de Matos - São José,horas_metro,1.9108
+redundancia,corredor Norton de Matos - São José,passagens,64
+redundancia,corredor Portela - Quinta da Ponte,km_metro,17.3985
+redundancia,corredor Portela - Quinta da Ponte,horas_metro,1.3892
+redundancia,corredor Portela - Quinta da Ponte,passagens,25
+redundancia,corredor Arregaça - Parque,km_metro,16.1066
+redundancia,corredor Arregaça - Parque,horas_metro,1.7628
+redundancia,corredor Arregaça - Parque,passagens,36
+redundancia,corredor Coimbra B - Coimbra B,km_metro,14.5704
+redundancia,corredor Coimbra B - Coimbra B,horas_metro,0.7903
+redundancia,corredor Coimbra B - Coimbra B,passagens,56
+redundancia,corredor Casa Branca - Fernando Namora,km_metro,14.17
+redundancia,corredor Casa Branca - Fernando Namora,horas_metro,1.1097
+redundancia,corredor Casa Branca - Fernando Namora,passagens,44
+redundancia,corredor Mercado - Mercado,km_metro,13.9801
+redundancia,corredor Mercado - Mercado,horas_metro,1.1339
+redundancia,corredor Mercado - Mercado,passagens,59
+redundancia,corredor Norton de Matos - Norton de Matos,km_metro,13.2581
+redundancia,corredor Norton de Matos - Norton de Matos,horas_metro,1.0808
+redundancia,corredor Norton de Matos - Norton de Matos,passagens,73
+redundancia,corredor Arregaça - Arregaça,km_metro,11.4061
+redundancia,corredor Arregaça - Arregaça,horas_metro,0.5967
+redundancia,corredor Arregaça - Arregaça,passagens,36
+redundancia,corredor Alto de São João - Vale das Flores,km_metro,11.0372
+redundancia,corredor Alto de São João - Vale das Flores,horas_metro,0.85
+redundancia,corredor Alto de São João - Vale das Flores,passagens,35
+redundancia,corredor Fernando Namora - Solum,km_metro,10.8233
+redundancia,corredor Fernando Namora - Solum,horas_metro,0.965
+redundancia,corredor Fernando Namora - Solum,passagens,31
+redundancia,corredor Arregaça - Norton de Matos,km_metro,10.3395
+redundancia,corredor Arregaça - Norton de Matos,horas_metro,0.5469
+redundancia,corredor Arregaça - Norton de Matos,passagens,36
+redundancia,corredor Alto de São João - Alto de São João,km_metro,10.23
+redundancia,corredor Alto de São João - Alto de São João,horas_metro,0.7528
+redundancia,corredor Alto de São João - Alto de São João,passagens,34
+redundancia,corredor Arregaça - Colégios,km_metro,8.5838
+redundancia,corredor Arregaça - Colégios,horas_metro,0.4417
+redundancia,corredor Arregaça - Colégios,passagens,24
+redundancia,corredor Vale das Flores - Vale das Flores,km_metro,5.5496
+redundancia,corredor Vale das Flores - Vale das Flores,horas_metro,0.3975
+redundancia,corredor Vale das Flores - Vale das Flores,passagens,31
+redundancia,corredor Sobral de Ceira - Sobral de Ceira,km_metro,3.0629
+redundancia,corredor Sobral de Ceira - Sobral de Ceira,horas_metro,0.2186
+redundancia,corredor Sobral de Ceira - Sobral de Ceira,passagens,12
+redundancia,corredor Portela - Portela,km_metro,2.1337
+redundancia,corredor Portela - Portela,horas_metro,1.2358
+redundancia,corredor Portela - Portela,passagens,21
+redundancia,corredor Arnado - Arnado,km_metro,0.3887
+redundancia,corredor Arnado - Arnado,horas_metro,0.2894
+redundancia,corredor Arnado - Arnado,passagens,10
+meta,snapshot,secoes,linhas;overlap_resumo;esperas_54;busca_fase_54;isocrona;populacao;redundancia;isocrona_nos
+meta,snapshot,secoes_omitidas,

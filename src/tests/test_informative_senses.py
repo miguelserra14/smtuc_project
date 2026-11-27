@@ -88,14 +88,16 @@ def test_north_of_portagem_only_in_phase_2() -> None:
 
 
 def test_north_exists_in_every_scenario_with_the_phase_2_metro() -> None:
-    # O sentido norte depende do metro (que continua de Portagem para norte na fase 2), não do
-    # horário SMTUC: tem de existir em todos os cenários com o metro da fase 2 (N1: fase2_ep212).
+    # O sentido norte depende do metro (que continua de Portagem para norte desde a fase 2), não
+    # do horário SMTUC: tem de existir em todos os cenários cujo metro não é o da fase 1 (N1:
+    # fase2_ep212; N3: os metros planeados da fase 3, que também passam em Coimbra B/República).
     from gtfs_processing.scenarios import get_scenario
 
     north = next(s for s in PORTAGEM["informative_reverse_senses"] if s["key"] == "norte")
-    with_phase_2_metro = {name for name in SCENARIOS if get_scenario(name).metro == get_scenario("fase2").metro}
-    assert set(north["scenarios"]) == with_phase_2_metro
-    assert "fase2_ep212" in with_phase_2_metro
+    phase_1_metro = get_scenario("antes").metro
+    with_northern_metro = {name for name in SCENARIOS if get_scenario(name).metro != phase_1_metro}
+    assert set(north["scenarios"]) == with_northern_metro
+    assert {"fase2_ep212", "fase3", "fase3_metade"} <= with_northern_metro
 
 
 def test_integration_page_renders_informative_groups_safely(tmp_path: Path) -> None:

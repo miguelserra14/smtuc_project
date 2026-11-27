@@ -175,3 +175,15 @@ def test_regenerate_validates_each_scenario_on_its_own_day(two_scenarios, monkey
     bad = {**TWO_SCENARIOS, "b": {**TWO_SCENARIOS["b"], "reference_day": "2026-05-11"}}
     monkeypatch.setattr(config, "SCENARIOS", bad)
     assert regen._validate_reference_day() is False
+
+
+def test_planned_phase_3_changes_only_the_metro() -> None:
+    # N3.3: D (fase3) e a sensibilidade são C (fase2) com outro metro - o mesmo SMTUC e o mesmo
+    # dia, para fase2 -> fase3 medir só a Linha do Hospital. Os metros planeados não são oficiais.
+    c = get_scenario("fase2")
+    for name in ("fase3", "fase3_metade"):
+        d = get_scenario(name)
+        assert (d.smtuc, d.reference_day, d.reference_time) == (c.smtuc, c.reference_day, c.reference_time)
+        assert d.metro != c.metro and "planeado" in config.DATASET_DIRS[d.metro]
+        assert "planeado" in d.display_name.lower()
+        assert ("fase2", name) in config.COMPARISON_PAIRS

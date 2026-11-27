@@ -84,7 +84,7 @@ SCENARIO_LADDER: list[dict[str, Any]] = [
         "detail": "SMTUC Ep225 + Metro fase 2 + Linha do Hospital",
         "day": "09/11/2026",
         "nature": "planeado",
-        "status": "por construir",
+        "status": "existe",
     },
     {
         "id": "E",
