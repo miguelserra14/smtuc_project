@@ -10,6 +10,8 @@ indicadores,isocrona_nos/Portagem | total/tempo_medio_ponderado_min,,33.5277,33.
 indicadores,isocrona_nos/Portagem | total/populacao_30min_media,,81750.4167,82132.5833
 indicadores,isocrona_nos/Portela | total/tempo_medio_ponderado_min,,43.8843,43.8724
 indicadores,isocrona_nos/Portela | total/populacao_30min_media,,57312.5833,57381.9167
+indicadores,isocrona_huc/Hospitais (H.U.C.) | total/tempo_medio_ponderado_min,,46.5989,42.9043
+indicadores,isocrona_huc/Hospitais (H.U.C.) | total/populacao_30min_media,,51160.75,56925.5
 indicadores,redundancia/total/km_metro,,1970.2236,2403.8549
 indicadores,redundancia/total/horas_metro,,150.1911,185.7225
 indicadores,redundancia/desperdicio/ano_t_co2,,459.4108,563.1849

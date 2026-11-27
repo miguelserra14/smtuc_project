@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>O que o metro novo torna redundante: Como Vou → Fase 3 (planeado)</title>
+  <!-- Sem recursos externos: a página tem de funcionar offline (parede FeedNPlay) e dentro de
+       um iframe num cartão branco dos slides - por isso fundo claro e as cores da apresentação. -->
+  <style>
+    :root {
+      --ink: #221d13;
+      --muted: #5c574c;
+      --border: #e7e2d8;
+      --card: #ffffff;
+      --card-soft: #faf8f4;
+      --accent: #ffdd2b;
+      --good: #1f7a3a;
+      --good-bg: #e6f4ea;
+      --bad: #a3361f;
+      --bad-bg: #fbe9e4;
+      color-scheme: light only;
+    }
+    html, body { margin: 0; background: var(--card); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
+      font-size: clamp(13px, 1.25vw, 17px);
+      line-height: 1.4;
+      padding: 1em 1.2em;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 1.05em;
+      margin: 0 0 0.5em;
+      letter-spacing: 0.01em;
+    }
+    section + section { margin-top: 1.4em; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 0.45em 0.6em; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+    thead th { background: var(--card-soft); font-size: 0.85em; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--accent); }
+    thead th span { font-weight: 400; }
+    th[scope="row"], thead th:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+    td { white-space: nowrap; }
+    .trend-melhor { color: var(--good); background: var(--good-bg); font-weight: 600; }
+    .trend-pior { color: var(--bad); background: var(--bad-bg); font-weight: 600; }
+    span.trend-melhor, span.trend-pior { padding: 0 0.3em; border-radius: 3px; }
+    .note { color: var(--muted); font-size: 0.85em; margin: 0.5em 0 0; }
+    .sources { margin-top: 1.4em; }
+    code { font-size: 0.95em; }
+    /* Diferenças de rede (network_diff_page.py): colunas de texto, nome da linha, tabela de contagens. */
+    td.text { text-align: left; white-space: normal; }
+    th .name { font-weight: 400; font-size: 0.8em; color: var(--muted); }
+    table.counts { width: auto; min-width: 50%; margin-top: 0.8em; }
+    .note code { overflow-wrap: anywhere; }
+    /* Redundância (redundancy_page.py): barra proporcional atrás do valor. */
+    td.barcell { position: relative; min-width: 9em; }
+    td.barcell .bar { position: absolute; left: 0; top: 18%; bottom: 18%; background: var(--accent); opacity: 0.55; border-radius: 0 3px 3px 0; }
+    td.barcell .barval { position: relative; }
+    @media (max-width: 560px) {
+      body { padding: 0.75em 0.5em; }
+      th, td { padding: 0.35em 0.3em; }
+      td { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+<section>
+  <h2>A par do metro: Como Vou → Fase 3 (planeado)</h2>
+  <table>
+    <thead><tr><th scope="col">Indicador</th><th scope="col">Como Vou</th><th scope="col">Fase 3 (planeado)</th><th scope="col">Diferença</th></tr></thead>
+    <tbody><tr><th scope="row">Autocarros·km a par do metro, dia útil</th><td>1 970</td><td>2 404</td><td class="trend-pior">+434</td></tr><tr><th scope="row">Autocarros·hora a par do metro, dia útil</th><td>150</td><td>186</td><td class="trend-pior">+36</td></tr><tr><th scope="row">Autocarros·hora a par do metro, ano (estimativa)</th><td>45 298</td><td>56 258</td><td class="trend-pior">+10 960</td></tr><tr><th scope="row">t CO2 a par do metro, ano (estimativa)</th><td>459</td><td>563</td><td class="trend-pior">+104</td></tr></tbody>
+  </table>
+  <p class="note">O horário SMTUC é o mesmo nos dois: a diferença vem só das estações novas (Sereia, Celas, Polo Ciências da Saúde, Hospitais (H.U.C.), Pediátrico). Nos corredores com uma estação nova numa ponta correm 35,5 autocarros·hora por dia útil, de 18 linhas (10 960 por ano, estimativa): é a capacidade que fica ao lado da linha nova.</p>
+</section>
+<section>
+  <h2>As linhas que passam a correr mais a par do metro</h2>
+  <table>
+    <thead><tr><th scope="col">Linha</th><th scope="col">Autocarros·km/dia<br><span>Como Vou</span></th><th scope="col">Autocarros·km/dia<br><span>Fase 3 (planeado)</span></th><th scope="col">Aumento</th><th scope="col">Horas/dia nos corredores novos</th><th scope="col">Horas/ano nos corredores novos</th><th scope="col">t CO2/ano a mais</th><th scope="col">Overlap temporal<br><span>Como Vou</span></th><th scope="col">Overlap temporal<br><span>Fase 3 (planeado)</span></th><th scope="col">Overlap temporal<br><span>Fase 3, metade das viagens (planeado)</span></th><th scope="col">Estações novas por onde passa</th></tr></thead>
+    <tbody><tr><th scope="row">7</th><td>47</td><td>166</td><td class="barcell"><span class="bar" style="width:100.0%"></span><span class="barval">+119</span></td><td>9,4</td><td>3 043</td><td>30,1</td><td>98 %</td><td>98 %</td><td>85 %</td><td class="text">Sereia, Celas, Hospitais (H.U.C.), Pediátrico</td></tr><tr><th scope="row">6</th><td>84</td><td>174</td><td class="barcell"><span class="bar" style="width:75.7%"></span><span class="barval">+90</span></td><td>8,5</td><td>2 593</td><td>21,8</td><td>99 %</td><td>99 %</td><td>92 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde, Hospitais (H.U.C.), Pediátrico</td></tr><tr><th scope="row">29</th><td>114</td><td>169</td><td class="barcell"><span class="bar" style="width:45.7%"></span><span class="barval">+55</span></td><td>5,4</td><td>1 651</td><td>12,7</td><td>98 %</td><td>98 %</td><td>90 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde, Hospitais (H.U.C.)</td></tr><tr><th scope="row">37</th><td>43</td><td>85</td><td class="barcell"><span class="bar" style="width:35.2%"></span><span class="barval">+42</span></td><td>3,3</td><td>949</td><td>9,3</td><td>96 %</td><td>96 %</td><td>88 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde, Hospitais (H.U.C.)</td></tr><tr><th scope="row">19T</th><td>79</td><td>103</td><td class="barcell"><span class="bar" style="width:19.7%"></span><span class="barval">+24</span></td><td>1,3</td><td>410</td><td>5,8</td><td>93 %</td><td>95 %</td><td>90 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde</td></tr><tr><th scope="row">4</th><td>20</td><td>38</td><td class="barcell"><span class="bar" style="width:15.1%"></span><span class="barval">+18</span></td><td>1,6</td><td>510</td><td>4,4</td><td>100 %</td><td>99 %</td><td>94 %</td><td class="text">Sereia, Celas</td></tr><tr><th scope="row">35</th><td>15</td><td>31</td><td class="barcell"><span class="bar" style="width:13.3%"></span><span class="barval">+16</span></td><td>1,3</td><td>350</td><td>3,1</td><td>100 %</td><td>100 %</td><td>93 %</td><td class="text">Celas, Polo Ciências da Saúde, Hospitais (H.U.C.), Pediátrico</td></tr><tr><th scope="row">6F</th><td>18</td><td>33</td><td class="barcell"><span class="bar" style="width:12.8%"></span><span class="barval">+15</span></td><td>1,3</td><td>407</td><td>3,7</td><td>86 %</td><td>89 %</td><td>67 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde, Hospitais (H.U.C.), Pediátrico</td></tr><tr><th scope="row">27</th><td>95</td><td>108</td><td class="barcell"><span class="bar" style="width:10.8%"></span><span class="barval">+13</span></td><td>1,3</td><td>395</td><td>3,0</td><td>99 %</td><td>99 %</td><td>96 %</td><td class="text">Celas, Polo Ciências da Saúde</td></tr><tr><th scope="row">16G</th><td>14</td><td>26</td><td class="barcell"><span class="bar" style="width:9.8%"></span><span class="barval">+12</span></td><td>0,5</td><td>161</td><td>2,8</td><td>100 %</td><td>100 %</td><td>94 %</td><td class="text">Sereia, Celas, Hospitais (H.U.C.)</td></tr><tr><th scope="row">36T</th><td>21</td><td>29</td><td class="barcell"><span class="bar" style="width:6.5%"></span><span class="barval">+8</span></td><td>0,5</td><td>129</td><td>1,5</td><td>100 %</td><td>100 %</td><td>90 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde</td></tr><tr><th scope="row">16</th><td>8</td><td>15</td><td class="barcell"><span class="bar" style="width:5.8%"></span><span class="barval">+7</span></td><td>0,3</td><td>84</td><td>1,4</td><td>100 %</td><td>100 %</td><td>100 %</td><td class="text">Sereia, Celas, Hospitais (H.U.C.)</td></tr><tr><th scope="row">36</th><td>23</td><td>30</td><td class="barcell"><span class="bar" style="width:5.8%"></span><span class="barval">+7</span></td><td>0,4</td><td>132</td><td>1,8</td><td>100 %</td><td>100 %</td><td>94 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde</td></tr><tr><th scope="row">19R</th><td>9</td><td>13</td><td class="barcell"><span class="bar" style="width:3.0%"></span><span class="barval">+4</span></td><td>0,2</td><td>52</td><td>0,8</td><td>95 %</td><td>97 %</td><td>97 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde</td></tr><tr><th scope="row">19</th><td>10</td><td>12</td><td class="barcell"><span class="bar" style="width:1.6%"></span><span class="barval">+2</span></td><td>0,1</td><td>39</td><td>0,5</td><td>100 %</td><td>100 %</td><td>88 %</td><td class="text">Sereia, Celas, Polo Ciências da Saúde</td></tr></tbody>
+  </table>
+  <p class="note">Overlap temporal da linha = passagens nas paragens a par do metro com um metro a ≤ 5 min. A sensibilidade (menos viagens do metro na linha nova) não muda a redundância espacial, que só depende da distância às estações; muda só o overlap temporal.</p>
+</section>
+<section>
+  <h2>Corredores das estações novas (dia útil)</h2>
+  <table>
+    <thead><tr><th scope="col">Corredor do metro</th><th scope="col">Autocarros·km</th><th scope="col">Autocarros·hora</th><th scope="col">Passagens</th><th scope="col">Linhas</th></tr></thead>
+    <tbody><tr><th scope="row">Celas – Sereia</th><td class="barcell"><span class="bar" style="width:100.0%"></span><span class="barval">92</span></td><td>6,7</td><td>343</td><td class="text">4, 6, 6F, 7, 16, 16G, 19, 19A, 19R, 19T, 27F, 29, 36, 36T, 37</td></tr><tr><th scope="row">Hospitais (H.U.C.) – Pediátrico</th><td class="barcell"><span class="bar" style="width:85.4%"></span><span class="barval">79</span></td><td>7,7</td><td>183</td><td class="text">6, 6F, 7, 35</td></tr><tr><th scope="row">Celas – Polo Ciências da Saúde</th><td class="barcell"><span class="bar" style="width:74.5%"></span><span class="barval">69</span></td><td>5,5</td><td>190</td><td class="text">6, 6F, 19, 19A, 19R, 19T, 27, 27F, 29, 35, 36, 36T, 37</td></tr><tr><th scope="row">junto a Hospitais (H.U.C.)</th><td class="barcell"><span class="bar" style="width:62.4%"></span><span class="barval">57</span></td><td>3,8</td><td>240</td><td class="text">6, 6F, 7, 16, 16F, 16G, 35, 37</td></tr><tr><th scope="row">junto a Celas</th><td class="barcell"><span class="bar" style="width:58.0%"></span><span class="barval">53</span></td><td>5,1</td><td>256</td><td class="text">4, 6, 6F, 7, 16, 16G, 19R, 19T, 27, 27F, 29, 35, 36, 36T, 37</td></tr><tr><th scope="row">junto a Sereia</th><td class="barcell"><span class="bar" style="width:47.5%"></span><span class="barval">44</span></td><td>3,0</td><td>161</td><td class="text">6, 6F, 7, 16, 16G, 19, 19A, 19R, 19T, 29</td></tr><tr><th scope="row">junto a Polo Ciências da Saúde</th><td class="barcell"><span class="bar" style="width:22.3%"></span><span class="barval">21</span></td><td>1,7</td><td>91</td><td class="text">6, 29, 37</td></tr><tr><th scope="row">Hospitais (H.U.C.) – Polo Ciências da Saúde</th><td class="barcell"><span class="bar" style="width:21.4%"></span><span class="barval">20</span></td><td>2,1</td><td>91</td><td class="text">6, 29, 37</td></tr></tbody>
+  </table>
+</section>
+<section>
+  <h2>Overlap temporal de toda a rede, por horário do metro</h2>
+  <table class="counts">
+    <thead><tr><th scope="col">Cenário</th><th scope="col">Passagens a par do metro com um metro a ≤ 5 min</th></tr></thead>
+    <tbody><tr><th scope="row">Como Vou</th><td>95,6 %</td></tr><tr><th scope="row">Fase 3 (planeado)</th><td>96,1 %</td></tr><tr><th scope="row">Fase 3, metade das viagens (planeado)</th><td>92,4 %</td></tr></tbody>
+  </table>
+</section>
+<p class="note sources">Viagem a viagem no dia útil de referência, cada viagem com as suas paragens. Um troço conta como a par do metro quando as duas paragens ficam a ≤ 3 min a pé de uma estação (a mesma regra da extensão a par do metro). Corredor = as estações mais próximas das duas pontas do troço. Ano estimado = semana-tipo (o dia útil × 5, mais o sábado e o domingo mais próximos dentro do período do horário) × 52, sem descontar feriados nem agosto. CO2 com a frota SMTUC de fev/2025 repartida por igual pelas linhas e consumos típicos (fontes em reports/estatisticas.txt). Dados: SMTUC / Município de Coimbra; Metro Mondego (AGIT).</p>
+
+</body>
+</html>
