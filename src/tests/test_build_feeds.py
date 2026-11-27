@@ -151,3 +151,118 @@ def test_real_build_definitions_point_to_registered_raw_files() -> None:
     for b in bf.BUILDS:
         assert b.raw in registered, b.raw
         assert b.target in targets, f"{b.target} construído mas não está em config.DATASET_DIRS"
+
+
+# --------------------------------------------------------------------------- Linha do Hospital (N3.2)
+
+_DEG = 111_195.0  # metros por grau de latitude (haversine)
+_HOSPITAL_KMZ_STATIONS = {  # nome no KMZ -> metros para norte (todas no eixo, exceto o desvio de 10 m da desc)
+    "Loja de Cidadão": 0, "Câmara": 400, "Mercado": 800, "República (asc)": 1200, "República (desc)": 1200,
+    "Sereia (asc)": 1700, "Sereia (desc)": 1700, "Celas": 2200, "Polo Ciências da Saúde": 2700,
+    "Hospitais (H.U.C.)": 3000, "Pediátrico": 3500,
+}
+
+
+def _lat(m: float) -> float:
+    return 40.2 + m / _DEG
+
+
+def _hospital_kmz() -> bytes:
+    axis = " ".join(f"-8.4,{_lat(m)},0" for m in range(0, 3501, 100))
+    pts = "".join(f"<Placemark><name>{n}</name><Point><coordinates>-8.4,{_lat(m)},0</coordinates></Point></Placemark>"
+                  for n, m in _HOSPITAL_KMZ_STATIONS.items())
+    kml = ('<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+           f"<Folder><name>Eixo LH</name><Placemark><name>eixo</name><LineString><coordinates>{axis}</coordinates>"
+           f"</LineString></Placemark></Folder><Folder><name>Paragens LH</name>{pts}</Folder></Document></kml>")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("doc.kml", kml)
+    return buf.getvalue()
+
+
+def _hospital_feed() -> dict:
+    stops = [("1", "Loja do Cidadão", 0), ("2", "Câmara (asc)", 400), ("3", "Mercado (asc)", 800),
+             ("4", "República (asc)", 1200), ("5", "República (desc)", 1200), ("6", "Mercado (desc)", 800)]
+    st_cols = ["trip_id", "arrival_time", "departure_time", "stop_id", "stop_sequence", "pickup_type", "drop_off_type"]
+    st = []
+
+    def trip(tid: str, ids: list[str], start_min: int) -> None:
+        for k, sid in enumerate(ids):
+            t = f"08:{start_min + 2 * k:02d}:00"  # 2 min entre paragens
+            st.append({"trip_id": tid, "arrival_time": t, "departure_time": t, "stop_id": sid, "stop_sequence": str(k + 1),
+                       "pickup_type": "1" if k == len(ids) - 1 else "0", "drop_off_type": "1" if k == 0 else "0"})
+
+    for tid, start in (("t1", 0), ("t2", 10), ("t3", 20)):
+        trip(tid, ["1", "2", "3", "4"], start)          # U2 a subir: acaba na República (asc)
+    trip("t4", ["5", "6", "1"], 30)                      # U2 a descer: parte da República (desc)
+    trip("t9", ["1", "2", "3", "4"], 40)                 # outra linha: fica igual
+    return {
+        "stops.txt": (["stop_id", "stop_name", "stop_lat", "stop_lon"],
+                      [{"stop_id": i, "stop_name": n, "stop_lat": f"{_lat(m):.6f}", "stop_lon": "-8.4"} for i, n, m in stops]),
+        "routes.txt": (["route_id", "route_short_name"], [{"route_id": "r2", "route_short_name": "U2"},
+                                                          {"route_id": "r9", "route_short_name": "X"}]),
+        "trips.txt": (["route_id", "trip_id"], [{"route_id": "r9" if t == "t9" else "r2", "trip_id": t}
+                                                for t in ("t1", "t2", "t3", "t4", "t9")]),
+        "stop_times.txt": (st_cols, st),
+    }
+
+
+@pytest.fixture
+def hospital_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    raw = tmp_path / "raw"
+    monkeypatch.setattr(bf, "RAW_DIR", raw)
+    rel = "dados-gov/metro-mondego-kmz/v1/rede.kmz"
+    data = _hospital_kmz()
+    (raw / rel).parent.mkdir(parents=True, exist_ok=True)
+    (raw / rel).write_bytes(data)
+    with open(raw / "MANIFEST.csv", "w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=["ficheiro", "estado", "sha256", "versao", "url", "verificacoes"])
+        w.writeheader()
+        w.writerow({"ficheiro": rel, "estado": "novo", "sha256": hashlib.sha256(data).hexdigest(),
+                    "versao": "v1", "url": "https://exemplo/rede.kmz", "verificacoes": "teste"})
+    return rel
+
+
+def _by_trip(feed: dict) -> dict[str, list[dict]]:
+    names = {r["stop_id"]: r["stop_name"] for r in feed["stops.txt"][1]}
+    out: dict[str, list[dict]] = {}
+    for r in feed["stop_times.txt"][1]:
+        out.setdefault(r["trip_id"], []).append({**r, "nome": names[r["stop_id"]]})
+    return {t: sorted(rows, key=lambda r: int(r["stop_sequence"])) for t, rows in out.items()}
+
+
+def test_extend_to_hospital_all_trips(hospital_env: str) -> None:
+    feed = _hospital_feed()
+    report = bf.extend_to_hospital(hospital_env, ("U2",), 1, "teste")(feed)
+    trips = _by_trip(feed)
+    up = trips["t1"]
+    assert [r["nome"] for r in up][-6:] == ["República (asc)", "Sereia (asc)", "Celas", "Polo Ciências da Saúde",
+                                           "Hospitais (H.U.C.)", "Pediátrico"]
+    # Velocidade de referência: Loja -> República = 1200 m em 6 min = 200 m/min; 2300 m -> 11,5 min.
+    assert up[3]["arrival_time"] == "08:06:00" and up[-1]["arrival_time"] == "08:17:30"
+    assert (up[3]["pickup_type"], up[-1]["pickup_type"]) == ("0", "1")  # a República deixa de ser o fim
+    down = trips["t4"]
+    assert [r["nome"] for r in down][:2] == ["Pediátrico", "Hospitais (H.U.C.)"]
+    assert down[0]["drop_off_type"] == "1" and down[5]["nome"] == "República (desc)" and down[5]["drop_off_type"] == "0"
+    assert [int(r["stop_sequence"]) for r in down] == list(range(1, len(down) + 1))
+    assert down[0]["departure_time"] < down[5]["departure_time"] == "08:30:00"
+    assert [r["nome"] for r in trips["t9"]][-1] == "República (asc)"  # outra linha não muda
+    assert report["viagens_prolongadas"] == {"U2 descer": "1/1", "U2 subir": "3/3"}
+    assert report["velocidade_referencia"]["subir"]["km_h"] == 12.0
+    assert len([s for s in feed["stops.txt"][1] if s["stop_id"].startswith("LH")]) == 6
+
+
+def test_extend_to_hospital_every_other_trip(hospital_env: str) -> None:
+    feed = _hospital_feed()
+    report = bf.extend_to_hospital(hospital_env, ("U2",), 2, "teste")(feed)
+    ends = {t: rows[-1]["nome"] for t, rows in _by_trip(feed).items()}
+    assert (ends["t1"], ends["t2"], ends["t3"]) == ("Pediátrico", "República (asc)", "Pediátrico")  # 1.ª, 3.ª
+    assert report["viagens_prolongadas"]["U2 subir"] == "2/3"
+
+
+def test_extend_to_hospital_refuses_unknown_lines_and_a_changed_kmz(hospital_env: str) -> None:
+    with pytest.raises(bf.BuildError, match="não existem"):
+        bf.extend_to_hospital(hospital_env, ("U2", "Z9"), 1, "teste")(_hospital_feed())
+    (bf.RAW_DIR / hospital_env).write_bytes(b"mexido")
+    with pytest.raises(bf.BuildError, match="MANIFEST"):
+        bf.extend_to_hospital(hospital_env, ("U2",), 1, "teste")(_hospital_feed())

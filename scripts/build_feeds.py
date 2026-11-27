@@ -124,6 +124,143 @@ def swap_all_route_names(expected_short: dict[str, str], reason: str) -> Callabl
     return step
 
 
+def extend_to_hospital(kmz_raw: str, routes: tuple[str, ...], every: int, reason: str) -> Callable[[dict[str, Table]], dict]:
+    """Linha do Hospital (fase 3, PLANEADO; N3.2): as viagens das `routes` (route_short_name) que
+    acabam na República (asc) seguem até ao Pediátrico, e as que partem da República (desc) passam a
+    partir do Pediátrico - uma em cada `every` por linha e sentido (1 = todas), pela ordem da hora.
+    Estações e via do KMZ oficial `kmz_raw` (data/raw/, tem de estar no MANIFEST.csv); tempos =
+    distância no eixo ÷ velocidade de referência do troço Loja do Cidadão - República NESTE feed
+    (gtfs_processing/hospital_line.py). Sem paragem nas estações novas (chegada = partida)."""
+    def step(feed: dict[str, Table]) -> dict:
+        import pandas as pd
+
+        from gtfs_processing import hospital_line, kmz
+        from gtfs_processing.timeutil import hhmmss_to_seconds, seconds_to_hhmmss
+
+        if every < 1:
+            raise BuildError(f"extend_to_hospital: every={every} (tem de ser >= 1)")
+        kmz_path = RAW_DIR / kmz_raw
+        manifest = _manifest_row(kmz_raw)
+        kmz_sha = _sha256(kmz_path)
+        if kmz_sha != manifest["sha256"]:
+            raise BuildError(f"{kmz_raw}: sha256 {kmz_sha[:16]} != MANIFEST {manifest['sha256'][:16]}")
+        st_cols, st_rows = feed["stop_times.txt"]
+        stop_cols, stop_rows = feed["stops.txt"]
+        stops_df = pd.DataFrame(stop_rows, columns=stop_cols)
+        legs = hospital_line.hospital_timetable_legs(kmz_path, stops_df, pd.DataFrame(st_rows, columns=st_cols))
+        speeds = hospital_line.reference_speeds(kmz_path, stops_df, pd.DataFrame(st_rows, columns=st_cols))
+
+        by_name = {r["stop_name"]: r["stop_id"] for r in stop_rows}
+        for name in ("República (asc)", "República (desc)"):
+            if name not in by_name:
+                raise BuildError(f"extend_to_hospital: paragem {name!r} não existe no feed")
+        kmz_points = kmz.stations(kmz.read_placemarks(kmz_path), kmz.HOSPITAL_STATIONS_FOLDER)
+        new_names = [n for n in dict.fromkeys(kmz.HOSPITAL_UP[1:] + kmz.HOSPITAL_DOWN[:-1])]
+        new_ids = {}
+        for i, name in enumerate(new_names, start=1):
+            sid = f"LH{i}"
+            if any(r["stop_id"] == sid for r in stop_rows):
+                raise BuildError(f"extend_to_hospital: stop_id {sid} já existe")
+            lat, lon = kmz_points[name]
+            row = {c: "" for c in stop_cols}
+            row.update({"stop_id": sid, "stop_name": name, "stop_lat": f"{lat:.6f}", "stop_lon": f"{lon:.6f}"})
+            if "stop_code" in stop_cols:
+                row["stop_code"] = f"planeado_lh{i}"
+            stop_rows.append(row)
+            new_ids[name] = sid
+
+        route_names = {r["route_id"]: r["route_short_name"] for r in feed["routes.txt"][1]}
+        missing = sorted(set(routes) - set(route_names.values()))
+        if missing:
+            raise BuildError(f"extend_to_hospital: linhas que não existem no feed: {missing}")
+        trip_route = {r["trip_id"]: route_names[r["route_id"]] for r in feed["trips.txt"][1]}
+        rows_by_trip: dict[str, list[dict]] = {}
+        for r in st_rows:
+            rows_by_trip.setdefault(r["trip_id"], []).append(r)
+        for rows in rows_by_trip.values():
+            rows.sort(key=lambda r: int(r["stop_sequence"]))
+
+        up_id, down_id = by_name["República (asc)"], by_name["República (desc)"]
+        candidates: dict[tuple[str, str], list[tuple[int, str]]] = {}
+        for trip, rows in rows_by_trip.items():
+            line = trip_route.get(trip)
+            if line not in routes:
+                continue
+            if rows[-1]["stop_id"] == up_id:
+                candidates.setdefault((line, "subir"), []).append((hhmmss_to_seconds(rows[0]["departure_time"]), trip))
+            elif rows[0]["stop_id"] == down_id:
+                candidates.setdefault((line, "descer"), []).append((hhmmss_to_seconds(rows[0]["departure_time"]), trip))
+        chosen = {key: [trip for k, (_, trip) in enumerate(sorted(trips)) if k % every == 0]
+                  for key, trips in candidates.items()}
+
+        def flags(row: dict, pickup: str, drop: str) -> None:
+            if "pickup_type" in row:
+                row["pickup_type"] = pickup
+            if "drop_off_type" in row:
+                row["drop_off_type"] = drop
+
+        added = 0
+        for (line, sense), trips in chosen.items():
+            for trip in trips:
+                rows = rows_by_trip[trip]
+                if sense == "subir":
+                    last = rows[-1]
+                    t = hhmmss_to_seconds(last["arrival_time"])
+                    flags(last, "0", "0")  # a República deixa de ser o fim da viagem
+                    seq, cum = int(last["stop_sequence"]), 0.0
+                    for leg in legs["subir"]:
+                        cum += leg.minutos
+                        seq += 1
+                        new = {c: "" for c in st_cols}
+                        new.update({"trip_id": trip, "stop_id": new_ids[leg.destino], "stop_sequence": str(seq)})
+                        new["arrival_time"] = new["departure_time"] = seconds_to_hhmmss(t + round(cum * 60))
+                        flags(new, "0", "0")
+                        st_rows.append(new)
+                        added += 1
+                    flags(st_rows[-1], "1", "0")  # Pediátrico: fim da viagem
+                else:
+                    first = rows[0]
+                    t = hhmmss_to_seconds(first["departure_time"])
+                    flags(first, "0", "0")  # a República deixa de ser o início da viagem
+                    total = sum(leg.minutos for leg in legs["descer"])
+                    offset = int(min(int(r["stop_sequence"]) for r in rows)) - len(legs["descer"]) - 1
+                    shift = 0 if offset >= 0 else -offset
+                    if shift:
+                        for r in rows:
+                            r["stop_sequence"] = str(int(r["stop_sequence"]) + shift)
+                    seq0 = int(rows[0]["stop_sequence"]) - len(legs["descer"]) - 1
+                    cum = 0.0
+                    stations = [legs["descer"][0].origem] + [leg.destino for leg in legs["descer"][:-1]]
+                    for k, name in enumerate(stations):
+                        new = {c: "" for c in st_cols}
+                        new.update({"trip_id": trip, "stop_id": new_ids[name], "stop_sequence": str(seq0 + 1 + k)})
+                        new["arrival_time"] = new["departure_time"] = seconds_to_hhmmss(t - round((total - cum) * 60))
+                        flags(new, "0", "0")
+                        if k == 0:
+                            flags(new, "0", "1")  # Pediátrico: início da viagem
+                        st_rows.append(new)
+                        cum += legs["descer"][k].minutos
+                        added += 1
+        st_rows.sort(key=lambda r: (r["trip_id"], int(r["stop_sequence"])))
+        return {
+            "passo": "PLANEADO: prolongar até ao Pediátrico (Linha do Hospital)",
+            "kmz": {"ficheiro": f"data/raw/{kmz_raw}", "sha256": kmz_sha},
+            "linhas": list(routes),
+            "uma_em_cada": every,
+            "paragens_novas": {new_ids[n]: n for n in new_names},
+            "velocidade_referencia": {k: {"troco": f"{v.origem} -> {v.destino}", "eixo_m": round(v.eixo_m, 1),
+                                          "viagens": v.viagens, "minutos_medios": round(v.minutos_medios, 4),
+                                          "km_h": round(v.km_h, 2)} for k, v in speeds.items()},
+            "trocos": {k: [{"de": l.origem, "para": l.destino, "eixo_m": round(l.eixo_m, 1),
+                            "minutos": round(l.minutos, 3)} for l in v] for k, v in legs.items()},
+            "viagens_prolongadas": {f"{line} {sense}": f"{len(trips)}/{len(candidates[(line, sense)])}"
+                                    for (line, sense), trips in sorted(chosen.items())},
+            "passagens_novas": added,
+            "motivo": reason,
+        }
+    return step
+
+
 @dataclass(frozen=True)
 class Build:
     target: str               # pasta relativa a data/gtfs/
@@ -171,6 +308,48 @@ BUILDS: tuple[Build, ...] = (
                 "No NeTEx o código da linha (U1, U2, U3, S1, S2) vem em Line/Name e a cor em Line/ShortName, "
                 "repetida (U1 e S1 = 'Azul', U2 e S2 = 'Vermelho'): como as linhas se resolvem pelo "
                 "route_short_name, sem a troca U1 e S1 eram a mesma linha. Mesma troca que no GTFS de 2025 (rota 3606).",
+            ),
+        ),
+    ),
+    # PLANEADOS (N3.2, 2026-11-27): a Linha do Hospital não tem horário oficial - estas pastas são o
+    # metro da fase 2 com o prolongamento assumido (decisões do utilizador: os três serviços que
+    # acabam na República, U2/U3/S2, seguem até ao Pediátrico, mesma frequência; sensibilidade com
+    # uma em cada duas viagens). Nunca usar como dado oficial: os slides que as mostram levam o selo
+    # "cenário planeado".
+    Build(
+        target="metro/fase3_planeado_20261111",
+        raw="agit/metro-mondego-netex/20261111-151447-135a5e2b/metro-mondego-netex.zip",
+        descricao="PLANEADO (hipotético): Metro Mondego fase 2 (NeTEx AGIT 2026-11-11) com a Linha do Hospital "
+                  "assumida - as viagens U2, U3 e S2 que acabam/começam na República prolongadas até ao Pediátrico "
+                  "(estações e via do KMZ oficial; tempos pela velocidade do troço Loja do Cidadão - República). "
+                  "Não é um horário oficial",
+        formato="netex",
+        steps=(
+            swap_all_route_names(
+                {"3605": "Vermelho", "3622": "Azul", "3623": "Verde", "3624": "Azul", "3625": "Vermelho"},
+                "Mesma troca que em metro/fase2_netex_20261111.",
+            ),
+            extend_to_hospital(
+                "dados-gov/metro-mondego-kmz/20260817-153951-91f456a7/rede-metrobus.kmz", ("U2", "U3", "S2"), 1,
+                "Fase 3 (março 2027) sem horário oficial: decisão do utilizador (2026-11-26/27) de prolongar a linha "
+                "da fase 2 que acaba na República, com a mesma frequência.",
+            ),
+        ),
+    ),
+    Build(
+        target="metro/fase3_planeado_metade_20261111",
+        raw="agit/metro-mondego-netex/20261111-151447-135a5e2b/metro-mondego-netex.zip",
+        descricao="PLANEADO (hipotético, sensibilidade): como metro/fase3_planeado_20261111, mas só uma em cada duas "
+                  "viagens U2, U3 e S2 segue para o Pediátrico (as outras acabam na República). Não é um horário oficial",
+        formato="netex",
+        steps=(
+            swap_all_route_names(
+                {"3605": "Vermelho", "3622": "Azul", "3623": "Verde", "3624": "Azul", "3625": "Vermelho"},
+                "Mesma troca que em metro/fase2_netex_20261111.",
+            ),
+            extend_to_hospital(
+                "dados-gov/metro-mondego-kmz/20260817-153951-91f456a7/rede-metrobus.kmz", ("U2", "U3", "S2"), 2,
+                "Sensibilidade do horário assumido (decisão do utilizador, 2026-11-27): metade das viagens prolongadas.",
             ),
         ),
     ),

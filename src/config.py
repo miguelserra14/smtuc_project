@@ -139,6 +139,12 @@ DATASET_DIRS: dict[str, str] = {
     # 2026-11-11 convertido para GTFS. Substituíram o "metrobus_fase2" sintético (D2.7).
     "smtuc_atual": "smtuc/atual_ep225",
     "metro_fase2_oficial": "metro/fase2_netex_20261111",
+    # PLANEADOS (N3.2): o metro da fase 2 com a Linha do Hospital ASSUMIDA (sem horário oficial),
+    # construídos por scripts/build_feeds.py a partir do NeTEx da fase 2 e do KMZ oficial (ver o
+    # PROVENANCE.json de cada pasta): todas as viagens U2/U3/S2 da República prolongadas até ao
+    # Pediátrico, e a sensibilidade com uma em cada duas. Só para os cenários planeados (fase 3).
+    "metro_fase3_planeado": "metro/fase3_planeado_20261111",
+    "metro_fase3_planeado_metade": "metro/fase3_planeado_metade_20261111",
     # Sintéticos arquivados em data/_arquivo/sintetico/ (ver o README de lá para reproduzir
     # reports/metricas/sintetico.csv e sintetico_fase2.csv).
 }
