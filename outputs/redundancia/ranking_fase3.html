@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>Redundância autocarro × metro: Fase 3 (planeado)</title>
+  <!-- Sem recursos externos: a página tem de funcionar offline (parede FeedNPlay) e dentro de
+       um iframe num cartão branco dos slides - por isso fundo claro e as cores da apresentação. -->
+  <style>
+    :root {
+      --ink: #221d13;
+      --muted: #5c574c;
+      --border: #e7e2d8;
+      --card: #ffffff;
+      --card-soft: #faf8f4;
+      --accent: #ffdd2b;
+      --good: #1f7a3a;
+      --good-bg: #e6f4ea;
+      --bad: #a3361f;
+      --bad-bg: #fbe9e4;
+      color-scheme: light only;
+    }
+    html, body { margin: 0; background: var(--card); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
+      font-size: clamp(13px, 1.25vw, 17px);
+      line-height: 1.4;
+      padding: 1em 1.2em;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 1.05em;
+      margin: 0 0 0.5em;
+      letter-spacing: 0.01em;
+    }
+    section + section { margin-top: 1.4em; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 0.45em 0.6em; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+    thead th { background: var(--card-soft); font-size: 0.85em; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--accent); }
+    thead th span { font-weight: 400; }
+    th[scope="row"], thead th:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+    td { white-space: nowrap; }
+    .trend-melhor { color: var(--good); background: var(--good-bg); font-weight: 600; }
+    .trend-pior { color: var(--bad); background: var(--bad-bg); font-weight: 600; }
+    span.trend-melhor, span.trend-pior { padding: 0 0.3em; border-radius: 3px; }
+    .note { color: var(--muted); font-size: 0.85em; margin: 0.5em 0 0; }
+    .sources { margin-top: 1.4em; }
+    code { font-size: 0.95em; }
+    /* Diferenças de rede (network_diff_page.py): colunas de texto, nome da linha, tabela de contagens. */
+    td.text { text-align: left; white-space: normal; }
+    th .name { font-weight: 400; font-size: 0.8em; color: var(--muted); }
+    table.counts { width: auto; min-width: 50%; margin-top: 0.8em; }
+    .note code { overflow-wrap: anywhere; }
+    /* Redundância (redundancy_page.py): barra proporcional atrás do valor. */
+    td.barcell { position: relative; min-width: 9em; }
+    td.barcell .bar { position: absolute; left: 0; top: 18%; bottom: 18%; background: var(--accent); opacity: 0.55; border-radius: 0 3px 3px 0; }
+    td.barcell .barval { position: relative; }
+    @media (max-width: 560px) {
+      body { padding: 0.75em 0.5em; }
+      th, td { padding: 0.35em 0.3em; }
+      td { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+<section>
+  <h2>Fase 3 (planeado): serviço SMTUC a par do metro</h2>
+  <table class="counts">
+    <thead><tr><th scope="col">A par do metro</th><th scope="col">Dia útil (09/11/2026)</th><th scope="col">Ano (estimativa)</th></tr></thead>
+    <tbody><tr><th scope="row">Autocarros·km a par do metro</th><td>2 404</td><td>740 601</td></tr><tr><th scope="row">Autocarros·hora a par do metro</th><td>186</td><td>56 258</td></tr><tr><th scope="row">t CO2 a par do metro</th><td>1,8</td><td>563</td></tr></tbody>
+  </table>
+  <p class="note">2 404 de 16 055 autocarros·km do dia (15,0 %), em 80 das 85 linhas com viagens. Semana-tipo (autocarros·km a par do metro): dia útil 09/11 × 5: 2 404 · sábado 07/11: 1 382 · domingo 08/11: 841.</p>
+</section>
+<section>
+  <h2>Linhas com mais autocarros·km a par do metro (dia útil)</h2>
+  <table>
+    <thead><tr><th scope="col">Linha</th><th scope="col">Autocarros·km</th><th scope="col">% dos km da linha</th><th scope="col">Viagens</th><th scope="col">Horas</th><th scope="col">Autocarros·km/ano</th><th scope="col">t CO2/ano</th></tr></thead>
+    <tbody><tr><th scope="row">5</th><td class="barcell"><span class="bar" style="width:100.0%"></span><span class="barval">184</span></td><td>25 %</td><td>58</td><td>13,1</td><td>61 318</td><td>46,6</td></tr><tr><th scope="row">6</th><td class="barcell"><span class="bar" style="width:94.5%"></span><span class="barval">174</span></td><td>34 %</td><td>61</td><td>15,7</td><td>55 243</td><td>42,0</td></tr><tr><th scope="row">29</th><td class="barcell"><span class="bar" style="width:91.6%"></span><span class="barval">169</span></td><td>59 %</td><td>68</td><td>17,7</td><td>51 610</td><td>39,2</td></tr><tr><th scope="row">7</th><td class="barcell"><span class="bar" style="width:90.1%"></span><span class="barval">166</span></td><td>22 %</td><td>101</td><td>13,3</td><td>55 095</td><td>41,9</td></tr><tr><th scope="row">28</th><td class="barcell"><span class="bar" style="width:66.8%"></span><span class="barval">123</span></td><td>40 %</td><td>54</td><td>9,6</td><td>31 989</td><td>24,3</td></tr><tr><th scope="row">24T</th><td class="barcell"><span class="bar" style="width:63.5%"></span><span class="barval">117</span></td><td>29 %</td><td>74</td><td>10,3</td><td>36 996</td><td>28,1</td></tr><tr><th scope="row">27</th><td class="barcell"><span class="bar" style="width:58.7%"></span><span class="barval">108</span></td><td>32 %</td><td>53</td><td>9,0</td><td>33 067</td><td>25,1</td></tr><tr><th scope="row">19T</th><td class="barcell"><span class="bar" style="width:55.9%"></span><span class="barval">103</span></td><td>23 %</td><td>47</td><td>6,7</td><td>33 553</td><td>25,5</td></tr><tr><th scope="row">37</th><td class="barcell"><span class="bar" style="width:46.4%"></span><span class="barval">85</span></td><td>24 %</td><td>62</td><td>6,7</td><td>24 938</td><td>19,0</td></tr><tr><th scope="row">50T</th><td class="barcell"><span class="bar" style="width:32.3%"></span><span class="barval">60</span></td><td>10 %</td><td>48</td><td>3,2</td><td>18 532</td><td>14,1</td></tr><tr><th scope="row">14</th><td class="barcell"><span class="bar" style="width:28.0%"></span><span class="barval">52</span></td><td>13 %</td><td>58</td><td>3,9</td><td>14 790</td><td>11,2</td></tr><tr><th scope="row">2T</th><td class="barcell"><span class="bar" style="width:27.0%"></span><span class="barval">50</span></td><td>10 %</td><td>40</td><td>2,5</td><td>15 265</td><td>11,6</td></tr><tr><th scope="row">5T</th><td class="barcell"><span class="bar" style="width:24.6%"></span><span class="barval">45</span></td><td>25 %</td><td>15</td><td>3,1</td><td>15 575</td><td>11,8</td></tr><tr><th scope="row">24</th><td class="barcell"><span class="bar" style="width:24.6%"></span><span class="barval">45</span></td><td>31 %</td><td>41</td><td>3,8</td><td>15 317</td><td>11,6</td></tr><tr><th scope="row">22</th><td class="barcell"><span class="bar" style="width:21.9%"></span><span class="barval">40</span></td><td>18 %</td><td>32</td><td>3,1</td><td>10 958</td><td>8,3</td></tr></tbody>
+  </table>
+</section>
+<section>
+  <h2>Troços do metro com mais autocarros a par (dia útil)</h2>
+  <table>
+    <thead><tr><th scope="col">Corredor do metro</th><th scope="col">Autocarros·km</th><th scope="col">Passagens</th><th scope="col">Linhas</th></tr></thead>
+    <tbody><tr><th scope="row">Açude – Casa do Sal</th><td class="barcell"><span class="bar" style="width:100.0%"></span><span class="barval">231</span></td><td>632</td><td class="text">2T, 5, 5T, 14, 19, 19A, 19R, 19T, 20, 20T, 22, 25, 25T, 27, 27F, 28, 29, 30, 30T, 35, 36, 36T, 39, 50, 50M, 50S, 50T, 51, 53, 53T</td></tr><tr><th scope="row">Mercado – República</th><td class="barcell"><span class="bar" style="width:82.9%"></span><span class="barval">191</span></td><td>521</td><td class="text">4, 5, 5T, 6, 6F, 11, 16, 16G, 19, 19A, 19R, 19T, 24, 24T, 27, 27F, 28, 29, 34, 36, 36T, 42V</td></tr><tr><th scope="row">junto a Loja do Cidadão</th><td class="barcell"><span class="bar" style="width:71.1%"></span><span class="barval">164</span></td><td>969</td><td class="text">5, 5T, 6, 6F, 12, 13, 13T, 14T, 16, 16G, 17, 19, 19A, 19R, 19T, 21, 21A, 21R, 21T, 22, 24T, 25, 25T, 27, 27F, 28, 29, 30, 31, 32, 32A, 32R, 35, 38F, 50T, 53, 53T</td></tr><tr><th scope="row">Parque – Portagem</th><td class="barcell"><span class="bar" style="width:63.4%"></span><span class="barval">146</span></td><td>292</td><td class="text">5, 5T, 9, 10A, 11, 24, 24T, 26, 38, 38F, 38T, 41, 42T, 42V, 43T, 44, 45, 54</td></tr><tr><th scope="row">Câmara – Mercado</th><td class="barcell"><span class="bar" style="width:55.3%"></span><span class="barval">127</span></td><td>384</td><td class="text">5, 5T, 6, 6F, 11, 16, 16G, 19, 19A, 19R, 19T, 24, 24T, 27, 27F, 28, 29, 36, 36T, 42V</td></tr><tr><th scope="row">Arnado – Açude</th><td class="barcell"><span class="bar" style="width:52.0%"></span><span class="barval">120</span></td><td>397</td><td class="text">2T, 5, 5T, 14, 19, 19A, 19R, 19T, 20, 20T, 22, 25, 25T, 27, 27F, 28, 29, 30, 30T, 35, 36T, 39, 50, 50M, 50S, 50T, 51, 53, 53T</td></tr><tr><th scope="row">Loja do Cidadão – Portagem</th><td class="barcell"><span class="bar" style="width:48.9%"></span><span class="barval">113</span></td><td>397</td><td class="text">2T, 6, 6F, 11, 12, 13, 13T, 14, 14T, 16, 16G, 17, 20, 20T, 21, 21A, 21R, 21T, 22, 24, 24T, 25, 25T, 27, 28, 30, 31, 32, 32A, 32R, 35, 36T, 38F, 39, 42V, 50M, 50T, 53, 53T</td></tr><tr><th scope="row">Arnado – Loja do Cidadão</th><td class="barcell"><span class="bar" style="width:44.9%"></span><span class="barval">104</span></td><td>409</td><td class="text">2T, 5, 5T, 12, 13, 13T, 14, 14T, 17, 19, 19A, 19R, 19T, 20, 20T, 21, 21A, 21R, 21T, 22, 25, 25T, 27, 27F, 28, 29, 30, 31, 32, 32A, 32R, 35, 36T, 38F, 39, 50M, 50T, 53, 53T</td></tr><tr><th scope="row">junto a Açude</th><td class="barcell"><span class="bar" style="width:43.5%"></span><span class="barval">100</span></td><td>323</td><td class="text">2T, 5, 5T, 19, 19A, 19R, 19T, 25, 25T, 27, 27F, 28, 29, 30, 30T, 35, 36, 36T, 39, 50, 50M, 50S, 50T, 51, 53, 53T</td></tr><tr><th scope="row">Celas – Sereia</th><td class="barcell"><span class="bar" style="width:39.9%"></span><span class="barval">92</span></td><td>343</td><td class="text">4, 6, 6F, 7, 16, 16G, 19, 19A, 19R, 19T, 27F, 29, 36, 36T, 37</td></tr><tr><th scope="row">Hospitais (H.U.C.) – Pediátrico</th><td class="barcell"><span class="bar" style="width:34.1%"></span><span class="barval">79</span></td><td>183</td><td class="text">6, 6F, 7, 35</td></tr><tr><th scope="row">Câmara – Loja do Cidadão</th><td class="barcell"><span class="bar" style="width:32.3%"></span><span class="barval">74</span></td><td>226</td><td class="text">5, 5T, 6, 6F, 11, 16G, 19, 19A, 19R, 19T, 24, 27, 27F, 28, 29, 42V</td></tr><tr><th scope="row">junto a República</th><td class="barcell"><span class="bar" style="width:31.8%"></span><span class="barval">73</span></td><td>466</td><td class="text">5, 5T, 6, 6F, 7, 10, 11, 16, 16F, 16G, 19, 19A, 19R, 19T, 24, 26, 27, 27F, 29, 34, 42V</td></tr><tr><th scope="row">Celas – Polo Ciências da Saúde</th><td class="barcell"><span class="bar" style="width:29.7%"></span><span class="barval">69</span></td><td>190</td><td class="text">6, 6F, 19, 19A, 19R, 19T, 27, 27F, 29, 35, 36, 36T, 37</td></tr><tr><th scope="row">Casa do Sal – Coimbra B</th><td class="barcell"><span class="bar" style="width:26.3%"></span><span class="barval">61</span></td><td>237</td><td class="text">2T, 5, 5T, 19A, 25, 25T, 27, 27F, 28, 30, 30T, 36, 36T, 39, 50, 50M, 50S, 50T, 51, 53, 53T</td></tr></tbody>
+  </table>
+</section>
+<p class="note sources">Viagem a viagem no dia útil de referência, cada viagem com as suas paragens. Um troço conta como a par do metro quando as duas paragens ficam a ≤ 3 min a pé de uma estação (a mesma regra da extensão a par do metro). Corredor = as estações mais próximas das duas pontas do troço. Ano estimado = semana-tipo (o dia útil × 5, mais o sábado e o domingo mais próximos dentro do período do horário) × 52, sem descontar feriados nem agosto. CO2 com a frota SMTUC de fev/2025 repartida por igual pelas linhas e consumos típicos (fontes em reports/estatisticas.txt). Dados: SMTUC / Município de Coimbra; Metro Mondego (AGIT).</p>
+
+</body>
+</html>
