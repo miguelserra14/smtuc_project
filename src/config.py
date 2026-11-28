@@ -127,6 +127,13 @@ REDUNDANCY_TOP_N = 15
 # do metro, capacidade nos corredores das estações novas e overlap temporal (a sensibilidade só
 # muda as frequências do metro, por isso só entra no overlap temporal).
 METRO_EXTENSION_PAGES: tuple[tuple[str, str, str | None], ...] = (("fase2", "fase3", "fase3_metade"),)
+# e, para os mesmos pares (N3.5, slide s3_capacidade), capacidade_<antes>_vs_<depois>.{html,csv}: as
+# horas SMTUC nos corredores das estações novas, linha a linha.
+# Página do horário assumido da Linha do Hospital (N3.5, slide s3_linha): troços e tempos do
+# PROVENANCE do feed planeado e o serviço num dia útil na estação HOSPITAL_ISOCHRONE_ORIGIN, em
+# cada cenário de HOSPITAL_LINE_PAGE_SCENARIOS -> OUTPUTS_PLANNED_DIR/linha_hospital.html.
+OUTPUTS_PLANNED_DIR = "outputs/fase3"
+HOSPITAL_LINE_PAGE_SCENARIOS: tuple[str, ...] = ("fase3", "fase3_metade")
 
 LINE_METRICS_DB_PATH = "outputs/overlap/line_metrics_db.csv"
 

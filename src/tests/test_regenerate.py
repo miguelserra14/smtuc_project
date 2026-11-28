@@ -24,6 +24,8 @@ SECTIONS = (
     "regenerate_integration_htmls",
     "regenerate_comparison_html",
     "regenerate_network_diff_html",
+    "regenerate_redundancy_html",
+    "regenerate_hospital_line_html",
     "regenerate_master_dashboard",
     "regenerate_presentation_dashboard",
     "regenerate_feednplay_dashboard",
@@ -49,6 +51,16 @@ def _stub_sections(monkeypatch: pytest.MonkeyPatch, calls: list[str], failing: s
                 except RuntimeError as exc:
                     regen._record_failure(_name, exc)
         monkeypatch.setattr(regen, name, _stub)
+
+
+def test_sections_list_covers_every_section_of_main() -> None:
+    # Os testes do main() substituem as secções de SECTIONS; uma secção que falte aqui corre a
+    # sério sobre os dados e escreve em outputs/ (aconteceu com a redundância e a Linha do Hospital).
+    import inspect
+    import re
+
+    called = re.findall(r"^\s+(regenerate_\w+)\(\)", inspect.getsource(regen.main), flags=re.MULTILINE)
+    assert called and list(called) == list(SECTIONS)
 
 
 def test_summary_exit_code() -> None:
@@ -264,6 +276,7 @@ def test_redundancy_section_writes_rankings_and_measures(monkeypatch: pytest.Mon
     # N3.4: uma página do aumento por METRO_EXTENSION_PAGES
     for before, after, _ in regen.METRO_EXTENSION_PAGES:
         assert (out / f"aumento_{before}_vs_{after}.html").exists() and (out / f"aumento_{before}_vs_{after}.csv").exists()
+        assert (out / f"capacidade_{before}_vs_{after}.html").exists()  # N3.5
 
     def _boom(sc):
         raise RuntimeError("falhou")

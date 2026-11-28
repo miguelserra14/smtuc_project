@@ -12,6 +12,7 @@ import pandas as pd
 
 from overlap.redundancy import Redundancy, Waste, WasteFactors
 from visualizations.redundancy_page import (
+    create_capacity_html,
     create_extension_html,
     create_measures_html,
     create_ranking_html,
@@ -126,3 +127,23 @@ def test_extension_page(tmp_path: Path) -> None:
     assert set(table["line"].astype(str)) == {"6", "<7>"}
     assert "overlap_temporal_pct | D metade" in table.columns
     assert (tmp_path / "aumento_corredores.csv").exists()
+
+
+def test_capacity_page(tmp_path: Path) -> None:
+    from tests.test_redundancy import _extension_waste
+
+    before = _extension_waste({"6": (10.0, 1.0)}, [("6", "República", "República", 10.0, 1.0, 5)])
+    after = _extension_waste(
+        {"6": (25.0, 2.5), "<7>": (30.0, 2.0)},
+        [("6", "República", "República", 10.0, 1.0, 5), ("6", "Celas", "Hospitais", 15.0, 1.5, 6),
+         ("<7>", "Celas", "Celas", 30.0, 2.0, 9)],
+    )
+    csv = tmp_path / "cap.csv"
+    page = Path(create_capacity_html(tmp_path / "cap.html", before, after, ("Celas", "Hospitais"), "D & cia",
+                                     csv_path=csv)).read_text(encoding="utf-8")
+    assert "D &amp; cia" in page and "&lt;7&gt;" in page
+    assert page.index("&lt;7&gt;</th>") < page.index(">6</th>")  # mais horas primeiro (2,0 > 1,5)
+    assert "3,5" in page  # 2,0 + 1,5 autocarros·hora por dia útil nos corredores novos
+    assert "78 %" in page  # 3,5 das 4,5 horas a par do metro
+    table = pd.read_csv(csv)
+    assert table["horas_novas"].sum() == 3.5 and "ano_t_co2_novos" in table.columns

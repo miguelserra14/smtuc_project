@@ -30,6 +30,11 @@ from config import (  # noqa: E402
     OUTPUTS_REDUNDANCY_DIR,
     REDUNDANCY_TOP_N,
     METRO_EXTENSION_PAGES,
+    HOSPITAL_ISOCHRONE_ORIGIN,
+    HOSPITAL_LINE_PAGE_SCENARIOS,
+    FREQUENCY_WINDOW_END_H,
+    FREQUENCY_WINDOW_START_H,
+    OUTPUTS_PLANNED_DIR,
     OUTPUTS_OVERLAP_DIR,
     OUTPUTS_POPULATION_DIR,
     POPULATION_STADIUM_MAP_RADIUS_M,
@@ -77,7 +82,13 @@ from visualizations import (  # noqa: E402
 )
 from visualizations.dashboard import load_overlap_stats, overlap_stats_footer_html  # noqa: E402
 from visualizations.network_diff_page import create_network_diff_html, default_note_html  # noqa: E402
-from visualizations.redundancy_page import create_extension_html, create_measures_html, create_ranking_html  # noqa: E402
+from visualizations.redundancy_page import (  # noqa: E402
+    create_capacity_html,
+    create_extension_html,
+    create_measures_html,
+    create_ranking_html,
+)
+from visualizations.hospital_line_page import create_hospital_line_html, extension_step  # noqa: E402
 from visualizations.scenario_comparison import create_scenario_comparison_html  # noqa: E402
 
 # Registo do que correu mal / foi saltado durante a execução, para o resumo final e o exit code.
@@ -569,6 +580,50 @@ def regenerate_redundancy_html() -> None:
             print(f"[SUCCESS] Aumento da redundância com o metro novo ({stem}): {created}")
         except Exception as e:
             _record_failure(f"{section} {stem}", e)
+        cap = f"capacidade_{before_name}_vs_{after_name}"
+        try:
+            created = create_capacity_html(
+                out_dir / f"{cap}.html", wastes[before_name], wastes[after_name], _ordered_new_stations(before_name, after_name),
+                get_scenario(after_name).display_name, top_n=REDUNDANCY_TOP_N, csv_path=out_dir / f"{cap}.csv",
+            )
+            print(f"[SUCCESS] Capacidade nos corredores das estações novas ({cap}): {created}")
+        except Exception as e:
+            _record_failure(f"{section} {cap}", e)
+
+
+def regenerate_hospital_line_html() -> None:
+    """Horário assumido da Linha do Hospital (N3.5) -> OUTPUTS_PLANNED_DIR/linha_hospital.html: os
+    troços do PROVENANCE do metro do primeiro cenário de HOSPITAL_LINE_PAGE_SCENARIOS e o serviço
+    num dia útil na estação dos HUC em cada um."""
+    section = "linha do hospital"
+    print("\n" + "=" * 60)
+    print("[INFO] Regenerando página da Linha do Hospital (planeado)...")
+    print("=" * 60)
+    from gtfs_processing.gtfs import dataset_dir
+    from gtfs_processing.hospital_line import station_service
+    from gtfs_processing.kmz import HOSPITAL_UP
+    from overlap.redundancy import station_name
+
+    scenarios = [get_scenario(name) for name in HOSPITAL_LINE_PAGE_SCENARIOS]
+    missing = [sc.metro for sc in scenarios if not _require_dataset(sc.metro)]
+    if not scenarios or missing:
+        _record_skip(section, f"datasets do metro planeado não disponíveis: {missing}")
+        return
+    try:
+        station = str(HOSPITAL_ISOCHRONE_ORIGIN[0])
+        terminus = station_name(HOSPITAL_UP[-1])
+        day = resolve_reference_day(scenario=scenarios[0])
+        step = extension_step(dataset_dir(scenarios[0].metro) / "PROVENANCE.json")
+        services = {
+            sc.display_name: station_service(load_gtfs_cached(sc.metro), resolve_reference_day(scenario=sc), station,
+                                             terminus, (FREQUENCY_WINDOW_START_H, FREQUENCY_WINDOW_END_H))
+            for sc in scenarios
+        }
+        created = create_hospital_line_html(project_root() / OUTPUTS_PLANNED_DIR / "linha_hospital.html", step, services,
+                                            station, day.strftime("%d/%m/%Y"))
+        print(f"[SUCCESS] Linha do Hospital (horário assumido): {created}")
+    except Exception as e:
+        _record_failure(section, e)
 
 
 def _ordered_new_stations(before_name: str, after_name: str) -> tuple[str, ...]:
@@ -690,6 +745,7 @@ def main() -> None:
     regenerate_comparison_html()
     regenerate_network_diff_html()
     regenerate_redundancy_html()
+    regenerate_hospital_line_html()
     regenerate_master_dashboard()
     regenerate_presentation_dashboard()
     regenerate_feednplay_dashboard()

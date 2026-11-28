@@ -480,46 +480,73 @@ PRESENTATION_TABS: list[dict[str, Any]] = [
     # Secção 3: fase 3 (C -> D, planeado) - redundância por resolver
     # =====================================================================================
     {"id": "secao_3", "label": "3 · Fase 3", "kind": "section", "section": "s3"},
+    # N3.5: páginas de regenerate_hospital_line_html e regenerate_redundancy_html (números só dos
+    # dados). O selo "cenário planeado" vem do degrau D (nature "planeado").
     {
         "id": "s3_linha",
         "label": "A Linha do Hospital",
-        "kind": "pending",
+        "kind": "scenario-compare",
         "section": "s3",
         "ladder": ["C", "D"],
-        "status": "Por construir · N3",
-        "description": "Cinco estações novas entre a República e o Pediátrico.",
-        "shows": [
-            "Estações oficiais do Metro Mondego: Sereia, Celas, Polo Ciências da Saúde, Hospitais (HUC) e Pediátrico.",
-            "Horário assumido: prolongamento da linha que acaba na República, com a mesma frequência; tempos entre estações calculados pela distância e pela velocidade média do troço Aeminium – República.",
-            "Acessibilidade a partir dos Hospitais (HUC), antes e depois da fase 3.",
+        "description": "Cinco estações novas entre a República e o Pediátrico, com um horário assumido.",
+        "note": "As estações e a via são as do mapa oficial do Metro Mondego; o horário não existe ainda. Assume-se que as viagens que hoje acabam na República seguem até ao Pediátrico, com a mesma frequência, e que cada troço novo demora o que demoraria à velocidade média do troço urbano Loja do Cidadão – República. Como o horário é assumido, mede-se também uma variante com metade das viagens prolongadas.",
+        "table": {
+            "title": "Linha do Hospital: tempos assumidos e serviço nos Hospitais",
+            "src": "fase3/linha_hospital.html",
+            "caption": "Troços, distâncias na via e tempos; passagens e intervalo num dia útil nas duas variantes do horário.",
+        },
+        "iframes": [
+            {
+                "title": "Linhas sobrepostas: Como Vou",
+                "src": "overlap/overlap_lines_map_fase2.html",
+                "caption": "Rede atual (09/11/2026), metro até à República.",
+            },
+            {
+                "title": "Linhas sobrepostas: fase 3",
+                "src": "overlap/overlap_lines_map_fase3.html",
+                "caption": "O mesmo horário SMTUC, com a Linha do Hospital (cenário planeado).",
+            },
         ],
     },
     {
         "id": "s3_redundancia",
         "label": "Redundância por resolver",
-        "kind": "pending",
+        "kind": "scenario-compare",
         "section": "s3",
         "ladder": ["C", "D"],
-        "status": "Por construir · N3",
-        "description": "O que o Como Vou deixou ficar e o que a Linha do Hospital acrescenta.",
-        "shows": [
-            "Redundância que já existe na rede atual e que o Como Vou não resolveu.",
-            "Linhas SMTUC que passam a ter overlap com a Linha do Hospital, com a mesma regra das secções anteriores.",
-            "Overlap temporal com duas frequências da Linha do Hospital, porque o horário é assumido.",
+        "description": "O que a Linha do Hospital acrescenta à redundância que o Como Vou deixou ficar.",
+        "note": "Mesmo horário SMTUC, mesmo dia: a diferença é só a Linha do Hospital. As linhas que sobem a Celas e aos Hospitais passam a correr a par do metro, com a mesma regra das secções anteriores. O painel inclui o tempo de viagem a partir dos Hospitais, medido do mesmo ponto nos dois cenários. Com metade das viagens a redundância é a mesma (só conta a distância às estações); muda o overlap temporal.",
+        "table": {
+            "title": "Indicadores: Como Vou → fase 3",
+            "src": "comparacao/fase2_vs_fase3.html",
+            "caption": "Overlap, acessibilidade a partir do estádio, das estações e dos Hospitais, população sem oferta, redundância.",
+        },
+        "iframes": [
+            {
+                "title": "O que a Linha do Hospital torna redundante",
+                "src": "redundancia/aumento_fase2_vs_fase3.html",
+                "caption": "Linha a linha, com o overlap temporal nas duas variantes do horário.",
+            },
+            {
+                "title": "Ranking da fase 3",
+                "src": "redundancia/ranking_fase3.html",
+                "caption": "Toda a redundância por resolver: a que o Como Vou deixou e a nova.",
+            },
         ],
     },
     {
         "id": "s3_capacidade",
-        "label": "Capacidade libertada",
-        "kind": "pending",
+        "label": "Capacidade a libertar",
+        "kind": "scenario-compare",
         "section": "s3",
         "ladder": ["C", "D"],
-        "status": "Por construir · N3",
-        "description": "Quantos autocarros a fase 3 permite tirar dos corredores redundantes.",
-        "shows": [
-            "Autocarros·hora por dia nas passagens redundantes, linha a linha.",
-            "Total disponível para redirecionar: é o orçamento da secção 4.",
-        ],
+        "description": "Quanto tempo de condução SMTUC fica ao lado da Linha do Hospital, e de que linhas.",
+        "note": "Conta-se cada viagem do dia útil nos troços junto às estações novas; o ano é a estimativa pela semana-tipo. É o tempo de condução que pode ir para outro lado se estas linhas deixarem de repetir o percurso do metro: o orçamento da secção 4. Mede-se em autocarros·hora, não em autocarros: quantos veículos isso dá depende de como se reorganizarem as linhas.",
+        "table": {
+            "title": "Autocarros nos corredores das estações novas",
+            "src": "redundancia/capacidade_fase2_vs_fase3.html",
+            "caption": "Autocarros·hora e ·km por dia útil e por ano, linha a linha.",
+        },
     },
     # =====================================================================================
     # Secção 4: sugestões (D -> E, planeado) - onde investir

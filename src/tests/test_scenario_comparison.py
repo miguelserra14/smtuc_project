@@ -180,6 +180,10 @@ def test_slides_and_master_link_both_scenarios(tmp_path: Path) -> None:
         "efeito_metro": "comparacao/antes_vs_fase2_ep212.html",
         "s2_rede": "comparacao/rede_fase2_ep212_vs_fase2.html",
         "como_vou": "comparacao/fase2_ep212_vs_fase2.html",
+        # N3.5: secção 3 (C -> D, planeado).
+        "s3_linha": "fase3/linha_hospital.html",
+        "s3_redundancia": "comparacao/fase2_vs_fase3.html",
+        "s3_capacidade": "redundancia/capacidade_fase2_vs_fase3.html",
     }
     for column in tabs[ids.index("integracao")]["columns"]:
         assert "_fase2" not in column["current"]["src"]  # secção 1.5 = só a fase 1
@@ -193,8 +197,11 @@ def test_slides_and_master_link_both_scenarios(tmp_path: Path) -> None:
     assert master["antes-vs-fase2"]["src"] == "comparacao/antes_vs_fase2.html"
     assert master["redundancia"]["src"] == "redundancia/ranking_fase2.html"
     assert "comparacao/antes_sem54_vs_antes.html" in [f["src"] for f in master["redundancia"]["extra_frames"]]
-    # N2 fechado: nenhum slide das secções 1, 1.5 e 2 continua por construir.
-    assert not [t["id"] for t in tabs if t["kind"] == "pending" and t.get("section") in ("s1", "s1_5", "s2")]
+    # N2 e N3 fechados: nenhum slide das secções 1, 1.5, 2 e 3 continua por construir.
+    assert not [t["id"] for t in tabs if t["kind"] == "pending" and t.get("section") in ("s1", "s1_5", "s2", "s3")]
+    # A secção 3 compara C com D (planeado): leva o selo em todos os slides.
+    s3 = [t for t in tabs if t.get("section") == "s3" and t["kind"] != "section"]
+    assert s3 and all(t["ladder"] == ["C", "D"] for t in s3)
 
     for create in (create_presentation_dashboard_html, create_feednplay_dashboard_html):
         out = Path(create(tmp_path / f"{create.__name__}.html"))

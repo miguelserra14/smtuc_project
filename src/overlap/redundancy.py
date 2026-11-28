@@ -395,7 +395,8 @@ def new_stations(before: str | Scenario, after: str | Scenario) -> tuple[str, ..
 
 INCREASE_COLUMNS = (
     "line", "km_antes", "km_depois", "delta_km", "horas_antes", "horas_depois", "delta_horas",
-    "ano_delta_horas", "ano_delta_t_co2", "horas_novas", "ano_horas_novas", "estacoes_novas", "corredores_novos",
+    "ano_delta_horas", "ano_delta_t_co2", "horas_novas", "ano_horas_novas", "km_novos", "ano_km_novos",
+    "estacoes_novas", "corredores_novos",
 )
 
 
@@ -447,6 +448,9 @@ def metro_extension_increase(before: Waste, after: Waste, stations: tuple[str, .
     out["horas_novas"] = out["line"].map(day_new.groupby("line")["horas_metro"].sum()).fillna(0.0).astype(float)
     out["ano_horas_novas"] = (out["line"].map(week_new.groupby("line")["horas_metro"].sum()).fillna(0.0).astype(float)
                               * f.weeks_per_year)
+    out["km_novos"] = out["line"].map(day_new.groupby("line")["km_metro"].sum()).fillna(0.0).astype(float)
+    out["ano_km_novos"] = (out["line"].map(week_new.groupby("line")["km_metro"].sum()).fillna(0.0).astype(float)
+                           * f.weeks_per_year)
     labels = day_new.assign(_c=[_corridor_label(x, y) for x, y in zip(day_new["station_a"], day_new["station_b"])])
     by_line = labels.groupby("line")["_c"].apply(lambda s: "; ".join(dict.fromkeys(s))) if not labels.empty else pd.Series(dtype=str)
     out["corredores_novos"] = out["line"].map(by_line).fillna("")

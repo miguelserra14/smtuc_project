@@ -7,6 +7,8 @@
 - `create_extension_html`: o que um metro novo (mesmo SMTUC) faz à redundância (C -> D = a Linha
   do Hospital, N3.4): as linhas que passam a correr a par do metro, a capacidade nos corredores
   das estações novas e o overlap temporal com cada horário do metro (incl. a sensibilidade).
+- `create_capacity_html`: a capacidade SMTUC nos corredores das estações novas (N3.5, slide
+  s3_capacidade), linha a linha - o orçamento da secção 4.
 
 Mesma casca das páginas de comparação (templates/scenario_comparison.html: sem recursos externos,
 fundo claro para os iframes dos slides e da parede FeedNPlay). As barras são HTML/CSS. Tudo o que
@@ -386,3 +388,67 @@ def create_extension_html(
         out.to_csv(csv_path, index=False)
         corridors.to_csv(csv_path.with_name(f"{csv_path.stem}_corredores.csv"), index=False)
     return _write(output_path, f"O que o metro novo torna redundante: {label_before} → {label_after}", body)
+
+
+def create_capacity_html(
+    output_path: Path | str,
+    waste_before: Waste,
+    waste_after: Waste,
+    stations: tuple[str, ...],
+    label_after: str,
+    top_n: int = 15,
+    csv_path: Path | str | None = None,
+) -> str:
+    """Autocarros·hora e ·km que o SMTUC de `waste_after` corre nos corredores com uma estação nova
+    (`stations`) numa ponta, por linha, no dia útil e no ano estimado. Com `csv_path`, grava todas
+    as linhas com capacidade nesses corredores."""
+    table = metro_extension_increase(waste_before, waste_after, stations)
+    table = table[(table["horas_novas"] > 0) | (table["ano_horas_novas"] > 0)]
+    table = table.sort_values(["horas_novas", "ano_horas_novas"], ascending=False, kind="mergesort").reset_index(drop=True)
+    f = waste_after.factors
+    t_co2 = table["ano_km_novos"] * f.kg_co2_per_km / 1000.0
+    total_h = float(waste_after.summary()["dia_horas_metro"])
+    day_h, year_h = float(table["horas_novas"].sum()), float(table["ano_horas_novas"].sum())
+    day_km, year_km = float(table["km_novos"].sum()), float(table["ano_km_novos"].sum())
+    la = html.escape(label_after)
+    shown = table[table["horas_novas"] > 0].head(top_n)
+    top = float(shown["horas_novas"].max()) if not shown.empty else 0.0
+    rows = "".join(
+        "<tr>"
+        f"<th scope=\"row\">{html.escape(str(r.line))}</th>"
+        f"<td class=\"barcell\">{_bar(r.horas_novas, top)}<span class=\"barval\">{_fmt_number(r.horas_novas, 1)}</span></td>"
+        f"<td>{_fmt_number(r.ano_horas_novas)}</td>"
+        f"<td>{_fmt_number(r.km_novos)}</td>"
+        f"<td>{_fmt_number(r.ano_km_novos * f.kg_co2_per_km / 1000.0, 1)}</td>"
+        f"<td class=\"text\">{html.escape(str(r.estacoes_novas))}</td>"
+        "</tr>"
+        for r in shown.itertuples(index=False)
+    )
+    share = 100.0 * day_h / total_h if total_h > 0 else 0.0
+    body = f"""
+<section>
+  <h2>{la}: autocarros nos corredores das estações novas</h2>
+  <table class="counts">
+    <thead><tr><th scope="col">Nos corredores das estações novas</th><th scope="col">Dia útil</th><th scope="col">Ano (estimativa)</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Autocarros·hora</th><td>{_fmt_number(day_h, 1)}</td><td>{_fmt_number(year_h)}</td></tr>
+      <tr><th scope="row">Autocarros·km</th><td>{_fmt_number(day_km)}</td><td>{_fmt_number(year_km)}</td></tr>
+      <tr><th scope="row">t CO2</th><td>{_fmt_number(day_km * f.kg_co2_per_km / 1000.0, 1)}</td><td>{_fmt_number(float(t_co2.sum()))}</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Estações novas: {html.escape(", ".join(stations))}. São {_fmt_number(share, 0, "%")} dos {_fmt_number(total_h)} autocarros·hora que a rede SMTUC corre a par do metro num dia útil, em {int((table["horas_novas"] > 0).sum())} linhas. É o tempo de condução que pode ser redirecionado se estas linhas deixarem de fazer o percurso da Linha do Hospital: o orçamento da secção 4. São autocarros·hora, não autocarros: o número de veículos depende de como se reorganizam as linhas.</p>
+</section>
+<section>
+  <h2>Linha a linha</h2>
+  <table>
+    <thead><tr><th scope="col">Linha</th><th scope="col">Autocarros·hora/dia</th><th scope="col">Autocarros·hora/ano</th><th scope="col">Autocarros·km/dia</th><th scope="col">t CO2/ano</th><th scope="col">Estações novas por onde passa</th></tr></thead>
+    <tbody>{rows}</tbody>
+  </table>
+</section>
+<p class="note sources">{html.escape(_METHOD_NOTE)}</p>
+"""
+    if csv_path is not None:
+        Path(csv_path).parent.mkdir(parents=True, exist_ok=True)
+        table.assign(ano_t_co2_novos=t_co2)[["line", "horas_novas", "ano_horas_novas", "km_novos", "ano_km_novos",
+                                             "ano_t_co2_novos", "estacoes_novas", "corredores_novos"]].to_csv(csv_path, index=False)
+    return _write(output_path, f"Capacidade nos corredores das estações novas: {label_after}", body)

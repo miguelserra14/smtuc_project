@@ -23,7 +23,7 @@ from pathlib import Path
 import pandas as pd
 
 from gtfs_processing import kmz
-from gtfs_processing.timeutil import series_hhmmss_to_seconds
+from gtfs_processing.timeutil import seconds_to_hhmmss, series_hhmmss_to_seconds
 
 # Troço de referência por sentido: (nomes no GTFS da fase 2, nomes no KMZ). "subir" = da Baixa
 # para a República (plataformas asc), "descer" = da República para a Baixa (desc).
@@ -107,6 +107,55 @@ def hospital_timetable_legs(kmz_path: Path | str, stops: pd.DataFrame, stop_time
     speeds = reference_speeds(kmz_path, stops, stop_times)
     legs = kmz.hospital_line_legs(kmz_path)
     return {sense: timed_legs(legs[sense], speeds[sense]) for sense in ("subir", "descer")}
+
+
+SERVICE_COLUMNS = ("linha", "sentido", "passagens", "primeira", "ultima", "intervalo_mediano_min")
+ALL_LINES = "todas"
+
+
+def station_service(gtfs, day, station: str, terminus: str, window_h: tuple[float, float]) -> pd.DataFrame:
+    """Serviço de um dia numa estação do metro (N3.5: a página do horário assumido), por linha e
+    sentido: "subir" = a viagem acaba em `terminus`, "descer" = as outras. `station`/`terminus` sem
+    sufixo de plataforma. Passagens no dia, primeira e última (HH:MM) e o intervalo mediano entre
+    passagens consecutivas que partem dentro de `window_h` (horas, fim exclusive; NaN com menos de
+    duas). Mais uma linha ALL_LINES por sentido com todas as linhas juntas. Só viagens com serviço
+    em `day` (active_service_ids)."""
+    from gtfs_processing.gtfs_probe import active_service_ids
+    from overlap.redundancy import station_name
+
+    active = active_service_ids(gtfs, day)
+    trips = gtfs.trips[gtfs.trips["service_id"].isin(active)][["trip_id", "route_id"]].astype(str)
+    lines = gtfs.routes.assign(route_id=gtfs.routes["route_id"].astype(str)).set_index("route_id")["route_short_name"]
+    trips = trips.assign(linha=trips["route_id"].map(lines).astype(str))
+    names = gtfs.stops.assign(stop_id=gtfs.stops["stop_id"].astype(str)).set_index("stop_id")["stop_name"].map(station_name)
+    st = gtfs.stop_times[gtfs.stop_times["trip_id"].astype(str).isin(trips["trip_id"])]
+    st = st.assign(trip_id=st["trip_id"].astype(str), _name=st["stop_id"].astype(str).map(names),
+                   _seq=pd.to_numeric(st["stop_sequence"]))
+    if "departure_seconds" not in st.columns:
+        st = st.assign(departure_seconds=series_hhmmss_to_seconds(st["departure_time"]))
+    last = st.sort_values(["trip_id", "_seq"]).drop_duplicates("trip_id", keep="last").set_index("trip_id")["_name"]
+    at = st[st["_name"] == station].sort_values(["trip_id", "_seq"]).drop_duplicates("trip_id")
+    at = at.merge(trips[["trip_id", "linha"]], on="trip_id")
+    at = at.assign(sentido=at["trip_id"].map(last).eq(terminus).map({True: "subir", False: "descer"}))
+    start, end = window_h[0] * 3600, window_h[1] * 3600
+
+    def row(linha: str, sentido: str, times: pd.Series) -> dict:
+        t = times.sort_values().to_numpy()
+        inside = t[(t >= start) & (t < end)]
+        gaps = pd.Series(inside[1:] - inside[:-1]) / 60.0
+        return {"linha": linha, "sentido": sentido, "passagens": int(len(t)),
+                "primeira": seconds_to_hhmmss(int(t[0]) % 86400)[:5] if len(t) else "",
+                "ultima": seconds_to_hhmmss(int(t[-1]) % 86400)[:5] if len(t) else "",  # 24:10 -> 00:10
+                "intervalo_mediano_min": float(gaps.median()) if len(gaps) else float("nan")}
+
+    rows = []
+    for sentido in ("subir", "descer"):
+        part = at[at["sentido"] == sentido]
+        for linha, g in sorted(part.groupby("linha"), key=lambda kv: kv[0]):
+            rows.append(row(linha, sentido, g["departure_seconds"]))
+        if not part.empty:
+            rows.append(row(ALL_LINES, sentido, part["departure_seconds"]))
+    return pd.DataFrame(rows, columns=list(SERVICE_COLUMNS))
 
 
 def _main() -> None:
