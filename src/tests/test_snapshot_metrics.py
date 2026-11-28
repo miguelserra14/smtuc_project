@@ -206,3 +206,71 @@ def test_baseline_covers_every_section_and_known_values(current_snapshot: pd.Dat
     assert base[("overlap_resumo", "total", "temporal_overlap_times")] == "4651"
     assert base[("overlap_resumo", "total", "total_spatial_candidates")] == "4971"
     assert base[("overlap_resumo", "total", "temporal_overlap_pct")] == "93.56"
+
+
+# --------------------------------------------------------------------------- verificar (auditoria 2026-11-28)
+
+
+def _record(path: Path, scenario: str, sections: str, values: dict[tuple[str, str], object], fp: str = "aa") -> None:
+    rows = [("meta", "snapshot", "cenario", scenario), ("meta", "snapshot", "secoes", sections),
+            ("meta", "dados", "impressao_digital_smtuc", fp), ("meta", "dados", "impressao_digital_metro", "bb")]
+    rows += [(sec, key, "valor", v) for (sec, key), v in values.items()]
+    snap_mod.write_snapshot(_frame(rows), path)
+
+
+def _fake_snapshot(values: dict[tuple[str, str], object], fp: str = "aa"):
+    calls = []
+
+    def run(phase, scenario=None, sections=()):
+        calls.append((scenario, tuple(sections)))
+        rows = [("meta", "dados", "impressao_digital_smtuc", fp), ("meta", "dados", "impressao_digital_metro", "bb")]
+        rows += [(sec, key, "valor", v) for (sec, key), v in values.items() if sec in sections]
+        return _frame(rows)
+
+    run.calls = calls
+    return run
+
+
+def test_verify_compares_each_record_on_its_own_sections(tmp_path: Path) -> None:
+    _record(tmp_path / "base.csv", "fase2", "linhas;isocrona", {("linhas", "5"): 10, ("isocrona", "t"): 40})
+    _record(tmp_path / "opt.csv", "fase2", "redundancia", {("redundancia", "km"): 1970})
+    records = [("base", "fase2"), ("opt", "fase2")]
+    same = _fake_snapshot({("linhas", "5"): 10, ("isocrona", "t"): 40, ("redundancia", "km"): 1970, ("populacao", "x"): 1})
+    results = snap_mod.verify_records(records, tmp_path, snapshot_fn=same)
+    assert [r["estado"] for r in results] == ["igual", "igual"]
+    assert same.calls == [("fase2", ("linhas", "isocrona", "redundancia"))]  # um snapshot por cenário
+    changed = _fake_snapshot({("linhas", "5"): 11, ("isocrona", "t"): 40, ("redundancia", "km"): 1970})
+    results = {r["registo"]: r for r in snap_mod.verify_records(records, tmp_path, snapshot_fn=changed)}
+    assert results["base"]["estado"] == "diferente" and len(results["base"]["diferencas"]) == 1
+    assert results["opt"]["estado"] == "igual"
+
+
+def test_verify_flags_missing_wrong_scenario_and_changed_data(tmp_path: Path) -> None:
+    _record(tmp_path / "a.csv", "fase2", "linhas", {("linhas", "5"): 10})
+    _record(tmp_path / "b.csv", "antes", "linhas", {("linhas", "5"): 10})
+    records = [("a", "fase2"), ("b", "fase2"), ("c", "fase2")]
+    results = {r["registo"]: r["estado"] for r in snap_mod.verify_records(records, tmp_path, snapshot_fn=_fake_snapshot({("linhas", "5"): 10}, fp="zz"))}
+    assert results == {"a": "dados mudaram", "b": "cenário errado (antes)", "c": "em falta"}
+    assert snap_mod._print_verification([{"registo": "a", "cenario": "fase2", "estado": "dados mudaram", "diferencas": None}]) == 1
+
+
+def test_current_records_list_is_consistent() -> None:
+    # em_vigor.csv: cada registo existe e é do cenário indicado, e cada cenário do config tem
+    # registos que cobrem as secções por omissão (as que o cenário tem: sem a 54 não há esperas).
+    import config
+
+    records = snap_mod.load_current_records()
+    folder = snap_mod.CURRENT_RECORDS_CSV.parent
+    covered: dict[str, set[str]] = {}
+    for name, scen in records:
+        df = snap_mod.read_snapshot(folder / f"{name}.csv")
+        assert snap_mod._meta(df, "cenario") == scen, name
+        covered.setdefault(scen, set()).update(snap_mod.record_sections(df))
+    from gtfs_processing.scenarios import excluded_integration_lines, get_scenario
+
+    for scen in config.SCENARIOS:
+        expected = set(snap_mod.SECTIONS)
+        if excluded_integration_lines(get_scenario(scen)):
+            expected -= {"esperas_54", "busca_fase_54"}
+        missing = expected - covered.get(scen, set())
+        assert not missing, f"cenário {scen} sem registo em vigor para {sorted(missing)} (reports/metricas/em_vigor.csv)"

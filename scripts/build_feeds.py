@@ -404,9 +404,15 @@ def _manifest_row(raw_rel: str) -> dict[str, str]:
 
 
 def _git_commit() -> str:
+    """HEAD curto, com "+alterações" se a árvore tiver mudanças por commitar em ficheiros
+    versionados (o mesmo critério do snapshot_metrics). Antes gravava só o HEAD: as pastas
+    fase3_planeado* dizem 78bf30e, mas o extend_to_hospital que as gerou só entrou no bd12fde -
+    o conteúdo está confirmado pelo --verificar, que ignora este campo."""
     try:
-        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True)
-        return out.stdout.strip()
+        head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True)
+        dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT,
+                               capture_output=True, text=True, check=True)
+        return head.stdout.strip() + ("+alterações" if dirty.stdout.strip() else "")
     except (OSError, subprocess.CalledProcessError):
         return "desconhecido"
 

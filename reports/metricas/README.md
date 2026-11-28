@@ -2,6 +2,12 @@
 
 Gerados por `scripts/snapshot_metrics.py` e `scripts/search_phase_shift.py`. Os ficheiros não se substituem: cada troca de dados acrescenta um snapshot novo e o diff contra o anterior.
 
+**Registos em vigor** (auditoria de 2026-11-28): `em_vigor.csv` lista os registos que o código atual tem de reproduzir, número a número, e o cenário de cada um. Os outros ficheiros são história: ficaram para trás por mudanças intencionais, documentadas nos `diff_*.csv`.
+
+- `python scripts/snapshot_metrics.py verificar` recalcula-os (um snapshot por cenário, cerca de 3 a 4 min) e sai com erro se algum número mudou, se faltar um registo ou se os dados já não forem os do registo. Corre-se antes de commitar qualquer mudança de cálculo ou de dados.
+- Uma mudança intencional faz-se com registos novos, o diff contra os anteriores e a atualização do `em_vigor.csv`, tudo no mesmo commit.
+- `test_snapshot_metrics` confere que a lista é coerente: cada registo existe e é do cenário indicado, e cada cenário do `config` tem registos com as secções por omissão. A 28/11/2026 os 17 registos em vigor saíram iguais.
+
 | Ficheiro | O que é |
 |---|---|
 | `sintetico.csv` | **Antes** (D0.2, 2026-11-16): SMTUC Ep212 + Metro **sintético** fase 1 |

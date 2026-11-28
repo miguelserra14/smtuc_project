@@ -142,6 +142,47 @@ def test_raw_file_must_match_the_manifest(env) -> None:
     assert not target.exists()
 
 
+def test_raw_files_match_the_manifest() -> None:
+    # Auditoria 2026-11-28: os ficheiros de data/raw/ só eram conferidos com o MANIFEST no build e
+    # no --verificar. Cada ficheiro registado (novo/manual) tem de ter o sha256 do MANIFEST, ou
+    # estar ausente E ignorado pelo git (o GTFS do Município, que cada máquina descarrega); e não
+    # pode haver ficheiros por registar (exceto o validation.json que o fetch_feeds guarda ao lado).
+    import hashlib
+    import subprocess
+
+    raw = ROOT / "data" / "raw"
+    with open(raw / "MANIFEST.csv", encoding="utf-8", newline="") as fh:
+        rows = [r for r in csv.DictReader(fh) if r["estado"] in ("novo", "manual") and r["ficheiro"]]
+    assert rows
+    for r in rows:
+        path = raw / r["ficheiro"]
+        if path.exists():
+            assert hashlib.sha256(path.read_bytes()).hexdigest() == r["sha256"], f"{r['ficheiro']} != MANIFEST"
+        else:
+            ignored = subprocess.run(["git", "check-ignore", "-q", str(path)], cwd=ROOT).returncode == 0
+            assert ignored, f"{r['ficheiro']} está no MANIFEST mas não existe (e não é ignorado pelo git)"
+    registered = {r["ficheiro"] for r in rows}
+    folders = {str(Path(f).parent.as_posix()) for f in registered}
+    extra = [p.relative_to(raw).as_posix() for p in raw.rglob("*") if p.is_file() and p.name != "MANIFEST.csv"]
+    extra = [e for e in extra if e not in registered and not (Path(e).name == "validation.json" and str(Path(e).parent.as_posix()) in folders)]
+    assert not extra, f"ficheiros em data/raw/ fora do MANIFEST: {extra}"
+
+
+def test_provenance_commit_marks_uncommitted_changes(monkeypatch) -> None:
+    # Auditoria 2026-11-28: com a árvore suja o PROVENANCE dizia só o HEAD.
+    import subprocess
+
+    def fake_run(args, **kw):
+        out = "abc1234\n" if "rev-parse" in args else (" M scripts/build_feeds.py\n" if dirty else "")
+        return subprocess.CompletedProcess(args, 0, stdout=out, stderr="")
+
+    monkeypatch.setattr(bf.subprocess, "run", fake_run)
+    dirty = True
+    assert bf._git_commit() == "abc1234+alterações"
+    dirty = False
+    assert bf._git_commit() == "abc1234"
+
+
 def test_real_build_definitions_point_to_registered_raw_files() -> None:
     with open(ROOT / "data" / "raw" / "MANIFEST.csv", encoding="utf-8", newline="") as fh:
         registered = {r["ficheiro"] for r in csv.DictReader(fh) if r["estado"] == "novo"}

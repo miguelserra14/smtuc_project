@@ -9,6 +9,7 @@ de se descobrir nos slides.
     python scripts/snapshot_metrics.py snapshot teste --metro outro_metro       # cenário com outro feed
     python scripts/snapshot_metrics.py diff reports/metricas/sintetico.csv reports/metricas/metro_2025.csv
     python scripts/snapshot_metrics.py diff A.csv B.csv --check                 # exit 1 se algo mudou
+    python scripts/snapshot_metrics.py verificar [--cenario fase2]              # registos em vigor (exit 1 se mudou)
 
 Formato (CSV longo, uma linha por número): section, key, metric, value. As linhas com
 section="meta" descrevem COMO foi calculado (datasets, impressões digitais, dia/hora, parâmetros,
@@ -38,6 +39,12 @@ As secções opcionais ficam fora das por omissão para os registos antigos cont
 Nada é escrito em outputs/: o cache de métricas é copiado para uma pasta temporária e as tabelas
 intermédias vão para lá. Um snapshot existente NÃO é substituído sem --force (é uma linha de base).
 
+`verificar` (auditoria de 2026-11-28): recalcula com o código atual os registos EM VIGOR
+(reports/metricas/em_vigor.csv: registo, cenário) - um snapshot por cenário com as secções dos
+seus registos - e compara número a número; exit 1 se algum número mudou, se faltar um registo ou
+se os dados (impressões digitais) já não forem os do registo. Correr antes de commitar qualquer
+mudança de cálculo ou de dados (~3-4 min); uma mudança intencional = registos novos + em_vigor.csv.
+
 Os feeds e o dia/hora de referência vêm do cenário (--cenario, config.SCENARIOS); --smtuc/--metro
 trocam só o feed (o dia continua o do cenário). Todas as secções, incluindo as esperas da 54,
 usam o mesmo cenário.
@@ -46,6 +53,7 @@ usam o mesmo cenário.
 from __future__ import annotations
 
 import argparse
+import csv
 import importlib.util
 import math
 import os
@@ -67,6 +75,7 @@ SECTIONS = ("linhas", "overlap_resumo", "esperas_54", "busca_fase_54", "isocrona
 OPTIONAL_SECTIONS = ("redundancia", "isocrona_nos", "isocrona_huc")
 ALL_SECTIONS = SECTIONS + OPTIONAL_SECTIONS
 DEFAULT_OUT_DIR = ROOT / "reports" / "metricas"
+CURRENT_RECORDS_CSV = DEFAULT_OUT_DIR / "em_vigor.csv"
 DECIMALS = 4
 
 # Colunas de outputs/overlap/line_metrics_db.csv que entram na secção "linhas".
@@ -519,6 +528,86 @@ def _print_diff(diff: pd.DataFrame) -> None:
             print(f"  {r.key} | {r.metric}: {r.before or '-'} -> {r.after or '-'}{pct}  [{r.status}]")
 
 
+# --------------------------------------------------------------------------- verificar
+
+
+def load_current_records(path: Path = CURRENT_RECORDS_CSV) -> list[tuple[str, str]]:
+    """(registo, cenário) de cada registo em vigor, pela ordem do ficheiro."""
+    with open(path, encoding="utf-8", newline="") as fh:
+        rows = [(r["registo"].strip(), r["cenario"].strip()) for r in csv.DictReader(fh) if r.get("registo", "").strip()]
+    names = [r for r, _ in rows]
+    repeated = sorted({n for n in names if names.count(n) > 1})
+    if repeated:
+        raise ValueError(f"{path}: registos repetidos {repeated}")
+    return rows
+
+
+def _meta(df: pd.DataFrame, metric: str) -> str:
+    m = df[(df["section"] == "meta") & (df["metric"] == metric)]
+    return str(m["value"].iloc[0]) if len(m) else ""
+
+
+def record_sections(df: pd.DataFrame) -> tuple[str, ...]:
+    """Secções que o registo tem (meta "secoes"), pela ordem de ALL_SECTIONS."""
+    listed = {s for s in _meta(df, "secoes").split(";") if s}
+    return tuple(s for s in ALL_SECTIONS if s in listed)
+
+
+_FINGERPRINTS = ("impressao_digital_smtuc", "impressao_digital_metro")
+
+
+def verify_records(records: list[tuple[str, str]], records_dir: Path = DEFAULT_OUT_DIR, snapshot_fn=None) -> list[dict]:
+    """Para cada cenário, um snapshot (`snapshot_fn`, por omissão take_snapshot) com a união das
+    secções dos seus registos; cada registo compara-se só nas SUAS secções (meta ignorada). Uma
+    linha por registo: registo, cenario, estado ("igual", "diferente", "dados mudaram",
+    "cenário errado", "em falta"), diferencas (DataFrame do diff_snapshots)."""
+    snapshot_fn = snapshot_fn or take_snapshot
+    results: list[dict] = []
+    frames: dict[str, pd.DataFrame] = {}
+    for name, scen in records:
+        path = Path(records_dir) / f"{name}.csv"
+        if not path.exists():
+            results.append({"registo": name, "cenario": scen, "estado": "em falta", "diferencas": None})
+            continue
+        df = read_snapshot(path)
+        if _meta(df, "cenario") != scen:
+            results.append({"registo": name, "cenario": scen, "estado": f"cenário errado ({_meta(df, 'cenario') or '?'})",
+                            "diferencas": None})
+            continue
+        frames[name] = df
+    for scen in dict.fromkeys(s for n, s in records if n in frames):
+        names = [n for n, s in records if s == scen and n in frames]
+        wanted = set().union(*(record_sections(frames[n]) for n in names))
+        fresh = snapshot_fn(f"verificar_{scen}", scenario=scen, sections=tuple(s for s in ALL_SECTIONS if s in wanted))
+        for name in names:
+            df = frames[name]
+            if any(_meta(df, fp) != _meta(fresh, fp) for fp in _FINGERPRINTS):
+                results.append({"registo": name, "cenario": scen, "estado": "dados mudaram", "diferencas": None})
+                continue
+            secs = record_sections(df)
+            diff = diff_snapshots(df[df["section"].isin(secs)], fresh[fresh["section"].isin(secs)])
+            diff = diff[diff["section"] != "meta"].reset_index(drop=True)
+            results.append({"registo": name, "cenario": scen, "estado": "igual" if diff.empty else "diferente",
+                            "diferencas": diff})
+    order = {n: i for i, (n, _) in enumerate(records)}
+    return sorted(results, key=lambda r: order[r["registo"]])
+
+
+def _print_verification(results: list[dict]) -> int:
+    bad = 0
+    for r in results:
+        diff = r["diferencas"]
+        extra = f" ({len(diff)} números)" if r["estado"] == "diferente" else ""
+        print(f"  {r['registo']:32s} {r['cenario']:14s} {r['estado']}{extra}")
+        if r["estado"] != "igual":
+            bad += 1
+        if r["estado"] == "diferente":
+            for d in diff.head(10).itertuples():
+                print(f"      [{d.section}] {d.key} | {d.metric}: {d.before or '-'} -> {d.after or '-'}  [{d.status}]")
+    print(f"[verificar] {len(results) - bad}/{len(results)} registos iguais ao código atual")
+    return 1 if bad else 0
+
+
 # --------------------------------------------------------------------------- CLI
 
 
@@ -542,9 +631,22 @@ def main(argv: list[str] | None = None) -> int:
     p_diff.add_argument("--csv", type=Path, default=None, help="grava a tabela de diferenças neste CSV")
     p_diff.add_argument("--check", action="store_true", help="exit 1 se algum número (fora de meta) mudou")
 
+    p_ver = sub.add_parser("verificar", help="recalcula os registos em vigor (em_vigor.csv) e falha se algum mudou")
+    p_ver.add_argument("--cenario", action="append", default=None, help="só este cenário (pode repetir)")
+    p_ver.add_argument("--lista", type=Path, default=CURRENT_RECORDS_CSV, help="CSV registo,cenario (por omissão em_vigor.csv)")
+
     args = parser.parse_args(argv)
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8", errors="replace")
+
+    if args.command == "verificar":
+        records = load_current_records(args.lista)
+        if args.cenario:
+            unknown = set(args.cenario) - {s for _, s in records}
+            if unknown:
+                parser.error(f"cenários sem registos em vigor: {sorted(unknown)}")
+            records = [r for r in records if r[1] in args.cenario]
+        return _print_verification(verify_records(records, Path(args.lista).parent))
 
     if args.command == "snapshot":
         if not args.fase.replace("_", "").replace("-", "").isalnum():

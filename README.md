@@ -182,8 +182,15 @@ docs/integracao_dados_agit/   plano, decisões e protótipos da integração dos
 **FeedNPlay**
 - Testar mais a interatividade e planear em que pontos da apresentação entram as componentes interativas. Pensar de forma mais estruturada a arquitetura do frontend para a parede.
 - Servir o Plotly e o Leaflet localmente: hoje vêm de CDN, e sem internet a parede não mostra os mapas nem os gráficos.
-- Tornar a ponte Kafka robusta a mensagens malformadas.
+- Tornar a ponte Kafka robusta a mensagens malformadas: o JSON inválido já é ignorado, mas um JSON válido com a forma errada (uma lista, ou `area` que não é número) mata a thread e a parede deixa de seguir as pessoas.
 - Escapar o texto que o `master_dashboard.html` insere com `innerHTML`.
+
+**Segurança e integridade** (auditoria de 2026-11-28; dados, registos, feeds e testes verificados sem problemas)
+- O `python -m http.server 8000` na raiz expõe o repositório inteiro à rede local: a pasta `.git`, o `src/config_local.py` e o GTFS do Município. Usar `--bind 127.0.0.1 --directory outputs`, porque os outputs só apontam para dentro de `outputs/`.
+- O histórico git ainda tem as coordenadas pessoais (commits de fevereiro a 13/11/2026) e caminhos da máquina. A reescrita do histórico está suspensa por decisão; os ficheiros atuais estão limpos.
+- O mapa de linhas publica a página sem pontos de interesse, ou sem a caixa "Mostrar linha", quando estes falham: só imprime um aviso e o regenerate acaba sem falhas.
+- O JSON metido em `<script>` nos três dashboards e no mapa de linhas não escapa `</`. O título do `visualizations/io.py` não é escapado. O `postMessage` das isócronas não confere a origem (só move o marcador).
+- O script PowerShell do FeedNPlay para à força o PID guardado sem confirmar que é o produtor.
 
 **Relatório**
 - Escrever e finalizar o relatório com a narrativa centrada no impacto do Metrobus e na adaptação do SMTUC. Os relatórios em `reports/` são de maio de 2026 e usam números do metro sintético.
