@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>Linha do Hospital (planeado)</title>
+  <!-- Sem recursos externos: a página tem de funcionar offline (parede FeedNPlay) e dentro de
+       um iframe num cartão branco dos slides - por isso fundo claro e as cores da apresentação. -->
+  <style>
+    :root {
+      --ink: #221d13;
+      --muted: #5c574c;
+      --border: #e7e2d8;
+      --card: #ffffff;
+      --card-soft: #faf8f4;
+      --accent: #ffdd2b;
+      --good: #1f7a3a;
+      --good-bg: #e6f4ea;
+      --bad: #a3361f;
+      --bad-bg: #fbe9e4;
+      color-scheme: light only;
+    }
+    html, body { margin: 0; background: var(--card); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', 'Segoe UI', Tahoma, sans-serif;
+      font-size: clamp(13px, 1.25vw, 17px);
+      line-height: 1.4;
+      padding: 1em 1.2em;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-family: 'Space Mono', 'Courier New', monospace;
+      font-size: 1.05em;
+      margin: 0 0 0.5em;
+      letter-spacing: 0.01em;
+    }
+    section + section { margin-top: 1.4em; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 0.45em 0.6em; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+    thead th { background: var(--card-soft); font-size: 0.85em; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--accent); }
+    thead th span { font-weight: 400; }
+    th[scope="row"], thead th:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+    td { white-space: nowrap; }
+    .trend-melhor { color: var(--good); background: var(--good-bg); font-weight: 600; }
+    .trend-pior { color: var(--bad); background: var(--bad-bg); font-weight: 600; }
+    span.trend-melhor, span.trend-pior { padding: 0 0.3em; border-radius: 3px; }
+    .note { color: var(--muted); font-size: 0.85em; margin: 0.5em 0 0; }
+    .sources { margin-top: 1.4em; }
+    code { font-size: 0.95em; }
+    /* Diferenças de rede (network_diff_page.py): colunas de texto, nome da linha, tabela de contagens. */
+    td.text { text-align: left; white-space: normal; }
+    th .name { font-weight: 400; font-size: 0.8em; color: var(--muted); }
+    table.counts { width: auto; min-width: 50%; margin-top: 0.8em; }
+    .note code { overflow-wrap: anywhere; }
+    /* Redundância (redundancy_page.py): barra proporcional atrás do valor. */
+    td.barcell { position: relative; min-width: 9em; }
+    td.barcell .bar { position: absolute; left: 0; top: 18%; bottom: 18%; background: var(--accent); opacity: 0.55; border-radius: 0 3px 3px 0; }
+    td.barcell .barval { position: relative; }
+    @media (max-width: 560px) {
+      body { padding: 0.75em 0.5em; }
+      th, td { padding: 0.35em 0.3em; }
+      td { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+<section>
+  <h2>Linha do Hospital: estações e tempos assumidos</h2>
+  <table>
+    <thead><tr><th scope="col">Troço</th><th scope="col">Distância na via</th><th scope="col">A subir</th><th scope="col">A descer</th></tr></thead>
+    <tbody><tr><th scope="row">República – Sereia</th><td>525 m</td><td>1,5 min</td><td>1,4 min</td></tr><tr><th scope="row">Sereia – Celas</th><td>459 m</td><td>1,4 min</td><td>1,6 min</td></tr><tr><th scope="row">Celas – Polo Ciências da Saúde</th><td>573 m</td><td>1,7 min</td><td>1,9 min</td></tr><tr><th scope="row">Polo Ciências da Saúde – Hospitais (H.U.C.)</th><td>269 m</td><td>0,8 min</td><td>0,9 min</td></tr><tr><th scope="row">Hospitais (H.U.C.) – Pediátrico</th><td>837 m</td><td>2,5 min</td><td>2,8 min</td></tr><tr><th scope="row">Total</th><td>2 663 m</td><td>7,8 min</td><td>8,6 min</td></tr></tbody>
+  </table>
+  <p class="note">Estações e via do mapa oficial do Metro Mondego. Não há horário oficial: as viagens U2, U3, S2 que hoje acabam ou começam na República seguem até ao Pediátrico, com a mesma frequência, e cada troço novo demora a distância na via ÷ a velocidade média do troço urbano que chega à República. A subir: Loja do Cidadão → República (asc),1 180 m em 3,47 min, média de 318 viagens = 20,4 km/h. A descer: República (desc) → Loja do Cidadão,1 216 m em 4,12 min, média de 316 viagens = 17,7 km/h.</p>
+</section>
+<section>
+  <h2>Serviço num dia útil (09/11/2026) na estação Hospitais (H.U.C.)</h2>
+  <table>
+    <thead><tr><th scope="col">Linha</th><th scope="col">Sentido</th><th scope="col">Passagens<br><span>Fase 3 (planeado)</span></th><th scope="col">Intervalo mediano<br><span>Fase 3 (planeado)</span></th><th scope="col">Passagens<br><span>Fase 3, metade das viagens (planeado)</span></th><th scope="col">Intervalo mediano<br><span>Fase 3, metade das viagens (planeado)</span></th></tr></thead>
+    <tbody><tr><th scope="row">S2</th><td class="text">para o Pediátrico</td><td>30</td><td>21,4 min</td><td>10</td><td>59,5 min</td></tr><tr><th scope="row">U2</th><td class="text">para o Pediátrico</td><td>47</td><td>19,5 min</td><td>23</td><td>27,0 min</td></tr><tr><th scope="row">U3</th><td class="text">para o Pediátrico</td><td>72</td><td>14,0 min</td><td>33</td><td>20,0 min</td></tr><tr class="total"><th scope="row">Todas as linhas</th><td class="text">para o Pediátrico</td><td>149</td><td>5,4 min</td><td>66</td><td>10,5 min</td></tr><tr><th scope="row">S2</th><td class="text">da Linha do Hospital para a Baixa</td><td>28</td><td>20,0 min</td><td>17</td><td>40,0 min</td></tr><tr><th scope="row">U2</th><td class="text">da Linha do Hospital para a Baixa</td><td>43</td><td>20,0 min</td><td>19</td><td>34,5 min</td></tr><tr><th scope="row">U3</th><td class="text">da Linha do Hospital para a Baixa</td><td>77</td><td>12,0 min</td><td>40</td><td>18,0 min</td></tr><tr class="total"><th scope="row">Todas as linhas</th><td class="text">da Linha do Hospital para a Baixa</td><td>148</td><td>5,0 min</td><td>76</td><td>8,0 min</td></tr></tbody>
+  </table>
+  <p class="note">Intervalo mediano entre passagens consecutivas das 7 h às 20 h. A variante com metade das viagens é a sensibilidade do horário assumido: uma em cada duas viagens de cada linha e sentido segue até ao Pediátrico, as outras acabam na República.</p>
+</section>
+<p class="note sources">Cenário planeado, não oficial. Dados: Metro Mondego (NeTEx AGIT de 11/11/2026; mapa da rede, dados.gov.pt, CC BY 4.0).</p>
+
+</body>
+</html>
